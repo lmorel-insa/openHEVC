@@ -127,8 +127,8 @@ static void scale_upsampled_mv_field(HEVCContext *s) {
             int xELtmp = av_clip_c(xEL+8, 0, sc->sps->pic_width_in_luma_samples -1);
             int yELtmp = av_clip_c(yEL+8, 0, sc->sps->pic_height_in_luma_samples -1);
             
-            xBL = (((xELtmp) - sc->sps->pic_conf_win.left_offset)*sc->sh.ScalingPosition[sc->layer_id][0] + (1<<15)) >> 16;
-            yBL = (((yELtmp) - sc->sps->pic_conf_win.top_offset )*sc->sh.ScalingPosition[sc->layer_id][1] + (1<<15)) >> 16;
+            xBL = (((xELtmp) - sc->sps->pic_conf_win.left_offset)*sc->sh.ScalingPosition[sc->nuh_layer_id][0] + (1<<15)) >> 16;
+            yBL = (((yELtmp) - sc->sps->pic_conf_win.top_offset )*sc->sh.ScalingPosition[sc->nuh_layer_id][1] + (1<<15)) >> 16;
             
             // printf("xBL %d yBL %d xEL %d yEL %d topStartL %d g_posScalingFactor[m_layerId][1] %d uiPelY %d \n",xBL, yBL, xELtmp, yELtmp,  sc->sps->pic_conf_win.top_offset, sc->sh.ScalingPosition[sc->layer_id][1], yEL+8);
             xBL = (xBL >>=4)<<2; /*xBL & 0xFFFFFFF0*/
@@ -138,8 +138,8 @@ static void scale_upsampled_mv_field(HEVCContext *s) {
                 for( list=0; list < 2; list++) {
                     int x = refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].mv[list].x;
                     int y = refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].mv[list].y;
-                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].x  = av_clip_c( (sc->sh.ScalingFactor[s->HEVCsc->layer_id][0] * x + 127 + (sc->sh.ScalingFactor[sc->layer_id][0] * x < 0)) >> 8 , -32768, 32767);
-                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y = av_clip_c( (sc->sh.ScalingFactor[s->HEVCsc->layer_id][1] * y + 127 + (s->HEVCsc->sh.ScalingFactor[sc->layer_id][1] * y < 0)) >> 8, -32768, 32767);
+                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].x  = av_clip_c( (sc->sh.ScalingFactor[s->HEVCsc->nuh_layer_id][0] * x + 127 + (sc->sh.ScalingFactor[sc->nuh_layer_id][0] * x < 0)) >> 8 , -32768, 32767);
+                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y = av_clip_c( (sc->sh.ScalingFactor[s->HEVCsc->nuh_layer_id][1] * y + 127 + (s->HEVCsc->sh.ScalingFactor[sc->nuh_layer_id][1] * y < 0)) >> 8, -32768, 32767);
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].ref_idx[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].ref_idx[list];
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].pred_flag[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].pred_flag[list];
                 }
@@ -372,9 +372,9 @@ static void set_ref_pic_list(HEVCContext *s)
 #if REF_IDX_FRAMEWORK
 #if REF_IDX_MFM
 #if ZERO_NUM_DIRECT_LAYERS
-    if( s->HEVCsc->layer_id > 0 && vps->max_one_active_ref_layer_flag > 0 )
+    if( s->HEVCsc->nuh_layer_id > 0 && vps->max_one_active_ref_layer_flag > 0 )
 #else
-    if (s->HEVCsc->layer_id)
+    if (s->HEVCsc->nuh_layer_id)
 #endif
     {
         if(!(s->HEVCsc->nal_unit_type >= NAL_BLA_W_LP && s->HEVCsc->nal_unit_type <= NAL_CRA_NUT) && s->HEVCsc->sps->set_mfm_enabled_flag)  {
@@ -433,7 +433,7 @@ static void set_ref_pic_list(HEVCContext *s)
             cIdx++;
         }
 #if REF_IDX_FRAMEWORK
-        if(s->HEVCsc->layer_id) {
+        if(s->HEVCsc->nuh_layer_id) {
 #if JCTVC_M0458_INTERLAYER_RPS_SIG
             for( i = 0; i < vps->max_one_active_ref_layer_flag && cIdx < num_poc_total_curr; i ++) {
 #else
@@ -481,7 +481,7 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
 #if REF_IDX_FRAMEWORK
         VPS *vps = s->HEVCsc->vps;
 #if ZERO_NUM_DIRECT_LAYERS
-        if(s->HEVCsc->layer_id == 0 || ( s->HEVCsc->layer_id > 0 && ( vps->max_one_active_ref_layer_flag == 0 || !((s->HEVCsc->nal_unit_type >= NAL_BLA_W_LP) && (s->HEVCsc->nal_unit_type <= NAL_CRA_NUT)) ) ) )
+        if(s->HEVCsc->nuh_layer_id == 0 || ( s->HEVCsc->nuh_layer_id > 0 && ( vps->max_one_active_ref_layer_flag == 0 || !((s->HEVCsc->nal_unit_type >= NAL_BLA_W_LP) && (s->HEVCsc->nal_unit_type <= NAL_CRA_NUT)) ) ) )
 #else
         if ((s->HEVCsc->layer_id == 0) ||
             ((s->HEVCsc->layer_id) &&  !((s->HEVCsc->nal_unit_type >= NAL_BLA_W_LP) &&
@@ -551,7 +551,7 @@ int ff_hevc_get_NumPocTotalCurr(HEVCContext *s) {
     ShortTermRPS *rps     = s->HEVCsc->sh.short_term_rps;
     LongTermRPS *long_rps = &s->HEVCsc->sh.long_term_rps;
 #if REF_IDX_FRAMEWORK
-    if( s->HEVCsc->sh.slice_type == I_SLICE || (s->HEVCsc->layer_id &&
+    if( s->HEVCsc->sh.slice_type == I_SLICE || (s->HEVCsc->nuh_layer_id &&
                                                 (s->HEVCsc->nal_unit_type >= NAL_BLA_W_LP) &&
                                                 (s->HEVCsc->nal_unit_type<= NAL_CRA_NUT ) ) )
 #else
@@ -580,7 +580,7 @@ int ff_hevc_get_NumPocTotalCurr(HEVCContext *s) {
                 NumPocTotalCurr++;
     }
 #if REF_IDX_FRAMEWORK
-    if(s->HEVCsc->layer_id) {
+    if(s->HEVCsc->nuh_layer_id) {
 #if JCTVC_M0458_INTERLAYER_RPS_SIG
         NumPocTotalCurr += s->HEVCsc->sh.active_num_ILR_ref_idx;
 #else

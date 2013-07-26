@@ -2409,11 +2409,19 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
                 if ((ret = ff_reget_buffer(s->avctx, sc->tmp_frame)) < 0)
                     return ret;
                 sc->frame = sc->tmp_frame;
+#ifdef SVC_EXTENSION
+                if ((ret = ff_hevc_set_new_ref(s, &sc->sao_frame, sc->poc,0))< 0)
+#else
                 if ((ret = ff_hevc_set_new_ref(s, &sc->sao_frame, sc->poc))< 0)
+#endif
                     return ret;
             } else {
 #endif
+#ifdef SVC_EXTENSION
+                if ((ret = ff_hevc_set_new_ref(s, &sc->frame, sc->poc, 0))< 0)
+#else
                 if ((ret = ff_hevc_set_new_ref(s, &sc->frame, sc->poc))< 0)
+#endif
                     return ret;
 #ifdef FILTER_EN
             }
