@@ -2309,8 +2309,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         return ret;
 
     ret = hls_nal_unit(s);
-    
-    if (ret < 0) {
+        if (ret < 0) {
         av_log(s->avctx, AV_LOG_ERROR, "Invalid NAL unit %d, skipping.\n",
                 sc->nal_unit_type);
         if (s->avctx->err_recognition & AV_EF_EXPLODE) {

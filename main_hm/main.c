@@ -97,7 +97,8 @@ static void video_decode_example(const char *filename)
             got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++);
         } else {
             if (stop_dec == 0 && feof(f)) stop_dec = 1;
-            got_picture = libOpenHevcDecode(openHevcHandle, buf, !stop_dec ? get_next_nal(f, buf) : 0, pts++);
+            got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++);
+            
         }
         if (got_picture) {
             fflush(stdout);
