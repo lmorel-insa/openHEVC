@@ -891,6 +891,7 @@ typedef struct HEVCSharedContext {
     SAOParams *sao;
     DBParams *deblock;
     enum NALUnitType nal_unit_type;
+    int nuh_layer_id; 
     int temporal_id;  ///< temporal_id_plus1 - 1
     HEVCFrame *ref;
     HEVCFrame DPB[32];
@@ -943,7 +944,6 @@ typedef struct HEVCSharedContext {
     int rbsp_buffer_size;
 
     int enable_parallel_tiles;
-    int nuh_layer_id;
     int ERROR;
 
 } HEVCSharedContext;

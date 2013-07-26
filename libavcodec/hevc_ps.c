@@ -385,7 +385,7 @@ static void parse_vps_extension (HEVCContext *s, VPS *vps)  {
             memcpy(vps->PTLExt[i], vps->PTLExt[vps->profile_ref[i]], sizeof(PTL));
         }
         vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
-     //   parse_ptl(s->HEVClc, vps->PTLExt[i], vps->vps_max_sub_layers-1);
+        parse_ptl(s->HEVClc, vps->PTLExt[i], vps->vps_max_sub_layers-1);
     }
 #endif
     
@@ -575,6 +575,7 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     // Coded parameters
 
     sps->vps_id = get_bits(gb, 4);
+   
     if (sps->vps_id >= MAX_VPS_COUNT) {
         av_log(s->avctx, AV_LOG_ERROR, "VPS id out of range: %d\n", sps->vps_id);
         goto err;
@@ -589,11 +590,12 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
 
     sps->temporal_id_nesting_flag = get_bits1(gb);
     
-    /*if (parse_ptl(s->HEVClc, &sps->ptl, s->HEVCsc->vps_list[sps->vps_id]->vps_max_sub_layers-1) < 0) {
+    if (parse_ptl(s->HEVClc, &sps->ptl, s->HEVCsc->vps_list[sps->vps_id]->vps_max_sub_layers-1) < 0) {
         av_log(s->avctx, AV_LOG_ERROR, "error decoding profile tier level\n");
         goto err;
-    }*/
+    }
     sps_id = get_ue_golomb(gb);
+
     if (sps_id >= MAX_SPS_COUNT) {
         av_log(s->avctx, AV_LOG_ERROR, "SPS id out of range: %d\n", sps_id);
         goto err;

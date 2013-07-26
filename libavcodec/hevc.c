@@ -2211,23 +2211,24 @@ static int hls_slice_data_wpp(HEVCContext *s, const uint8_t *nal, int length)
 static int hls_nal_unit(HEVCContext *s)
 {
     GetBitContext *gb = s->HEVClc->gb;
+    HEVCSharedContext *sc = s->HEVCsc;
     int nuh_layer_id;
 
     if (get_bits1(gb) != 0)
         return AVERROR_INVALIDDATA;
 
-    s->HEVCsc->nal_unit_type = get_bits(gb, 6);
+    sc->nal_unit_type = get_bits(gb, 6);
 
-    nuh_layer_id = get_bits(gb, 6);
-    s->HEVCsc->temporal_id = get_bits(gb, 3) - 1;
-    if (s->HEVCsc->temporal_id < 0)
+    sc->nuh_layer_id = get_bits(gb, 6);
+    sc->temporal_id = get_bits(gb, 3) - 1;
+    if (sc->temporal_id < 0)
         return AVERROR_INVALIDDATA;
 
     av_log(s->avctx, AV_LOG_DEBUG,
            "nal_unit_type: %d, nuh_layer_id: %dtemporal_id: %d\n",
-           s->HEVCsc->nal_unit_type, nuh_layer_id, s->HEVCsc->temporal_id);
+           sc->nal_unit_type, sc->nuh_layer_id, sc->temporal_id);
 
-    return (nuh_layer_id == 0);
+    return sc->nuh_layer_id ;
 }
 #ifdef POC_DISPLAY_MD5
 
@@ -2302,6 +2303,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         return ret;
 
     ret = hls_nal_unit(s);
+    
     if (ret < 0) {
         av_log(s->avctx, AV_LOG_ERROR, "Invalid NAL unit %d, skipping.\n",
                 sc->nal_unit_type);
@@ -2309,9 +2311,9 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
             return ret;
         }
         return 0;
-    } else if (!ret)
+    } else if (ret)
         return 0;
-
+    
     switch (sc->nal_unit_type) {
     case NAL_VPS:
         ff_hevc_decode_nal_vps(s);
