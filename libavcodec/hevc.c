@@ -2815,3 +2815,17 @@ AVCodec ff_hevc_decoder = {
     .flush          = hevc_decode_flush,
     .long_name      = NULL_IF_CONFIG_SMALL("HEVC (High Efficiency Video Coding)"),
 };
+
+AVCodec ff_shvc_decoder = {
+    .name           = "shvc",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = AV_CODEC_ID_SHVC,
+    .priv_data_size = sizeof(HEVCContext),
+    .priv_class     = &hevc_decoder_class,
+    .init           = hevc_decode_init,
+    .close          = hevc_decode_free,
+    .decode         = hevc_decode_frame,
+    .capabilities   = CODEC_CAP_DR1 | CODEC_CAP_DELAY | CODEC_CAP_SLICE_THREADS| CODEC_CAP_FRAME_THREADS,
+    .flush          = hevc_decode_flush,
+    .long_name      = NULL_IF_CONFIG_SMALL("HEVC (High Efficiency Video Coding)"),
+};

@@ -10,9 +10,11 @@ typedef struct OpenHevcWrapperContext {
     AVFrame *picture;
     AVPacket avpkt;
     AVCodecParserContext *parser;
+    AVCodec *ecodec;
+    AVCodecContext *ec;
 } OpenHevcWrapperContext;
 
-OpenHevc_Handle libOpenHevcInit(int nb_pthreads)
+OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers)
 {
     /* register all the codecs */
     avcodec_register_all();
@@ -46,6 +48,19 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads)
         return NULL;
     }
     av_opt_set_int(openHevcContext->c->priv_data, "disable-au", 0, 0);
+    
+    if(nb_layers>1)  {// Create the second decoder
+        openHevcContext->ecodec  = avcodec_find_decoder(AV_CODEC_ID_SHVC);
+        openHevcContext->ec     = avcodec_alloc_context3(openHevcContext->ecodec);
+        if(nb_pthreads)	{
+            av_opt_set(openHevcContext->ec, "thread_type", "slice", 0);
+            av_opt_set_int(openHevcContext->ec, "threads", nb_pthreads, 0);
+        }
+        if (avcodec_open2(openHevcContext->ec, openHevcContext->ecodec, NULL) < 0) {
+            fprintf(stderr, "could not open codec\n");
+            return NULL;
+        }
+    }
     return (OpenHevc_Handle) openHevcContext;
 }
 
@@ -143,10 +158,14 @@ void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val)
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "disable-au", val, 0);
 }
-void libOpenHevcClose(OpenHevc_Handle openHevcHandle)
+void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int nb_layers)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     avcodec_close(openHevcContext->c);
+    if(nb_layers >1){
+        avcodec_close(openHevcContext->ec);
+        av_free(openHevcContext->ec);
+    }
     av_free(openHevcContext->c);
     av_free(openHevcContext->picture);
     av_free(openHevcContext);

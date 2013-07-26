@@ -64,7 +64,7 @@ static void video_decode_example(const char *filename)
     OpenHevc_Frame openHevcFrame;
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
-    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads);
+    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers);
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
     libOpenHevcSetDisableAU(openHevcHandle, disable_au);
     if (!openHevcHandle) {
@@ -140,7 +140,7 @@ static void video_decode_example(const char *filename)
         fclose(fout);
     if (disable_au == 0)
         avformat_close_input(&pFormatCtx);
-    libOpenHevcClose(openHevcHandle);
+    libOpenHevcClose(openHevcHandle, nb_layers);
     printf("frame= %d fps= %.0f time=%.2f video_size= %dx%d\n", nbFrame, nbFrame/time, time, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
 }
 
