@@ -53,6 +53,7 @@ int check_md5_flags;
 int disable_au;
 // Activate multi-threading if possible
 int nb_pthreads;
+int nb_layers;
 
 // output file
 char *output_file;

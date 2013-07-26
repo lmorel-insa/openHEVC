@@ -53,6 +53,7 @@ void print_usage() {
     printf("     -c : no check md5\n");
     printf("     -a : disable AU\n");
     printf("     -p <number of threads> \n");
+    printf("     -l <number of layers> \n");
 }
 
 /*
@@ -124,12 +125,13 @@ int getopt(int nargc, char * const *nargv, const char *ostr) {
 void init_main(int argc, char *argv[]) {
 	// every command line option must be followed by ':' if it takes an
 	// argument, and '::' if this argument is optional
-	const char *ostr = "i:ncahp:o:";
+	const char *ostr = "i:ncahp:o:l:";
 	int c;
 	display_flags   = DISPLAY_ENABLE;
     check_md5_flags = MD5_ENABLE;
     disable_au      = 0;
     nb_pthreads = 0;
+    nb_layers = 1;
     output_file = NULL;
 	program = argv[0];
     
@@ -154,6 +156,9 @@ void init_main(int argc, char *argv[]) {
              break;
         case 'p':
             nb_pthreads = atoi(optarg);
+            break;
+        case 'l':
+            nb_layers = atoi(optarg);
             break;
 		default:
 			print_usage();
