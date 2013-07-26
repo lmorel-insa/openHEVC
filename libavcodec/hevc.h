@@ -697,6 +697,20 @@ typedef struct DBParams {
     int tc_offset;
 } DBParams;
 
+//#ifdef SVC_EXTENSION
+typedef struct UpsamplInf {
+	int addXLum;
+	int addYLum;
+	int scaleXLum;
+	int scaleYLum;
+	int addXCr;
+	int addYCr;
+	int scaleXCr;
+	int scaleYCr;
+} UpsamplInf;
+//#endif
+
+
 #define HEVC_FRAME_FLAG_OUTPUT    (1 << 0)
 #define HEVC_FRAME_FLAG_SHORT_REF (1 << 1)
 
