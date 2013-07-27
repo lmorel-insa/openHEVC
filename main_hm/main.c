@@ -65,8 +65,10 @@ static void video_decode_example(const char *filename)
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
     OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers);
+    
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags, nb_layers);
     libOpenHevcSetDisableAU(openHevcHandle, disable_au, nb_layers);
+    
     if (!openHevcHandle) {
         fprintf(stderr, "could not open OpenHevc\n");
         exit(1);
@@ -94,10 +96,12 @@ static void video_decode_example(const char *filename)
     while(!stop) {
         if (disable_au == 0) {
             if (stop_dec == 0 && av_read_frame(pFormatCtx, &packet)<0) stop_dec = 1;
-            got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++);
+            
+            got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++, nb_layers);
         } else {
             if (stop_dec == 0 && feof(f)) stop_dec = 1;
-            got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++);
+            
+            got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++, nb_layers);
             
         }
         if (got_picture>0) {

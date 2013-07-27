@@ -73,18 +73,18 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers)
     return (OpenHevc_Handle) openHevcContext;
 }
 int first = 0;
-int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts)
+int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts, int nb_layers)
 {
     int got_picture, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     
     int layer_id = ((buff[0]&0x01)<<5) + ((buff[1]&0xF8)>>3);
     uint8_t * buf;
-    if(!first){
+    if(!first && nb_layers>1){
         buf = av_malloc(au_len);
         memcpy(buf, buff, au_len);
     }
-    if(!layer_id){
+    if(!layer_id || nb_layers<=1){
         openHevcContext->avpkt.size = au_len;
         openHevcContext->avpkt.data = buff;
         len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
@@ -94,7 +94,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture, &openHevcContext->eavpkt);
         
     }
-    if(!first){
+    if(!first && nb_layers >1){
         openHevcContext->eavpkt.size = au_len;
          openHevcContext->eavpkt.data = buf;
          len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture, &openHevcContext->eavpkt);
