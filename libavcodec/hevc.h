@@ -801,7 +801,7 @@ typedef struct DBParams {
     int tc_offset;
 } DBParams;
 
-//#ifdef SVC_EXTENSION
+#ifdef SVC_EXTENSION
 typedef struct UpsamplInf {
 	int addXLum;
 	int addYLum;
@@ -812,7 +812,7 @@ typedef struct UpsamplInf {
 	int scaleXCr;
 	int scaleYCr;
 } UpsamplInf;
-//#endif
+#endif
 
 
 #define HEVC_FRAME_FLAG_OUTPUT    (1 << 0)
@@ -945,6 +945,14 @@ typedef struct HEVCSharedContext {
 
     int enable_parallel_tiles;
     int ERROR;
+#ifdef SVC_EXTENSION
+    AVFrame *EL_frame;
+    AVFrame *BL_frame;
+    short *buffer_frame[3];
+    UpsamplInf up_filter_inf;
+    int heightBL;
+    int widthBL;
+#endif
 
 } HEVCSharedContext;
 
@@ -964,11 +972,7 @@ typedef struct HEVCContext {
     int                 disable_au;
     int                 decoder_layer;
     
-//#ifdef SVC_EXTENSION
-    AVFrame *upsampled_frame;
-    short *buffer_frame[3];
-    UpsamplInf up_filter_inf;
-//#endif
+
 } HEVCContext;
 
 enum ScanType {

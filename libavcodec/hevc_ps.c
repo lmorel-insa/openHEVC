@@ -733,12 +733,34 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     }
 
     sps->sps_temporal_mvp_enabled_flag   = get_bits1(gb);
+#if REF_IDX_MFM
+    if(s->HEVCsc->nuh_layer_id > 0)
+        sps->set_mfm_enabled_flag = get_bits1(gb);
+#endif
+
     sps->sps_strong_intra_smoothing_enable_flag = get_bits1(gb);
     sps->vui_parameters_present_flag = get_bits1(gb);
     if (sps->vui_parameters_present_flag)
         decode_vui(s, sps);
+    
+#if SCALED_REF_LAYER_OFFSETS
+    if( s->HEVCsc->nuh_layer_id > 0 )   {
+        sps->scaled_ref_layer_window.left_offset = (get_se_golomb(gb)<<1);
+        sps->scaled_ref_layer_window.top_offset = (get_se_golomb(gb)<<1);
+        sps->scaled_ref_layer_window.right_offset = (get_se_golomb(gb)<<1);
+        sps->scaled_ref_layer_window.bottom_offset = (get_se_golomb(gb)<<1);
+    }
+#endif
+
     sps->sps_extension_flag = get_bits1(gb);
 
+    
+    
+    
+    
+    
+
+    
     // Inferred parameters
 
     sps->log2_ctb_size = sps->log2_min_coding_block_size

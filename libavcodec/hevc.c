@@ -123,6 +123,39 @@ static int pic_arrays_init(HEVCContext *s)
     sc->vertical_bs   = av_mallocz(2 * sc->bs_width * sc->bs_height);
     if (!sc->horizontal_bs || !sc->vertical_bs)
         goto fail;
+    
+    
+#ifdef SVC_EXTENSION
+    if(sc->nuh_layer_id)    {
+        int heightBL = sc->heightBL;
+        int widthBL = sc->widthBL;
+        
+        int heightEL = sc->sps->pic_height_in_luma_samples - sc->sps->scaled_ref_layer_window.bottom_offset - s->HEVCsc->sps->scaled_ref_layer_window.top_offset;
+        int widthEL = sc->sps->pic_width_in_luma_samples   - sc->sps->scaled_ref_layer_window.left_offset   - s->HEVCsc->sps->scaled_ref_layer_window.right_offset;
+        sc->sh.ScalingFactor[sc->nuh_layer_id][0] = av_clip_c(((widthEL  << 8) + (widthBL  >> 1)) / widthBL,  -4096, 4095);
+        sc->sh.ScalingFactor[sc->nuh_layer_id][1] = av_clip_c(((heightEL << 8) + (heightBL >> 1)) / heightBL, -4096, 4095);
+        sc->sh.ScalingPosition[sc->nuh_layer_id][0] = ((widthBL  << 16) + (widthEL  >> 1)) / widthEL;
+        sc->sh.ScalingPosition[sc->nuh_layer_id][1] = ((heightBL << 16) + (heightEL >> 1)) / heightEL;
+        sc->up_filter_inf.addXLum = ( widthEL >> 1 )  / widthEL  + ( 1 << ( 11 ) );
+        sc->up_filter_inf.addYLum = ( heightEL >> 1 )  / heightEL+ ( 1 << ( 11 ) );
+        sc->up_filter_inf.scaleXLum = ( ( widthBL << 16 ) + ( widthEL >> 1 ) ) / widthEL;
+        sc->up_filter_inf.scaleYLum = ( ( heightBL << 16 ) + ( heightEL >> 1 ) ) / heightEL;
+        
+        widthEL  >>= 1;
+        heightEL >>= 1;
+        widthBL  >>= 1;
+        heightBL >>= 1;
+        
+        sc->up_filter_inf.addXCr       =( widthEL >> 1 ) / widthEL + ( 1 << ( 11 ) );
+        sc->up_filter_inf.addYCr       = ( ( ( heightBL ) << ( 14 ) ) + ( heightEL >> 1 ) ) / heightEL+ ( 1 << ( 11 ) );
+        sc->up_filter_inf.scaleXCr     = ( ( widthBL << 16 ) + ( widthEL >> 1 ) ) / widthEL;
+        sc->up_filter_inf.scaleYCr     = ( ( heightBL << 16 ) + ( heightEL >> 1 ) ) / heightEL;
+        
+        sc->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
+        sc->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));
+        sc->buffer_frame[2] = av_malloc((pic_size>>2)*sizeof(short));
+    }
+#endif
     return 0;
 fail:
     pic_arrays_free(s);
@@ -229,6 +262,9 @@ static int hls_slice_header(HEVCContext *s)
     HEVCSharedContext *sc = s->HEVCsc;
     SliceHeader *sh = &sc->sh;
     int slice_address_length = 0;
+#if JCTVC_M0458_INTERLAYER_RPS_SIG
+    int NumILRRefIdx;
+#endif
 
     // initial values
     sh->beta_offset = 0;
@@ -388,7 +424,44 @@ static int hls_slice_header(HEVCContext *s)
             av_log(s->avctx, AV_LOG_ERROR, "No PPS active while decoding slice\n");
             return AVERROR_INVALIDDATA;
         }
-
+#if REF_IDX_FRAMEWORK
+#if JCTVC_M0458_INTERLAYER_RPS_SIG
+        sc->sh.active_num_ILR_ref_idx = 0;
+        NumILRRefIdx = sc->vps->m_numDirectRefLayers[sc->nuh_layer_id];
+        if(sc->nuh_layer_id > 0 && NumILRRefIdx>0) {
+            sc->sh.inter_layer_pred_enabled_flag = get_bits1(gb);
+            if(sc->sh.inter_layer_pred_enabled_flag) {
+                if(NumILRRefIdx>1)  {
+                    int numBits = 1;
+                    while ((1 << numBits) < NumILRRefIdx)   {
+                        numBits++;
+                    }
+                    if( !((HEVCContext*)s->avctx->priv_data)->HEVCsc->vps->max_one_active_ref_layer_flag)
+                        sc->sh.active_num_ILR_ref_idx = get_bits(gb, numBits) + 1;
+                    else
+                        sc->sh.active_num_ILR_ref_idx = 1;
+                    for(i = 0; i < sc->sh.active_num_ILR_ref_idx; i++ ){
+                        sc->sh.inter_layer_pred_layer_idc[i] =  get_bits(gb, numBits);
+                    }
+                }   else    {
+                    sc->sh.active_num_ILR_ref_idx = 1;
+                    sc->sh.inter_layer_pred_layer_idc[0] = 0;
+                }
+            }
+        }
+#else
+        if( sc->layer_id > 0 )
+            sc->sh.active_num_ILR_ref_idx = sc->vps->m_numDirectRefLayers[sc->layer_id];
+#endif
+#endif
+#ifdef SVC_EXTENSION
+        if(sc->nuh_layer_id && sh->first_slice_in_pic_flag){
+            if ((ret = ff_hevc_set_new_ref(s, &sc->EL_frame, sc->poc, 1))< 0)
+                return ret;
+            sc->hevcdsp.upsample_base_layer_frame_sse( sc->EL_frame, sc->BL_frame, sc->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &sc->sps->scaled_ref_layer_window, &sc->up_filter_inf);
+        }
+#endif
+        
         if (sc->sps->sample_adaptive_offset_enabled_flag) {
             sh->slice_sample_adaptive_offset_flag[0] = get_bits1(gb);
             sh->slice_sample_adaptive_offset_flag[2] =
@@ -2428,8 +2501,11 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         } else {
             ctb_addr_ts = hls_slice_data(s);
         }
-        if (ctb_addr_ts >= (sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs))
+        if (ctb_addr_ts >= (sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs))  {
+            if(sc->nuh_layer_id)
+                ff_unref_upsampled_frame(sc);
             sc->is_decoded = 1;
+        }
         if (ctb_addr_ts < 0)
             return ctb_addr_ts;
         break;
