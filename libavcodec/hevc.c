@@ -2316,9 +2316,9 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
             return ret;
         }
         return 0;
-    } else if (ret)
+    } else if (ret != (s->decoder_layer-1) && sc->nal_unit_type != NAL_VPS)
         return 0;
-    
+
     switch (sc->nal_unit_type) {
     case NAL_VPS:
         ff_hevc_decode_nal_vps(s);
@@ -2608,11 +2608,11 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
         *got_output = ret;
         return 0;
     }
-    
+
     if ((ret = decode_nal_units(s, avpkt->data, avpkt->size)) < 0) {
         return ret;
     }
-
+    
     if ((s->HEVCsc->is_decoded && (ret = ff_hevc_find_display(s, data, 0, &poc_display))) < 0) {
         return ret;
     }
@@ -2694,7 +2694,7 @@ static av_cold int hevc_decode_init(AVCodecContext *avctx)
     sc->skipped_bytes_pos = av_malloc_array(sc->skipped_bytes_pos_size, sizeof(*sc->skipped_bytes_pos));
     sc->enable_parallel_tiles = 0;
     s->threads_number = avctx->thread_count;
-
+    s->decoder_layer = 1; 
     if (avctx->extradata_size > 0 && avctx->extradata)
         return decode_nal_units(s, s->avctx->extradata, s->avctx->extradata_size);
 
@@ -2793,6 +2793,8 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { "disable-au", "disable read frame AU by AU", OFFSET(disable_au),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
+    { "layer-id", "set the layer id of the decoder", OFFSET(decoder_layer),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
     { NULL },
 };
 

@@ -43,7 +43,7 @@ int get_next_nal(FILE* inpf, unsigned char* Buf)
     fseek (inpf, - 4 + info2, SEEK_CUR);
     return pos - 4 + info2;
 }
-
+// Decode layer
 static void video_decode_example(const char *filename)
 {
     AVFormatContext *pFormatCtx=NULL;
@@ -66,9 +66,11 @@ static void video_decode_example(const char *filename)
 
     OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers);
     
+    
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags, nb_layers);
     libOpenHevcSetDisableAU(openHevcHandle, disable_au, nb_layers);
-    
+    libOpenHevcSetLayerId(openHevcHandle, nb_layers);
+
     if (!openHevcHandle) {
         fprintf(stderr, "could not open OpenHevc\n");
         exit(1);
@@ -104,7 +106,8 @@ static void video_decode_example(const char *filename)
             got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++, nb_layers);
             
         }
-        if (got_picture>0) {
+       
+        if (got_picture) {
             fflush(stdout);
             if (init == 1 ) {
                 libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo);

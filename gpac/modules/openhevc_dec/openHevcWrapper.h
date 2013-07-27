@@ -54,6 +54,7 @@ void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameIn
 int  libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame *openHevcFrame);
 int  libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame_cpy *openHevcFrame);
 void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val, int nb_layers);
+void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int nb_layers);
 void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val, int nb_layers);
 void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int nb_layers);
 void libOpenHevcFlush(OpenHevc_Handle openHevcHandle);

@@ -962,6 +962,7 @@ typedef struct HEVCContext {
     uint8_t             threads_number;
     int                 decode_checksum_sei;
     int                 disable_au;
+    int                 decoder_layer;
     
 //#ifdef SVC_EXTENSION
     AVFrame *upsampled_frame;
