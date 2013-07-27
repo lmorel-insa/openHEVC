@@ -95,7 +95,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
     }
-    if(nb_layers >1)
+    if(layer_id >1)
         return got_picture1;
     
     return got_picture;
