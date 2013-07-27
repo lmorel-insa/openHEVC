@@ -57,6 +57,9 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers)
         openHevcContext->ecodec  = avcodec_find_decoder(AV_CODEC_ID_SHVC);
         openHevcContext->ec     = avcodec_alloc_context3(openHevcContext->ecodec);
         openHevcContext->epicture = avcodec_alloc_frame();
+        if(openHevcContext->ecodec->capabilities&CODEC_CAP_TRUNCATED)
+            openHevcContext->ec->flags |= CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
+
         if(nb_pthreads)	{
             av_opt_set(openHevcContext->ec, "thread_type", "frame", 0);
             av_opt_set_int(openHevcContext->ec, "threads", nb_pthreads, 0);
@@ -65,27 +68,39 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers)
             fprintf(stderr, "could not open codec\n");
             return NULL;
         }
+        av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", 0, 0);
     }
     return (OpenHevc_Handle) openHevcContext;
 }
-
+int first = 0;
 int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts)
 {
     int got_picture, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     
     int layer_id = ((buff[0]&0x01)<<5) + ((buff[1]&0xF8)>>3);
+    uint8_t * buf;
+    if(!first){
+        buf = av_malloc(au_len);
+        memcpy(buf, buff, au_len);
+    }
     if(!layer_id){
         openHevcContext->avpkt.size = au_len;
         openHevcContext->avpkt.data = buff;
         len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
     }   else {
-   /*     openHevcContext->eavpkt.size = au_len;
+        openHevcContext->eavpkt.size = au_len;
         openHevcContext->eavpkt.data = buff;
-        len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture, &openHevcContext->eavpkt);*/
-        len = 0;
-        got_picture = 0;
+        len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture, &openHevcContext->eavpkt);
+        
     }
+    if(!first){
+        openHevcContext->eavpkt.size = au_len;
+         openHevcContext->eavpkt.data = buf;
+         len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture, &openHevcContext->eavpkt);
+         av_free(buf);
+    }
+    first = 1;
     if (len < 0) {
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
@@ -162,16 +177,22 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
     }
     return 1;
 }
-
-void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val)
+void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val, int nb_layers)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "decode-checksum", val, 0);
+    if(nb_layers >1){
+        av_opt_set_int(openHevcContext->ec->priv_data, "decode-checksum", val, 0);
+    }
+    
 }
-void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val)
+void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val, int nb_layers)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "disable-au", val, 0);
+    if(nb_layers >1){
+        av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", val, 0);
+    }
 }
 void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int nb_layers)
 {

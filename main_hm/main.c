@@ -65,8 +65,8 @@ static void video_decode_example(const char *filename)
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
     OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers);
-    libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
-    libOpenHevcSetDisableAU(openHevcHandle, disable_au);
+    libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags, nb_layers);
+    libOpenHevcSetDisableAU(openHevcHandle, disable_au, nb_layers);
     if (!openHevcHandle) {
         fprintf(stderr, "could not open OpenHevc\n");
         exit(1);
@@ -100,7 +100,7 @@ static void video_decode_example(const char *filename)
             got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++);
             
         }
-        if (got_picture) {
+        if (got_picture>0) {
             fflush(stdout);
             if (init == 1 ) {
                 libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo);
@@ -109,6 +109,7 @@ static void video_decode_example(const char *filename)
                 }
                 if (fout) {
                     int nbData;
+                    
                     libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrameCpy.frameInfo);
                     nbData = openHevcFrameCpy.frameInfo.nWidth * openHevcFrameCpy.frameInfo.nHeight;
                     openHevcFrameCpy.pvY = calloc ( nbData    , sizeof(unsigned char));
@@ -119,8 +120,10 @@ static void video_decode_example(const char *filename)
                 init = 0;
             }
             if (display_flags == DISPLAY_ENABLE) {
+                
                 libOpenHevcGetOutput(openHevcHandle, 1, &openHevcFrame);
                 libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo);
+            
                 SDL_Display((openHevcFrame.frameInfo.nYPitch - openHevcFrame.frameInfo.nWidth)/2, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight,
                         openHevcFrame.pvY, openHevcFrame.pvU, openHevcFrame.pvV);
             }

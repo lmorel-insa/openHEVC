@@ -2303,7 +2303,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
     int ret;
 
     av_log(s->avctx, AV_LOG_DEBUG, "=================\n");
-
+    
     ret = init_get_bits8(gb, nal, length);
     if (ret < 0)
         return ret;
@@ -2568,14 +2568,15 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
             buf += 3;
             length -= 3;
         }
-        nal = extract_rbsp(s, buf, &nal_length, &consumed, length);
 
+        nal = extract_rbsp(s, buf, &nal_length, &consumed, length);
+       
         if (nal == NULL)
             return -1;
 
         buf += consumed;
         length -= consumed;
-
+        
         ret = decode_nal_unit(s, nal, nal_length);
 
         if (ret < 0)
@@ -2599,7 +2600,7 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
     int ret, poc_display;
     HEVCContext *s = avctx->priv_data;
     HEVCSharedContext *sc = s->HEVCsc;
-
+    
     if (!avpkt->size) {
         if ((ret = ff_hevc_find_display(s, data, 1, &poc_display)) < 0)
             return ret;
@@ -2607,10 +2608,11 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
         *got_output = ret;
         return 0;
     }
-
+    
     if ((ret = decode_nal_units(s, avpkt->data, avpkt->size)) < 0) {
         return ret;
     }
+
     if ((s->HEVCsc->is_decoded && (ret = ff_hevc_find_display(s, data, 0, &poc_display))) < 0) {
         return ret;
     }
