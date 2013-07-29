@@ -24,7 +24,7 @@
 #include "hevc.h"
 #include "internal.h"
 //#define TEST_DPB
-static int find_ref_idx(HEVCContext *s, int poc)
+int ff_find_ref_idx(HEVCContext *s, int poc)
 {
     int i;
     HEVCSharedContext *sc = s->HEVCsc;
@@ -102,15 +102,16 @@ static void scale_upsampled_mv_field(HEVCContext *s) {
     HEVCSharedContext *sc = s->HEVCsc;
     int pic_width_in_min_pu = sc->sps->pic_width_in_luma_samples>>sc->sps->log2_min_pu_size;
     int pic_height_in_min_pu = sc->sps->pic_height_in_luma_samples>>sc->sps->log2_min_pu_size;
-    int pic_width_in_min_puBL = ((HEVCContext*)s->avctx->priv_data)->HEVCsc->sps->pic_width_in_luma_samples>> ((HEVCContext*)s->avctx->priv_data)->HEVCsc->sps->log2_min_pu_size;
-    refBL = &((HEVCContext*)s->avctx->priv_data)->HEVCsc->DPB[find_ref_idx(s->avctx->priv_data, s->HEVCsc->poc)];
+    int pic_width_in_min_puBL = s->widthBL >> ((HEVCContext*)s->avctx->priv_data)->HEVCsc->sps->log2_min_pu_size;
+//    refBL = &((HEVCContext*)s->avctx->priv_data)->HEVCsc->DPB[ff_find_ref_idx(s->avctx->priv_data, s->HEVCsc->poc)];
+    refBL = s->BL_frame;
     refEL = &s->HEVCsc->DPB[find_upsample_ref_idx( s,  s->HEVCsc->poc)];
     
     for(list = 0; list < 2; list++) {
         refEL->refPicList[list].numPic = refBL->refPicList[list].numPic;
         for(i=0; i< refBL->refPicList[list].numPic; i++){
             refEL->refPicList[list].list[i] = refBL->refPicList[list].list[i];
-            refEL->refPicList[list].idx[i] = find_ref_idx(s,refBL->refPicList[list].list[i]);
+            refEL->refPicList[list].idx[i] = ff_find_ref_idx(s,refBL->refPicList[list].list[i]);
             refEL->refPicList[list].isLongTerm[i] = refBL->refPicList[list].isLongTerm[i];
         }
         for(i=refBL->refPicList[list].numPic; i< REF_LIST_SIZE; i++)   {
@@ -230,7 +231,7 @@ int ff_hevc_find_next_ref(HEVCContext *s, int poc)
 {
     int i;
     if (!s->HEVCsc->sh.first_slice_in_pic_flag)
-        return find_ref_idx(s, poc);
+        return ff_find_ref_idx(s, poc);
 
     update_refs(s);
 
@@ -488,11 +489,11 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
             for (i = 0; i < rps->num_negative_pics; i ++) {
                 if ( rps->used[i] == 1 ) {
                     refPocList[ST_CURR_BEF].list[j] = sc->poc + rps->delta_poc[i];
-                    refPocList[ST_CURR_BEF].idx[j]  = find_ref_idx(s, refPocList[ST_CURR_BEF].list[j]);
+                    refPocList[ST_CURR_BEF].idx[j]  = ff_find_ref_idx(s, refPocList[ST_CURR_BEF].list[j]);
                     j++;
                 } else {
                     refPocList[ST_FOLL].list[k] = sc->poc + rps->delta_poc[i];
-                    refPocList[ST_FOLL].idx[k]  = find_ref_idx(s, refPocList[ST_FOLL].list[k]);
+                    refPocList[ST_FOLL].idx[k]  = ff_find_ref_idx(s, refPocList[ST_FOLL].list[k]);
                     k++;
                 }
             }
@@ -501,11 +502,11 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
             for (i = rps->num_negative_pics; i < rps->num_delta_pocs; i ++) {
                 if (rps->used[i] == 1) {
                     refPocList[ST_CURR_AFT].list[j] = sc->poc + rps->delta_poc[i];
-                    refPocList[ST_CURR_AFT].idx[j]  = find_ref_idx(s, refPocList[ST_CURR_AFT].list[j]);
+                    refPocList[ST_CURR_AFT].idx[j]  = ff_find_ref_idx(s, refPocList[ST_CURR_AFT].list[j]);
                     j++;
                 } else {
                     refPocList[ST_FOLL].list[k] = sc->poc + rps->delta_poc[i];
-                    refPocList[ST_FOLL].idx[k]  = find_ref_idx(s, refPocList[ST_FOLL].list[k]);
+                    refPocList[ST_FOLL].idx[k]  = ff_find_ref_idx(s, refPocList[ST_FOLL].list[k]);
                     k++;
                 }
             }
@@ -516,11 +517,11 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
                 if (long_rps->delta_poc_msb_present_flag[i])
                     pocLt += sc->poc - long_rps->DeltaPocMsbCycleLt[i] * MaxPicOrderCntLsb - sc->sh.pic_order_cnt_lsb;
                 if (long_rps->UsedByCurrPicLt[i]) {
-                    refPocList[LT_CURR].idx[j]  = find_ref_idx(s, pocLt);
+                    refPocList[LT_CURR].idx[j]  = ff_find_ref_idx(s, pocLt);
                     refPocList[LT_CURR].list[j] = sc->DPB[refPocList[LT_CURR].idx[j]].poc;
                     j++;
                 } else {
-                    refPocList[LT_FOLL].idx[k]  = find_ref_idx(s, pocLt);
+                    refPocList[LT_FOLL].idx[k]  = ff_find_ref_idx(s, pocLt);
                     refPocList[LT_FOLL].list[k] = sc->DPB[refPocList[LT_FOLL].idx[k]].poc;
                     k++;
                 }

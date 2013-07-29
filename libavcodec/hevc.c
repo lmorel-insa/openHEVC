@@ -127,8 +127,8 @@ static int pic_arrays_init(HEVCContext *s)
     
 #ifdef SVC_EXTENSION
     if(sc->nuh_layer_id)    {
-        int heightBL = sc->heightBL;
-        int widthBL = sc->widthBL;
+        int heightBL = s->heightBL;
+        int widthBL = s->widthBL;
         
         int heightEL = sc->sps->pic_height_in_luma_samples - sc->sps->scaled_ref_layer_window.bottom_offset - s->HEVCsc->sps->scaled_ref_layer_window.top_offset;
         int widthEL = sc->sps->pic_width_in_luma_samples   - sc->sps->scaled_ref_layer_window.left_offset   - s->HEVCsc->sps->scaled_ref_layer_window.right_offset;
@@ -456,9 +456,10 @@ static int hls_slice_header(HEVCContext *s)
 #endif
 #ifdef SVC_EXTENSION
         if(sc->nuh_layer_id && sh->first_slice_in_pic_flag){
+            
             if ((ret = ff_hevc_set_new_ref(s, &sc->EL_frame, sc->poc, 1))< 0)
                 return ret;
-            sc->hevcdsp.upsample_base_layer_frame_sse( sc->EL_frame, sc->BL_frame, sc->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &sc->sps->scaled_ref_layer_window, &sc->up_filter_inf);
+            sc->hevcdsp.upsample_base_layer_frame( sc->EL_frame, s->BL_frame->frame, sc->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &sc->sps->scaled_ref_layer_window, &sc->up_filter_inf);
         }
 #endif
         
@@ -2153,6 +2154,7 @@ static int hls_slice_data_wpp(HEVCContext *s, const uint8_t *nal, int length)
     int *arg = av_malloc((sc->sh.num_entry_point_offsets + 1) * sizeof(int));
     int i, j, res = 0;
     int offset;
+
 #ifdef WPP1
     int startheader, cmpt = 0;
 #endif
@@ -2291,7 +2293,6 @@ static int hls_nal_unit(HEVCContext *s)
 {
     GetBitContext *gb = s->HEVClc->gb;
     HEVCSharedContext *sc = s->HEVCsc;
-    int nuh_layer_id;
 
     if (get_bits1(gb) != 0)
         return AVERROR_INVALIDDATA;
@@ -2479,6 +2480,13 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
                 if ((ret = ff_hevc_set_new_ref(s, &sc->sao_frame, sc->poc))< 0)
 #endif
                     return ret;
+#ifdef SVC_EXTENSION
+                else    {
+                    if(sc->nuh_layer_id ==0) {
+                        s->BL_frame = &sc->DPB[ff_find_ref_idx(s, sc->poc)];
+                    }
+                }
+#endif
             } else {
 #endif
 #ifdef SVC_EXTENSION
@@ -2488,7 +2496,11 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 #endif
                     return ret;
 #ifdef FILTER_EN
-            }
+#ifdef SVC_EXTENSION
+                else
+                    s->BL_frame = sc->frame;
+#endif
+                    }
 #endif
         }
         if (!lc->edge_emu_buffer)
@@ -2725,19 +2737,19 @@ static av_cold int hevc_decode_init(AVCodecContext *avctx)
 {
     int i;
     HEVCContext *s = avctx->priv_data;
-
+    
     HEVCSharedContext *sc;
     HEVCLocalContext *lc;
-
+    
     s->avctx = avctx;
     s->HEVCsc = av_mallocz(sizeof(HEVCSharedContext));
     s->HEVClc = av_mallocz(sizeof(HEVCLocalContext));
+    s->BL_frame = 0;
     memset(&s->HEVCsc->sh, 0, sizeof(s->HEVCsc->sh));
-
+    
     lc = s->HEVClcList[0] = s->HEVClc;
     sc = s->HEVCsc;
     s->sList[0] = s;
-
     lc->BufferMC = av_malloc((MAX_PB_SIZE + 7) * MAX_PB_SIZE * sizeof(uint16_t));
     sc->tmp_frame = av_frame_alloc();
     sc->cabac_state = av_malloc(HEVC_CONTEXTS);
@@ -2871,13 +2883,48 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { "layer-id", "set the layer id of the decoder", OFFSET(decoder_layer),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
+#ifdef SVC_EXTENSION
+    { "bl-height", "set the base layer height", OFFSET(heightBL),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 5000, PAR },
+    { "bl-width", "set the base layer width", OFFSET(widthBL),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1000000, PAR },
+    { "rbl-picture", "set the base layer picture", OFFSET(BL_frame),
+        AV_OPT_TYPE_RBINARY, {.i64 = 0}, 0, 1000000, PAR },
+#endif
     { NULL },
 };
+
+static const AVOption options1[] = {
+    { "decode-checksum", "decode picture checksum SEI message", OFFSET(decode_checksum_sei),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
+    { "disable-au", "disable read frame AU by AU", OFFSET(disable_au),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
+    { "layer-id", "set the layer id of the decoder", OFFSET(decoder_layer),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
+#ifdef SVC_EXTENSION
+    { "bl-height", "set the base layer height", OFFSET(heightBL),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 5000, PAR },
+    { "bl-width", "set the base layer width", OFFSET(widthBL),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1000000, PAR },
+    { "wbl-picture", "set the base layer picture", OFFSET(BL_frame),
+        AV_OPT_TYPE_BINARY, {.i64 = 0}, 0, 1000000, PAR },
+#endif
+    { NULL },
+};
+
+
 
 static const AVClass hevc_decoder_class = {
     .class_name = "HEVC decoder",
     .item_name  = av_default_item_name,
     .option     = options,
+    .version    = LIBAVUTIL_VERSION_INT,
+};
+
+static const AVClass hevc_decoder_class1 = {
+    .class_name = "HEVC decoder",
+    .item_name  = av_default_item_name,
+    .option     = options1,
     .version    = LIBAVUTIL_VERSION_INT,
 };
 
@@ -2900,7 +2947,7 @@ AVCodec ff_shvc_decoder = {
     .type           = AVMEDIA_TYPE_VIDEO,
     .id             = AV_CODEC_ID_SHVC,
     .priv_data_size = sizeof(HEVCContext),
-    .priv_class     = &hevc_decoder_class,
+    .priv_class     = &hevc_decoder_class1,
     .init           = hevc_decode_init,
     .close          = hevc_decode_free,
     .decode         = hevc_decode_frame,

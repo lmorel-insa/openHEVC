@@ -303,6 +303,25 @@ int av_opt_set_bin(void *obj, const char *name, const uint8_t *val, int len, int
     return 0;
 }
 
+int av_opt_set_void(void *obj, const char *name, const void *in_val, int len, int search_flags)
+{
+    void *target_obj;
+    const AVOption *o = av_opt_find2(obj, name, NULL, 0, search_flags, &target_obj);
+    void **dst;
+    
+    if (!o || !target_obj)
+        return AVERROR_OPTION_NOT_FOUND;
+    
+    if (o->type != AV_OPT_TYPE_BINARY)
+        return AVERROR(EINVAL);
+ 
+    dst = (uint8_t **)(((uint8_t *)target_obj) + o->offset);
+    av_freep(dst);
+    *dst = av_malloc(len);
+    memcpy(*dst, in_val, len);
+    return 0;
+}
+
 int av_opt_get(void *obj, const char *name, int search_flags, uint8_t **out_val)
 {
     void *dst, *target_obj;
@@ -417,6 +436,21 @@ int av_opt_flag_is_set(void *obj, const char *field_name, const char *flag_name)
         av_opt_get_int(obj, field_name, 0, &res) < 0)
         return 0;
     return res & flag->default_val.i64;
+}
+
+int av_opt_get_void(void *obj, const char *name, void *out_val, int len,  int search_flags)
+{
+    void *target_obj;
+    const AVOption *o = av_opt_find2(obj, name, NULL, 0, search_flags, &target_obj);
+    uint8_t **src;
+    if (!o || !target_obj)
+        return AVERROR_OPTION_NOT_FOUND;
+    
+    if (o->type != AV_OPT_TYPE_RBINARY)
+        return AVERROR(EINVAL);
+    src = (uint8_t **)(((uint8_t *)target_obj) + o->offset);
+    memcpy(out_val, *src, len);
+    return 0;
 }
 
 static void opt_list(void *obj, void *av_log_obj, const char *unit,

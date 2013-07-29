@@ -135,7 +135,7 @@ void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth, const int pcm_d
                     c->dequant[2] = ff_hevc_dequant16x16_sse4;
                     c->dequant[3] = ff_hevc_dequant32x32_sse4;
                     
-                    c->    upsample_base_layer_frame_sse;
+                    c->upsample_base_layer_frame = ff_upsample_base_layer_frame_sse;
 
                     
                 }

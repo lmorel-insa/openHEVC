@@ -32,6 +32,7 @@
 #include "hevcpred.h"
 #include "hevcdsp.h"
 
+
 #define MAX_DPB_SIZE 16 // A.4.1
 #define MAX_NB_THREADS 16
 
@@ -55,7 +56,7 @@
 #endif
 #endif
 #endif
-
+#include "hevc_frame.h"
 #ifdef VPS_EXTENSION
 #define MAX_VPS_NUM_SCALABILITY_TYPES       16
 #define MAX_VPS_LAYER_ID_PLUS1              MAX_LAYERS
@@ -133,13 +134,14 @@ typedef struct LongTermRPS {
 #define ST_FOLL      2
 #define LT_CURR      3
 #define LT_FOLL      4
-
+/*
 typedef struct RefPicList {
     int list[16];
     int idx[16];
     int isLongTerm[16];
     int numPic;
 } RefPicList;
+*/
 
 /**
  * 7.4.2.1
@@ -722,18 +724,19 @@ enum IntraPredMode {
     INTRA_ANGULAR_33,
     INTRA_ANGULAR_34
 };
-
+/*
 typedef struct Mv {
     int16_t x;     ///< horizontal component of motion vector
     int16_t y;     ///< vertical component of motion vector
 } Mv;
-
-typedef struct MvField {
+*/
+/*typedef struct MvField {
       Mv  mv[2];
       int8_t ref_idx[2];
       int8_t pred_flag[2];
       uint8_t is_intra;
 } MvField;
+*/
 
 // MERGE
 #define MRG_MAX_NUM_CANDS     5
@@ -818,25 +821,21 @@ typedef struct UpsamplInf {
 #define HEVC_FRAME_FLAG_OUTPUT    (1 << 0)
 #define HEVC_FRAME_FLAG_SHORT_REF (1 << 1)
 
-typedef struct HEVCFrame {
+/*typedef struct HEVCFrame {
     AVFrame *frame;
     int poc;
     MvField *tab_mvf;
     RefPicList refPicList[2];
-    /**
-     * A combination of HEVC_FRAME_FLAG_*
-     */
+ 
     uint8_t flags;
 
-    /**
-     * A sequence counter, so that old frames are output first
-     * after a POC reset
-     */
+ 
     uint16_t sequence;
 #ifdef SVC_EXTENSION
     uint16_t up_sample_base;
 #endif
 } HEVCFrame;
+*/
 typedef struct Filter_data{
 	int x;
 	int y;
@@ -947,12 +946,9 @@ typedef struct HEVCSharedContext {
     int ERROR;
 #ifdef SVC_EXTENSION
     AVFrame *EL_frame;
-    AVFrame *BL_frame;
     short *buffer_frame[3];
     UpsamplInf up_filter_inf;
-    int heightBL;
-    int widthBL;
-#endif
+  #endif
 
 } HEVCSharedContext;
 
@@ -971,6 +967,11 @@ typedef struct HEVCContext {
     int                 decode_checksum_sei;
     int                 disable_au;
     int                 decoder_layer;
+#ifdef SVC_EXTENSION
+    HEVCFrame *BL_frame;
+    int heightBL;
+    int widthBL;
+#endif
     
 
 } HEVCContext;
@@ -1070,5 +1071,6 @@ void ff_hevc_deblocking_filter(HEVCContext *s);
 void ff_hevc_sao_filter(HEVCContext *s);
 void hls_filter(HEVCContext *s, int x, int y);
 void hls_filters(HEVCContext *s, int x_ctb, int y_ctb, int ctb_size);
+int ff_find_ref_idx(HEVCContext *s, int poc);
 
 #endif // AVCODEC_HEVC_H

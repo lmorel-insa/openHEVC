@@ -159,7 +159,8 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth, int pcm_deblock)
     hevcdsp->hevc_h_loop_filter_luma = FUNC(hevc_h_loop_filter_luma, depth);\
     hevcdsp->hevc_v_loop_filter_luma = FUNC(hevc_v_loop_filter_luma, depth);\
     hevcdsp->hevc_h_loop_filter_chroma = FUNC(hevc_h_loop_filter_chroma, depth); \
-    hevcdsp->hevc_v_loop_filter_chroma = FUNC(hevc_v_loop_filter_chroma, depth);
+    hevcdsp->hevc_v_loop_filter_chroma = FUNC(hevc_v_loop_filter_chroma, depth); \
+    hevcdsp->upsample_base_layer_frame = FUNC(upsample_base_layer_frame, depth);
 #endif
 
     switch (bit_depth) {
