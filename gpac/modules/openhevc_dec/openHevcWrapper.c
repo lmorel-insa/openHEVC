@@ -80,19 +80,22 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     
     int layer_id = ((buff[0]&0x01)<<5) + ((buff[1]&0xF8)>>3);
     
+
     openHevcContext->avpkt.size = au_len;
     openHevcContext->avpkt.data = buff;
     len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
     
     if(nb_layers>1) {
-        void* sp = av_malloc(sizeof(HEVCFrame));
+        int out_value;
         av_opt_set_int(openHevcContext->ec->priv_data, "bl-height",openHevcContext->c->height , 0);
         av_opt_set_int(openHevcContext->ec->priv_data, "bl-width",openHevcContext->c->width , 0);
-        
-        av_opt_get_void(openHevcContext->c->priv_data, "rbl-picture", sp, sizeof(HEVCFrame),  0);
-        
-        av_opt_set_void(openHevcContext->ec->priv_data, "wbl-picture", sp, sizeof(HEVCFrame), 0);
-        av_free(sp);
+        av_opt_get_int(openHevcContext->c->priv_data, "is-decoded", 0, &out_value);
+        if(out_value){
+            void* sp = av_malloc(sizeof(HEVCFrame));
+            av_opt_get_void(openHevcContext->c->priv_data, "rbl-picture", sp, sizeof(HEVCFrame),  0);
+            av_opt_set_void(openHevcContext->ec->priv_data, "wbl-picture", sp, sizeof(HEVCFrame), 0);
+            av_free(sp);
+        }
         openHevcContext->eavpkt.size = au_len;
         openHevcContext->eavpkt.data = buff;
         len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture1, &openHevcContext->eavpkt);

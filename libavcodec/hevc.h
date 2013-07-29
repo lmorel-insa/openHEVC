@@ -904,7 +904,7 @@ typedef struct HEVCSharedContext {
     uint8_t is_md5;
     int * ctb_entry_count;
     int coding_tree_count;
-    int is_decoded;
+    
     int SliceAddrRs;
     int64_t pts;
     
@@ -967,6 +967,7 @@ typedef struct HEVCContext {
     int                 decode_checksum_sei;
     int                 disable_au;
     int                 decoder_layer;
+    int                 is_decoded;
 #ifdef SVC_EXTENSION
     HEVCFrame *BL_frame;
     int heightBL;

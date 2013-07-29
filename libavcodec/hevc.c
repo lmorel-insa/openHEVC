@@ -2392,7 +2392,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         return 0;
     } else if (ret != (s->decoder_layer-1) && sc->nal_unit_type != NAL_VPS)
         return 0;
-
+ 
     switch (sc->nal_unit_type) {
     case NAL_VPS:
         ff_hevc_decode_nal_vps(s);
@@ -2444,7 +2444,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         }
 
         if (sc->nal_unit_type == NAL_RASL_R && sc->poc <= sc->max_ra) {
-            sc->is_decoded = 0;
+            s->is_decoded = 0;
             break;
         } else {
             if (sc->nal_unit_type == NAL_RASL_R && sc->poc > sc->max_ra)
@@ -2459,7 +2459,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
             memset(sc->cbf_luma, 0 , pic_width_in_min_pu * pic_height_in_min_pu);
             memset(sc->is_pcm, 0 , pic_width_in_min_pu * pic_height_in_min_pu);
             lc->start_of_tiles_x = 0;
-            sc->is_decoded = 0;
+            s->is_decoded = 0;
             if (sc->pps->tiles_enabled_flag )
 	            lc->end_of_tiles_x   = sc->pps->column_width[0]<< sc->sps->log2_ctb_size;
         }
@@ -2503,6 +2503,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
                     }
 #endif
         }
+            
         if (!lc->edge_emu_buffer)
             lc->edge_emu_buffer = av_malloc((MAX_PB_SIZE + 7) * sc->frame->linesize[0]);
         if (!lc->edge_emu_buffer)
@@ -2516,7 +2517,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         if (ctb_addr_ts >= (sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs))  {
             if(sc->nuh_layer_id)
                 ff_unref_upsampled_frame(sc);
-            sc->is_decoded = 1;
+            s->is_decoded = 1;
         }
         if (ctb_addr_ts < 0)
             return ctb_addr_ts;
@@ -2701,12 +2702,12 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
         return ret;
     }
     
-    if ((s->HEVCsc->is_decoded && (ret = ff_hevc_find_display(s, data, 0, &poc_display))) < 0) {
+    if ((s->is_decoded && (ret = ff_hevc_find_display(s, data, 0, &poc_display))) < 0) {
         return ret;
     }
 
     *got_output = ret;
-    if (s->decode_checksum_sei && s->HEVCsc->is_decoded) {
+    if (s->decode_checksum_sei && s->is_decoded) {
         AVFrame *frame = sc->ref->frame;
         int cIdx;
         uint8_t md5[3][16];
@@ -2782,7 +2783,8 @@ static av_cold int hevc_decode_init(AVCodecContext *avctx)
     sc->skipped_bytes_pos = av_malloc_array(sc->skipped_bytes_pos_size, sizeof(*sc->skipped_bytes_pos));
     sc->enable_parallel_tiles = 0;
     s->threads_number = avctx->thread_count;
-    s->decoder_layer = 1; 
+    s->decoder_layer = 1;
+    s->is_decoded = 0;
     if (avctx->extradata_size > 0 && avctx->extradata)
         return decode_nal_units(s, s->avctx->extradata, s->avctx->extradata_size);
 
@@ -2883,6 +2885,8 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { "layer-id", "set the layer id of the decoder", OFFSET(decoder_layer),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
+    { "is-decoded", "decode picture", OFFSET(is_decoded),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
 #ifdef SVC_EXTENSION
     { "bl-height", "set the base layer height", OFFSET(heightBL),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 5000, PAR },
