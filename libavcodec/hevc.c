@@ -2898,7 +2898,7 @@ static const AVOption options[] = {
     { NULL },
 };
 
-static const AVOption options1[] = {
+static const AVOption options_shvc[] = {
     { "decode-checksum", "decode picture checksum SEI message", OFFSET(decode_checksum_sei),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { "disable-au", "disable read frame AU by AU", OFFSET(disable_au),
@@ -2925,10 +2925,10 @@ static const AVClass hevc_decoder_class = {
     .version    = LIBAVUTIL_VERSION_INT,
 };
 
-static const AVClass hevc_decoder_class1 = {
-    .class_name = "HEVC decoder",
+static const AVClass hevc_decoder_class_shvc = {
+    .class_name = "SHVC decoder",
     .item_name  = av_default_item_name,
-    .option     = options1,
+    .option     = options_shvc,
     .version    = LIBAVUTIL_VERSION_INT,
 };
 
@@ -2951,7 +2951,7 @@ AVCodec ff_shvc_decoder = {
     .type           = AVMEDIA_TYPE_VIDEO,
     .id             = AV_CODEC_ID_SHVC,
     .priv_data_size = sizeof(HEVCContext),
-    .priv_class     = &hevc_decoder_class1,
+    .priv_class     = &hevc_decoder_class_shvc,
     .init           = hevc_decode_init,
     .close          = hevc_decode_free,
     .decode         = hevc_decode_frame,
