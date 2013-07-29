@@ -44,6 +44,13 @@
 #define MD5_DISABLE 0
 #define MD5_ENABLE  1
 
+#define AU_PARSER_DISABLE 1
+#define AU_PARSER_ENABLE  0
+
+#define FRAME_BASED_DISABLE 0
+#define FRAME_BASED_ENABLE  1
+
+
 // input file
 char *input_file;
 
@@ -51,6 +58,7 @@ char *input_file;
 char display_flags;
 int check_md5_flags;
 int disable_au;
+int enable_frame_based; 
 // Activate multi-threading if possible
 int nb_pthreads;
 int nb_layers;

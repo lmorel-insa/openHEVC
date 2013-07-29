@@ -18,7 +18,7 @@ typedef struct OpenHevcWrapperContext {
     AVPacket eavpkt;
 } OpenHevcWrapperContext;
 
-OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers)
+OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame_based)
 {
     /* register all the codecs */
     avcodec_register_all();
@@ -44,7 +44,10 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers)
 
     /* open it */
     if(nb_pthreads)	{
-        av_opt_set(openHevcContext->c, "thread_type", "frame", 0);
+        if(enable_frame_based)
+            av_opt_set(openHevcContext->c, "thread_type", "frame", 0);
+        else
+            av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
         av_opt_set_int(openHevcContext->c, "threads", nb_pthreads, 0);
     }
     if (avcodec_open2(openHevcContext->c, openHevcContext->codec, NULL) < 0) {
@@ -62,7 +65,10 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers)
             openHevcContext->ec->flags |= CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
 
         if(nb_pthreads)	{
-            av_opt_set(openHevcContext->ec, "thread_type", "frame", 0);
+            if(enable_frame_based)
+                av_opt_set(openHevcContext->ec, "thread_type", "frame", 0);
+            else
+                av_opt_set(openHevcContext->ec, "thread_type", "slice", 0);
             av_opt_set_int(openHevcContext->ec, "threads", nb_pthreads, 0);
         }
         if (avcodec_open2(openHevcContext->ec, openHevcContext->ecodec, NULL) < 0) {

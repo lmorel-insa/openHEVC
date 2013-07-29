@@ -64,7 +64,7 @@ static void video_decode_example(const char *filename)
     OpenHevc_Frame openHevcFrame;
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
-    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers);
+    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers, enable_frame_based);
     
     
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags, nb_layers);
