@@ -303,22 +303,32 @@ int av_opt_set_bin(void *obj, const char *name, const uint8_t *val, int len, int
     return 0;
 }
 
-int av_opt_set_void(void *obj, const char *name, const void *in_val, int len, int search_flags)
+int av_opt_set_void(void *obj, const char *name, const void *val, int len, int search_flags)
 {
     void *target_obj;
     const AVOption *o = av_opt_find2(obj, name, NULL, 0, search_flags, &target_obj);
-    void **dst;
+    uint8_t *ptr;
+    uint8_t **dst;
+    
     
     if (!o || !target_obj)
         return AVERROR_OPTION_NOT_FOUND;
     
     if (o->type != AV_OPT_TYPE_BINARY)
         return AVERROR(EINVAL);
- 
+    
+    ptr = av_malloc(len);
+    if (!ptr)
+        return AVERROR(ENOMEM);
+    
     dst = (uint8_t **)(((uint8_t *)target_obj) + o->offset);
-    av_freep(dst);
-    *dst = av_malloc(len);
-    memcpy(*dst, in_val, len);
+    
+    
+    av_free(*dst);
+    *dst = ptr;
+    
+    memcpy(ptr, val, len);
+    
     return 0;
 }
 
