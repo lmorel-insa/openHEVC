@@ -2774,7 +2774,10 @@ static av_cold int hevc_decode_init(AVCodecContext *avctx)
     sc->skipped_bytes_pos_size = 1024; // initial buffer size
     sc->skipped_bytes_pos = av_malloc_array(sc->skipped_bytes_pos_size, sizeof(*sc->skipped_bytes_pos));
     sc->enable_parallel_tiles = 0;
-    s->threads_number = avctx->thread_count;
+    if(avctx->active_thread_type & FF_THREAD_SLICE)
+        s->threads_number = avctx->thread_count;
+    else
+        s->threads_number = 1;
     s->decoder_layer = 1;
     s->is_decoded = 0;
     if (avctx->extradata_size > 0 && avctx->extradata)
