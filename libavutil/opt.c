@@ -375,7 +375,6 @@ static int get_number(void *obj, const char *name, double *num, int *den, int64_
     const AVOption *o = av_opt_find2(obj, name, NULL, 0, search_flags, &target_obj);
     if (!o || !target_obj)
         goto error;
-
     dst = ((uint8_t*)target_obj) + o->offset;
 
     return read_number(o, dst, num, den, intnum);

@@ -84,7 +84,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     int got_picture, got_picture1, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     
-    int layer_id = ((buff[0]&0x01)<<5) + ((buff[1]&0xF8)>>3);
+ //   int layer_id = ((buff[0]&0x01)<<5) + ((buff[1]&0xF8)>>3);
     
 
     openHevcContext->avpkt.size = au_len;

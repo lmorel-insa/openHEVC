@@ -54,7 +54,7 @@ void print_usage() {
     printf("     -a : disable AU\n");
     printf("     -f : enable frame based multi-threading \n");
     printf("     -p <number of threads> \n");
-    printf("     -l <number of layers> \n");
+    printf("     -l <number of layers to decode 1:2> \n");
 }
 
 /*
