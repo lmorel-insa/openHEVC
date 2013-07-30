@@ -1040,7 +1040,6 @@ int ff_thread_init(AVCodecContext *avctx)
 #endif
 
     validate_thread_parameters(avctx);
-
     if (avctx->active_thread_type&FF_THREAD_SLICE)
         return thread_init(avctx);
     else if (avctx->active_thread_type&FF_THREAD_FRAME)

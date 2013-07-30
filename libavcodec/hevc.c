@@ -2384,7 +2384,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         return 0;
     } else if (ret != (s->decoder_layer-1) && sc->nal_unit_type != NAL_VPS)
         return 0;
- 
+
     switch (sc->nal_unit_type) {
     case NAL_VPS:
         ff_hevc_decode_nal_vps(s);
@@ -2881,7 +2881,7 @@ static const AVOption options[] = {
     { "layer-id", "set the layer id of the decoder", OFFSET(decoder_layer),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
     { "is-decoded", "decode picture", OFFSET(is_decoded),
-        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
 #ifdef SVC_EXTENSION
     { "bl-height", "set the base layer height", OFFSET(heightBL),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 5000, PAR },

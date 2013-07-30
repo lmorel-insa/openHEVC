@@ -48,7 +48,6 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
             av_opt_set(openHevcContext->c, "thread_type", "frame", 0);
         else
             av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
-        
         av_opt_set_int(openHevcContext->c, "threads", nb_pthreads, 0);
     }
     if (avcodec_open2(openHevcContext->c, openHevcContext->codec, NULL) < 0) {
@@ -70,7 +69,6 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
                 av_opt_set(openHevcContext->ec, "thread_type", "frame", 0);
             else
                 av_opt_set(openHevcContext->ec, "thread_type", "slice", 0);
-        
             av_opt_set_int(openHevcContext->ec, "threads", nb_pthreads, 0);
         }
         if (avcodec_open2(openHevcContext->ec, openHevcContext->ecodec, NULL) < 0) {
@@ -86,7 +84,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     int got_picture, got_picture1, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     
- //   int layer_id = ((buff[0]&0x01)<<5) + ((buff[1]&0xF8)>>3);
+    int layer_id = ((buff[0]&0x01)<<5) + ((buff[1]&0xF8)>>3);
     
 
     openHevcContext->avpkt.size = au_len;

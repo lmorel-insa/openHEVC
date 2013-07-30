@@ -320,11 +320,12 @@ int av_opt_set_void(void *obj, const char *name, const void *val, int len, int s
     ptr = av_malloc(len);
     if (!ptr)
         return AVERROR(ENOMEM);
-    
+
     dst = (uint8_t **)(((uint8_t *)target_obj) + o->offset);
     
-    
+
     av_free(*dst);
+    
     *dst = ptr;
     
     memcpy(ptr, val, len);
