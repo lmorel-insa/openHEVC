@@ -592,6 +592,7 @@ int ff_thread_decode_frame(AVCodecContext *avctx,
      */
 
     p = &fctx->threads[fctx->next_decoding];
+    printf("fctx->next_decoding %d \n", fctx->next_decoding);
     err = update_context_from_user(p->avctx, avctx);
     if (err) return err;
     err = submit_packet(p, avpkt);
