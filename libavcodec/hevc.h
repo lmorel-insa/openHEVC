@@ -953,7 +953,7 @@ typedef struct HEVCSharedContext {
 } HEVCSharedContext;
 
 typedef struct HEVCContext {
-    AVClass *c;  // needed by private avoptions
+    AVClass             *c;  // needed by private avoptions
     AVCodecContext      *avctx;
 
     struct HEVCContext  *sList[MAX_NB_THREADS];
@@ -989,11 +989,13 @@ int ff_hevc_decode_nal_sps(HEVCContext *s);
 int ff_hevc_decode_nal_pps(HEVCContext *s);
 int ff_hevc_decode_nal_sei(HEVCContext *s);
 
-void ff_unref_upsampled_frame(HEVCSharedContext *s);
+void ff_unref_upsampled_frame(HEVCContext *s);
 void ff_hevc_clear_refs(HEVCContext *s);
 void ff_hevc_clean_refs(HEVCContext *s);
 int ff_hevc_add_ref(HEVCContext *s, AVFrame *frame, int poc);
 void ff_hevc_compute_poc(HEVCContext *s, int poc_lsb);
+void ff_hevc_free_refPicListTab(HEVCContext *s, HEVCFrame *ref);
+RefPicList* ff_hevc_get_ref_list(HEVCSharedContext *sc, int short_ref_idx, int x0, int y0);
 void ff_hevc_set_ref_poc_list(HEVCContext *s);
 
 void ff_hevc_save_states(HEVCContext *s, int ctb_addr_ts);

@@ -94,12 +94,12 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     if(nb_layers>1) {
         int out_value;
         av_opt_set_int(openHevcContext->ec->priv_data, "bl-height",openHevcContext->c->height , 0);
-        av_opt_set_int(openHevcContext->ec->priv_data, "bl-width",openHevcContext->c->width , 0);
+        av_opt_set_int(openHevcContext->ec->priv_data, "bl-width",openHevcContext->c->width   , 0);
         av_opt_get_int(openHevcContext->c->priv_data, "is-decoded", 0, &out_value);
-        if(out_value){
+        if(out_value)   {
             void* sp = av_malloc(sizeof(HEVCFrame));
-            av_opt_get_void(openHevcContext->c->priv_data, "rbl-picture", sp, sizeof(HEVCFrame),  0);
-            av_opt_set_void(openHevcContext->ec->priv_data, "wbl-picture", sp, sizeof(HEVCFrame), 0);
+            av_opt_get_void(openHevcContext->c->priv_data,  "rbl-picture", sp, sizeof(HEVCFrame),  0);
+            av_opt_set_void(openHevcContext->ec->priv_data, "wbl-picture", sp, sizeof(HEVCFrame),  0);
             av_free(sp);
         }
         openHevcContext->eavpkt.size = au_len;

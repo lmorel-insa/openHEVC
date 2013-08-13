@@ -31,7 +31,7 @@ int ff_find_ref_idx(HEVCContext *s, int poc)
     int LtMask = (1 << sc->sps->log2_max_poc_lsb) - 1;
     for (i = 0; i < FF_ARRAY_ELEMS(sc->DPB); i++) {
         HEVCFrame *ref = &sc->DPB[i];
-        if (ref->frame->buf[0] && (ref->sequence == sc->seq_decode)) {
+        if (ref->frame->buf[0] && (ref->sequence == sc->seq_decode) && (!ref->up_sample_base)) {
             if ((ref->flags & HEVC_FRAME_FLAG_SHORT_REF) != 0 && ref->poc == poc)
                 return i;
             if ((ref->flags & HEVC_FRAME_FLAG_SHORT_REF) != 0 && (ref->poc & LtMask) == poc)
@@ -59,32 +59,60 @@ static int find_upsample_ref_idx(HEVCContext *s, int poc)
     return 0;
 }
 
-void ff_unref_upsampled_frame(HEVCSharedContext *s){
+void ff_unref_upsampled_frame(HEVCContext *s){
 	int i;
-    for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
-        HEVCFrame *ref = &s->DPB[i];
-        if(ref->frame->buf[0] && ref->poc == s->poc && ref->up_sample_base){
+    HEVCSharedContext *sc = s->HEVCsc;
+    for (i = 0; i < FF_ARRAY_ELEMS(sc->DPB); i++) {
+        HEVCFrame *ref = &sc->DPB[i];
+        if(ref->frame->buf[0] && ref->poc == sc->poc && ref->up_sample_base){
             av_frame_unref(ref->frame);
             ref->flags = 0;
-            ref->refPicList[0].numPic = 0;
-            ref->refPicList[1].numPic = 0;
+            ff_hevc_free_refPicListTab(s, ref);
         }
     }
 }
 #endif
 
+static void malloc_refPicListTab_index(HEVCContext *s, int index)
+{
+    int i;
+    HEVCSharedContext *sc = s->HEVCsc;
+    HEVCFrame *ref  = &sc->DPB[index];
+    int ctb_count   = sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs;
+    int ctb_addr_ts = sc->pps->ctb_addr_rs_to_ts[sc->sh.slice_address];
+    ref->refPicListTab[ctb_addr_ts] = av_mallocz(sizeof(RefPicListTab));
+
+    for (i = ctb_addr_ts; i < ctb_count-1; i++)
+        ref->refPicListTab[i+1] = ref->refPicListTab[i];
+    ref->refPicList = (RefPicList*) ref->refPicListTab[ctb_addr_ts];
+}
 
 #if REF_IDX_FRAMEWORK
 static void init_upsampled_mv_fields(HEVCContext *s) {
     int i, list;
     int pic_width_in_min_pu = s->HEVCsc->sps->pic_width_in_luma_samples >> s->HEVCsc->sps->log2_min_pu_size;
     int pic_height_in_min_pu = s->HEVCsc->sps->pic_height_in_luma_samples >> s->HEVCsc->sps->log2_min_pu_size;
+    
+    malloc_refPicListTab_index(s, find_upsample_ref_idx( s,  s->HEVCsc->poc));
     HEVCFrame *refEL = &s->HEVCsc->DPB[find_upsample_ref_idx( s,  s->HEVCsc->poc)];
+    
+    RefPicList   *refPicList = refEL->refPicList;
+    
     RefPicList   *refPocList = s->HEVCsc->sh.refPocList;
     refPocList[ST_CURR_BEF].numPic = 0;
     refPocList[ST_CURR_AFT].numPic = 0;
     refPocList[LT_CURR].numPic = 0;
     
+    
+    for(list = 0; list < 2; list++) {
+        refPicList[list].numPic = 0; //refBL->refPicList[list].numPic;
+        for(i=0; i< REF_LIST_SIZE; i++)   {
+            refPicList[list].list[i] = 0; //refBL->refPicList[list].list[i];
+            refPicList[list].idx[i] = 0; //refBL->refPicList[list].idx[i];
+            refPicList[list].isLongTerm[i] = 0; //refBL->refPicList[list].isLongTerm[i];
+        }
+    }
+
     for(i = 0; i < pic_width_in_min_pu  * pic_height_in_min_pu; i++) {
         refEL->tab_mvf[i].is_intra = 1;
         for(list = 0; list < 2; list++){
@@ -103,8 +131,9 @@ static void scale_upsampled_mv_field(HEVCContext *s) {
     int pic_width_in_min_pu = sc->sps->pic_width_in_luma_samples>>sc->sps->log2_min_pu_size;
     int pic_height_in_min_pu = sc->sps->pic_height_in_luma_samples>>sc->sps->log2_min_pu_size;
     int pic_width_in_min_puBL = s->widthBL >> ((HEVCContext*)s->avctx->priv_data)->HEVCsc->sps->log2_min_pu_size;
-//    refBL = &((HEVCContext*)s->avctx->priv_data)->HEVCsc->DPB[ff_find_ref_idx(s->avctx->priv_data, s->HEVCsc->poc)];
+
     refBL = s->BL_frame;
+    malloc_refPicListTab_index(s, find_upsample_ref_idx( s,  s->HEVCsc->poc));
     refEL = &s->HEVCsc->DPB[find_upsample_ref_idx( s,  s->HEVCsc->poc)];
     
     for(list = 0; list < 2; list++) {
@@ -167,11 +196,48 @@ static void scale_upsampled_mv_field(HEVCContext *s) {
                 }
         }
     }
-    // exit(-1);
 }
 #endif
 
+void ff_hevc_free_refPicListTab(HEVCContext *s, HEVCFrame *ref)
+{
+    int j;
+    HEVCSharedContext *sc = s->HEVCsc;
+    int ctb_count = sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs;
+    for (j = ctb_count-1; j > 0; j--) {
+        if (ref->refPicListTab[j] != ref->refPicListTab[j-1])
+            av_free(ref->refPicListTab[j]);
+            ref->refPicListTab[j] = NULL;
+        }
+        if (ref->refPicListTab[0] != NULL) {
+            av_free(ref->refPicListTab[0]);
+            ref->refPicListTab[0] = NULL;
+        }
+        ref->refPicList = NULL;
+}
 
+static void malloc_refPicListTab(HEVCContext *s)
+{
+    int i;
+    HEVCSharedContext *sc = s->HEVCsc;
+    HEVCFrame *ref  = &sc->DPB[ff_hevc_find_next_ref(s, sc->poc)];
+    int ctb_count   = sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs;
+    int ctb_addr_ts = sc->pps->ctb_addr_rs_to_ts[sc->sh.slice_address];
+    ref->refPicListTab[ctb_addr_ts] = av_mallocz(sizeof(RefPicListTab));
+    for (i = ctb_addr_ts; i < ctb_count-1; i++)
+        ref->refPicListTab[i+1] = ref->refPicListTab[i];
+        ref->refPicList = (RefPicList*) ref->refPicListTab[ctb_addr_ts];
+}
+RefPicList* ff_hevc_get_ref_list(HEVCSharedContext *sc, int short_ref_idx, int x0, int y0)
+{
+    HEVCFrame *ref   = &sc->DPB[short_ref_idx];
+    int x_cb         = x0 >> sc->sps->log2_ctb_size;
+    int y_cb         = y0 >> sc->sps->log2_ctb_size;
+    int pic_width_cb = (sc->sps->pic_width_in_luma_samples + (1<<sc->sps->log2_ctb_size)-1 ) >> sc->sps->log2_ctb_size;
+    int ctb_addr_ts  = sc->pps->ctb_addr_rs_to_ts[y_cb * pic_width_cb + x_cb];
+    
+    return (RefPicList*) ref->refPicListTab[ctb_addr_ts];
+}
 static void update_refs(HEVCContext *s)
 {
     int i, j;
@@ -191,8 +257,7 @@ static void update_refs(HEVCContext *s)
             printf("\t\t\t\t\t\t%d\t%d\n",i, ref->poc);
 #endif
             av_frame_unref(ref->frame);
-            ref->refPicList[0].numPic = 0;
-            ref->refPicList[1].numPic = 0;
+            ff_hevc_free_refPicListTab(s, ref);
         }
     }
 }
@@ -208,8 +273,7 @@ void ff_hevc_clear_refs(HEVCContext *s)
 #endif
             av_frame_unref(ref->frame);
             ref->flags = 0;
-            ref->refPicList[0].numPic = 0;
-            ref->refPicList[1].numPic = 0;
+            ff_hevc_free_refPicListTab(s, ref);
         }
     }
 }
@@ -257,9 +321,9 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc)
         if (!ref->frame->buf[0]) {
             int pic_width_in_min_pu = s->HEVCsc->sps->pic_width_in_luma_samples >> s->HEVCsc->sps->log2_min_pu_size;
             int pic_height_in_min_pu = s->HEVCsc->sps->pic_height_in_luma_samples >> s->HEVCsc->sps->log2_min_pu_size;
-            *frame     = ref->frame;
-            s->HEVCsc->ref     = ref;
-            ref->poc   = poc;
+            *frame          = ref->frame;
+            s->HEVCsc->ref  = ref;
+            ref->poc        = poc;
             ref->frame->pts = s->HEVCsc->pts;
 #ifdef SVC_EXTENSION
             ref->up_sample_base = up_sample;
@@ -350,7 +414,7 @@ static void set_ref_pic_list(HEVCContext *s)
     HEVCSharedContext *sc = s->HEVCsc;
     SliceHeader *sh = &sc->sh;
     RefPicList  *refPocList = sc->sh.refPocList;
-    RefPicList  *refPicList = sc->DPB[ff_hevc_find_next_ref(s, sc->poc)].refPicList;
+    RefPicList  *refPicList;
     RefPicList  refPicListTmp[2]= {{{0}}};
 
     uint8_t num_ref_idx_lx_act[2];
@@ -361,6 +425,8 @@ static void set_ref_pic_list(HEVCContext *s)
     uint8_t sec_list;
     uint8_t i, list_idx;
 	uint8_t nb_list = sc->sh.slice_type == B_SLICE ? 2 : 1;
+    malloc_refPicListTab(s);
+    refPicList = sc->DPB[ff_hevc_find_next_ref(s, sc->poc)].refPicList;
     
 #if REF_IDX_FRAMEWORK
     VPS *vps = s->HEVCsc->vps;
@@ -534,9 +600,12 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
         set_ref_pic_list(s);
 #if REF_IDX_FRAMEWORK
     } else  {
+        malloc_refPicListTab(s);
         set_ref_pic_list(s);
     }
 #else
+    } else {
+        malloc_refPicListTab(s);
     }
 #endif
 }
