@@ -363,12 +363,12 @@ static attribute_align_arg void *frame_worker_thread(void *arg)
         avcodec_get_frame_defaults(&p->frame);
         p->got_frame = 0;
         p->result = codec->decode(avctx, &p->frame, &p->got_frame, &p->avpkt);
-
         /* many decoders assign whole AVFrames, thus overwriting extended_data;
          * make sure it's set correctly */
         p->frame.extended_data = p->frame.data;
 
-        if (p->state == STATE_SETTING_UP) ff_thread_finish_setup(avctx);
+        if (p->state == STATE_SETTING_UP)
+            ff_thread_finish_setup(avctx);
 
         p->state = STATE_INPUT_READY;
 
@@ -602,7 +602,8 @@ int ff_thread_decode_frame(AVCodecContext *avctx,
      */
 
     if (fctx->delaying) {
-        if (fctx->next_decoding >= (avctx->thread_count-1)) fctx->delaying = 0;
+        if (fctx->next_decoding >= (avctx->thread_count-1))
+            fctx->delaying = 0;
 
         *got_picture_ptr=0;
         if (avpkt->size)
@@ -618,11 +619,11 @@ int ff_thread_decode_frame(AVCodecContext *avctx,
 
     do {
         p = &fctx->threads[finished++];
-
         if (p->state != STATE_INPUT_READY) {
             pthread_mutex_lock(&p->progress_mutex);
-            while (p->state != STATE_INPUT_READY)
+            while (p->state != STATE_INPUT_READY){
                 pthread_cond_wait(&p->output_cond, &p->progress_mutex);
+            }
             pthread_mutex_unlock(&p->progress_mutex);
         }
 
@@ -803,7 +804,7 @@ static int frame_thread_init(AVCodecContext *avctx)
     fctx->delaying = 1;
 
     for (i = 0; i < thread_count; i++) {
-        AVCodecContext *copy = av_malloc(sizeof(AVCodecContext));
+        AVCodecContext *copy = av_mallocz(sizeof(AVCodecContext));
         PerThreadContext *p  = &fctx->threads[i];
 
         pthread_mutex_init(&p->mutex, NULL);

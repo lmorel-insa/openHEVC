@@ -138,9 +138,10 @@ static void scale_upsampled_mv_field(HEVCContext *s) {
     
     for(list = 0; list < 2; list++) {
         refEL->refPicList[list].numPic = refBL->refPicList[list].numPic;
+        
         for(i=0; i< refBL->refPicList[list].numPic; i++){
             refEL->refPicList[list].list[i] = refBL->refPicList[list].list[i];
-            refEL->refPicList[list].idx[i] = ff_find_ref_idx(s,refBL->refPicList[list].list[i]);
+            //refEL->refPicList[list].idx[i] = ff_find_ref_idx(s,refBL->refPicList[list].list[i]);
             refEL->refPicList[list].isLongTerm[i] = refBL->refPicList[list].isLongTerm[i];
         }
         for(i=refBL->refPicList[list].numPic; i< REF_LIST_SIZE; i++)   {
@@ -202,18 +203,18 @@ static void scale_upsampled_mv_field(HEVCContext *s) {
 void ff_hevc_free_refPicListTab(HEVCContext *s, HEVCFrame *ref)
 {
     int j;
-    HEVCSharedContext *sc = s->HEVCsc;
-    int ctb_count = sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs;
+    int ctb_count = ref->count;
     for (j = ctb_count-1; j > 0; j--) {
         if (ref->refPicListTab[j] != ref->refPicListTab[j-1])
             av_free(ref->refPicListTab[j]);
             ref->refPicListTab[j] = NULL;
         }
-        if (ref->refPicListTab[0] != NULL) {
-            av_free(ref->refPicListTab[0]);
-            ref->refPicListTab[0] = NULL;
-        }
-        ref->refPicList = NULL;
+    if (ref->refPicListTab[0] != NULL) {
+        av_free(ref->refPicListTab[0]);
+        ref->refPicListTab[0] = NULL;
+    }
+    ref->count = 0;
+    ref->refPicList = NULL;
 }
 
 static void malloc_refPicListTab(HEVCContext *s)
@@ -223,6 +224,7 @@ static void malloc_refPicListTab(HEVCContext *s)
     HEVCFrame *ref  = &sc->DPB[ff_hevc_find_next_ref(s, sc->poc)];
     int ctb_count   = sc->sps->pic_width_in_ctbs * sc->sps->pic_height_in_ctbs;
     int ctb_addr_ts = sc->pps->ctb_addr_rs_to_ts[sc->sh.slice_address];
+    ref->count = ctb_count;
     ref->refPicListTab[ctb_addr_ts] = av_mallocz(sizeof(RefPicListTab));
     for (i = ctb_addr_ts; i < ctb_count-1; i++)
         ref->refPicListTab[i+1] = ref->refPicListTab[i];

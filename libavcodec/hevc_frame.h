@@ -57,6 +57,7 @@ typedef struct HEVCFrame {
     MvField *tab_mvf;
     RefPicList *refPicList;
     RefPicListTab **refPicListTab;
+    int count; 
     /**
      * A combination of HEVC_FRAME_FLAG_*
      */

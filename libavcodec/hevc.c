@@ -2687,7 +2687,7 @@ static int compare_md5(uint8_t *md5_in1, uint8_t *md5_in2)
 }
 
 static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
-                             AVPacket *avpkt)
+                             AVPacket *avpkt, void *data1)
 {
     int ret, poc_display;
     HEVCContext *s = avctx->priv_data;
@@ -2708,7 +2708,14 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
     if ((s->is_decoded && (ret = ff_hevc_find_display(s, data, 0, &poc_display))) < 0) {
         return ret;
     }
-
+    /*
+    // Used to get the decoded frame
+    if(s->is_decoded)   {
+        ret = ff_find_ref_idx(s, s->HEVCsc->poc);
+        if(ret >= 0 && data1)
+            av_frame_ref(data1, s->HEVCsc->DPB[ret].frame);
+    }
+    */
     *got_output = ret;
     if (s->decode_checksum_sei && s->is_decoded) {
         AVFrame *frame = sc->ref->frame;
