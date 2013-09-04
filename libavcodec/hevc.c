@@ -2307,7 +2307,8 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
             return more_data;
         ctb_addr_ts++;
   //      printf("ctb_addr_ts %d %d %d \n", ctb_addr_ts, x_ctb>>s1->sps->log2_ctb_size, y_ctb>>s1->sps->log2_ctb_size);
-        ctb_addr_rs       = s->pps->ctb_addr_ts_to_rs[ctb_addr_ts];
+        if (more_data > 0)
+            ctb_addr_rs       = s->pps->ctb_addr_ts_to_rs[ctb_addr_ts];
         ff_hevc_save_states(s, ctb_addr_ts);
         avpriv_atomic_int_add_and_fetch(&s->ctb_entry_count[ctb_row],1);
 #ifdef FILTER_EN

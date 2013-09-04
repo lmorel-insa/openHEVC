@@ -118,6 +118,7 @@ static void malloc_refPicListTab_index(HEVCContext *s, int index)
     int i;
     
     HEVCFrame *ref  = &s->DPB[index];
+    printf("index %d \n", index );
     int ctb_count   = s->sps->pic_width_in_ctbs * s->sps->pic_height_in_ctbs;
     int ctb_addr_ts = s->pps->ctb_addr_rs_to_ts[s->sh.slice_address];
     ref->count = ctb_count;
