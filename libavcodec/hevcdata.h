@@ -23,13 +23,6 @@
 #ifndef AVCODEC_HEVCDATA_H
 #define AVCODEC_HEVCDATA_H
 
-#include "hevc.h"
-//#ifdef SVC_EXTENSION
-#define NTAPS_LUMA 8
-#define NTAPS_CHROMA 4
-#define US_FILTER_PREC  6
-//#endif
-
 
 static const uint8_t qpel_extra_before[4] = { 0, 3, 3, 2 };
 static const uint8_t qpel_extra_after[4] = { 0, 3, 4, 4 };

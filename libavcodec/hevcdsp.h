@@ -23,11 +23,15 @@
 #ifndef AVCODEC_HEVCDSP_H
 #define AVCODEC_HEVCDSP_H
 
+#include "get_bits.h"
+
 struct SAOParams;
 struct AVFrame;
 struct UpsamplInf;
 
 typedef struct HEVCDSPContext {
+    void (*copy_CTB)(uint8_t *dst, uint8_t *src, int width, int height, int stride);
+    
     void (*put_pcm)(uint8_t *_dst, ptrdiff_t _stride, int size,
                     GetBitContext *gb, int pcm_bit_depth);
 
@@ -66,10 +70,21 @@ typedef struct HEVCDSPContext {
     void (*hevc_v_loop_filter_luma)(uint8_t *_pix, ptrdiff_t _stride, int *_beta, int *_tc, uint8_t *_no_p, uint8_t *_no_q);
     void (*hevc_h_loop_filter_chroma)(uint8_t *_pix, ptrdiff_t _stride, int *_tc, uint8_t *_no_p, uint8_t *_no_q);
     void (*hevc_v_loop_filter_chroma)(uint8_t *_pix, ptrdiff_t _stride, int *_tc, uint8_t *_no_p, uint8_t *_no_q);
+    
+    void (*hevc_h_loop_filter_luma_c)(uint8_t *_pix, ptrdiff_t _stride, int *_beta, int *_tc, uint8_t *_no_p, uint8_t *_no_q);
+    void (*hevc_v_loop_filter_luma_c)(uint8_t *_pix, ptrdiff_t _stride, int *_beta, int *_tc, uint8_t *_no_p, uint8_t *_no_q);
+    void (*hevc_h_loop_filter_chroma_c)(uint8_t *_pix, ptrdiff_t _stride, int *_tc, uint8_t *_no_p, uint8_t *_no_q);
+    void (*hevc_v_loop_filter_chroma_c)(uint8_t *_pix, ptrdiff_t _stride, int *_tc, uint8_t *_no_p, uint8_t *_no_q);
+
     void (*upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFrame *FrameBL, short *Buffer[3], const int32_t enabled_up_sample_filter_luma[16][8], const int32_t enabled_up_sample_filter_chroma[16][4], struct HEVCWindow *Enhscal, struct UpsamplInf *up_info);
+
 
 } HEVCDSPContext;
 
-void ff_hevc_dsp_init(HEVCDSPContext *hpc, int bit_depth, int pcm_enabled);
-void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth, int pcm_enabled);
+void ff_hevc_dsp_init(HEVCDSPContext *hpc, int bit_depth);
+
+extern const int8_t ff_hevc_epel_filters[7][16];
+
+void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth);
+void ff_hevcdsp_init_arm(HEVCDSPContext *c, const int bit_depth);
 #endif /* AVCODEC_HEVCDSP_H */

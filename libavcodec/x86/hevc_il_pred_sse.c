@@ -6,6 +6,7 @@
 #include "libavcodec/hevc.h"
 #include "libavcodec/hevcdata.h"
 #include "libavcodec/x86/hevcdsp.h"
+#include "libavcodec/up_sample_filter.h"
 #include "libavcodec/bit_depth_template.c"
 
 

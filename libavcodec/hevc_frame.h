@@ -35,14 +35,15 @@ typedef struct Mv {
 typedef struct MvField {
     Mv  mv[2];
     int8_t ref_idx[2];
-    int8_t pred_flag[2];
+    int8_t pred_flag;
     uint8_t is_intra;
 } MvField;
+
 
 typedef struct RefPicList {
     int list[16];
     int idx[16];
-    int isLongTerm[16];
+    int is_long_term[16];
     int numPic;
 } RefPicList;
 
