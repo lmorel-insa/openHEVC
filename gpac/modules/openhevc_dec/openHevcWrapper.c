@@ -89,6 +89,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
 
     openHevcContext->avpkt.size = au_len;
     openHevcContext->avpkt.data = buff;
+    //printf("Decode frame ... \n");
     len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
     
     if(nb_layers>1) {

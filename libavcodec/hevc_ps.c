@@ -1193,6 +1193,7 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
      * 6.5
      */
     pic_area_in_ctbs     = sps->pic_width_in_ctbs    * sps->pic_height_in_ctbs;
+    //printf("sps %d %d %d %d %d \n", sps->pic_width_in_ctbs    , sps->pic_height_in_ctbs, sps->pic_width_in_ctbs    * sps->pic_height_in_ctbs, sps->pic_height_in_luma_samples, sps->pic_width_in_luma_samples);
     pic_area_in_min_cbs  = sps->pic_width_in_min_cbs * sps->pic_height_in_min_cbs;
     pic_area_in_min_tbs  = sps->pic_width_in_min_tbs * sps->pic_height_in_min_tbs;
 

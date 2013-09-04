@@ -2281,7 +2281,7 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
     int ctb_addr_ts = s1->pps->ctb_addr_rs_to_ts[ctb_addr_rs];
     s = s1->sList[self_id];
     lc = s->HEVClc;
-   
+//    printf("decode row %d \n", ctb_row);
     if(ctb_row) {
         ret = init_get_bits8(lc->gb, s->data+s->sh.offset[(ctb_row)-1], s->sh.size[(ctb_row)-1]);
         if (ret < 0)
@@ -2306,6 +2306,7 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
         if (more_data < 0)
             return more_data;
         ctb_addr_ts++;
+  //      printf("ctb_addr_ts %d %d %d \n", ctb_addr_ts, x_ctb>>s1->sps->log2_ctb_size, y_ctb>>s1->sps->log2_ctb_size);
         ctb_addr_rs       = s->pps->ctb_addr_ts_to_rs[ctb_addr_ts];
         ff_hevc_save_states(s, ctb_addr_ts);
         avpriv_atomic_int_add_and_fetch(&s->ctb_entry_count[ctb_row],1);
@@ -2714,7 +2715,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
                 av_frame_unref(s->tmp_frame);
                 if ((ret = ff_reget_buffer(s->avctx, s->tmp_frame)) < 0)
                     return ret;
-
+                 
                 s->frame = s->tmp_frame;
 #ifdef SVC_EXTENSION
                 if ((ret = ff_hevc_set_new_ref(s, &s->sao_frame, s->poc,0))< 0)
@@ -2732,7 +2733,6 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
             } else {
 #endif
 
-                
 #ifdef SVC_EXTENSION
                 if ((ret = ff_hevc_set_new_ref(s, &s->frame, s->poc, 0))< 0)
 #else

@@ -177,9 +177,14 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth)
     hevcdsp->hevc_h_loop_filter_luma = FUNC(hevc_h_loop_filter_luma, depth);\
     hevcdsp->hevc_v_loop_filter_luma = FUNC(hevc_v_loop_filter_luma, depth);\
     hevcdsp->hevc_h_loop_filter_chroma = FUNC(hevc_h_loop_filter_chroma, depth); \
-    hevcdsp->hevc_v_loop_filter_chroma = FUNC(hevc_v_loop_filter_chroma, depth);
+    hevcdsp->hevc_v_loop_filter_chroma = FUNC(hevc_v_loop_filter_chroma, depth); \
+    hevcdsp->hevc_h_loop_filter_luma_c = FUNC(hevc_h_loop_filter_luma, depth);\
+    hevcdsp->hevc_v_loop_filter_luma_c = FUNC(hevc_v_loop_filter_luma, depth);\
+    hevcdsp->hevc_h_loop_filter_chroma_c = FUNC(hevc_h_loop_filter_chroma, depth); \
+    hevcdsp->hevc_v_loop_filter_chroma_c = FUNC(hevc_v_loop_filter_chroma, depth);
 #else
 #define HEVC_DSP(depth)                                                     \
+    hevcdsp->copy_CTB = FUNC(copy_CTB, depth);                              \
     hevcdsp->put_pcm = FUNC(put_pcm, depth);                                \
     hevcdsp->dequant[0] = FUNC(dequant4x4, depth);                          \
     hevcdsp->dequant[1] = FUNC(dequant8x8, depth);                          \
@@ -238,6 +243,10 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth)
     hevcdsp->hevc_v_loop_filter_luma = FUNC(hevc_v_loop_filter_luma, depth);\
     hevcdsp->hevc_h_loop_filter_chroma = FUNC(hevc_h_loop_filter_chroma, depth); \
     hevcdsp->hevc_v_loop_filter_chroma = FUNC(hevc_v_loop_filter_chroma, depth); \
+    hevcdsp->hevc_h_loop_filter_luma_c = FUNC(hevc_h_loop_filter_luma, depth);\
+    hevcdsp->hevc_v_loop_filter_luma_c = FUNC(hevc_v_loop_filter_luma, depth);\
+    hevcdsp->hevc_h_loop_filter_chroma_c = FUNC(hevc_h_loop_filter_chroma, depth); \
+    hevcdsp->hevc_v_loop_filter_chroma_c = FUNC(hevc_v_loop_filter_chroma, depth);\
     hevcdsp->upsample_base_layer_frame = FUNC(upsample_base_layer_frame, depth);
 #endif
 

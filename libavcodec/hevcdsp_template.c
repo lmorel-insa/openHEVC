@@ -46,7 +46,7 @@ static void FUNC(copy_CTB)(uint8_t *_dst, uint8_t *_src, int width, int height, 
     pixel *src = (pixel*)_src;
     ptrdiff_t stride = _stride / sizeof(pixel);
     int i;
-
+     
     for (i = 0; i < height; i++){
         memcpy(dst, src, width * sizeof(pixel));
         dst += stride;
