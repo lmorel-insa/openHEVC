@@ -955,8 +955,6 @@ typedef struct HEVCContext {
     uint8_t             threads_number;
     int                 decode_checksum_sei;
     int                 disable_au;
-<<<<<<< HEAD
-
     int                 decoder_layer;
     int                 is_decoded;
 #ifdef SVC_EXTENSION
@@ -964,10 +962,8 @@ typedef struct HEVCContext {
     int heightBL;
     int widthBL;
 #endif
-
-=======
     int                 layer_id;
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
+    int                 temporal_layer_id;
     int                 width;
     int                 height;
 

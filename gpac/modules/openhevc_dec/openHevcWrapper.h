@@ -53,18 +53,13 @@ void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInf
 void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo, int nb_layers);
 int  libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame *openHevcFrame, int nb_layers);
 int  libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame_cpy *openHevcFrame);
-<<<<<<< HEAD
+
 void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val, int nb_layers);
 void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int nb_layers);
 void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val, int nb_layers);
 void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int nb_layers);
-=======
-void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val);
-void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val);
-void libOpenHevcSetLayer_id(OpenHevc_Handle openHevcHandle, int val);
+void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val, int nb_layers);
 
-void libOpenHevcClose(OpenHevc_Handle openHevcHandle);
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
 void libOpenHevcFlush(OpenHevc_Handle openHevcHandle);
 const char *libOpenHevcVersion(OpenHevc_Handle openHevcHandle);
 

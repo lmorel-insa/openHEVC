@@ -2544,7 +2544,6 @@ static int hls_nal_unit(HEVCContext *s)
     av_log(s->avctx, AV_LOG_DEBUG,
            "nal_unit_type: %d, nuh_layer_id: %dtemporal_id: %d\n",
            s->nal_unit_type, s->nuh_layer_id, s->temporal_id);
-
     return s->nuh_layer_id ;
 }
 #ifdef POC_DISPLAY_MD5
@@ -2622,7 +2621,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
     ret = hls_nal_unit(s);
 
-    if (s->temporal_id >= s->layer_id)
+    if (s->temporal_id >= s->temporal_layer_id)
         return 0;
     if (ret < 0) {
         av_log(s->avctx, AV_LOG_ERROR, "Invalid NAL unit %d, skipping.\n",
@@ -3139,7 +3138,6 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { "disable-au", "disable read frame AU by AU", OFFSET(disable_au),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
-<<<<<<< HEAD
     { "layer-id", "set the layer id of the decoder", OFFSET(decoder_layer),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
     { "is-decoded", "decode picture", OFFSET(is_decoded),
@@ -3152,10 +3150,8 @@ static const AVOption options[] = {
     { "rbl-picture", "set the base layer picture", OFFSET(BL_frame),
         AV_OPT_TYPE_RBINARY, {.i64 = 0}, 0, 1000000, PAR },
 #endif
-=======
-    { "layer-id", "select layer temporal id", OFFSET(layer_id),
+    { "temporal-layer-id", "select layer temporal id", OFFSET(temporal_layer_id),
         AV_OPT_TYPE_INT, {.i64 = 7}, 0, 7, PAR },
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
     { NULL },
 };
 
@@ -3174,6 +3170,8 @@ static const AVOption options_shvc[] = {
     { "wbl-picture", "set the base layer picture", OFFSET(BL_frame),
         AV_OPT_TYPE_BINARY, {.i64 = 0}, 0, 1000000, PAR },
 #endif
+    { "temporal-layer-id", "select layer temporal id", OFFSET(temporal_layer_id),
+        AV_OPT_TYPE_INT, {.i64 = 7}, 0, 7, PAR },
     { NULL },
 };
 

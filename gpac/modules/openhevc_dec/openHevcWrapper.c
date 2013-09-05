@@ -207,48 +207,46 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
     }
     return 1;
 }
-void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val, int nb_layers)
+void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val, int layer_id)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "decode-checksum", val, 0);
-    if(nb_layers >1){
+    if(layer_id >1){
         av_opt_set_int(openHevcContext->ec->priv_data, "decode-checksum", val, 0);
     }
     
 }
-void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val, int nb_layers)
+void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val, int layer_id)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "disable-au", val, 0);
-    if(nb_layers >1){
+    if(layer_id >1){
         av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", val, 0);
     }
 }
-void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int nb_layers) {
+void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int layer_id) {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "layer-id", 1, 0);
-    if(nb_layers >1) {
+    if(layer_id >1) {
         av_opt_set_int(openHevcContext->ec->priv_data, "layer-id", 2, 0);
     }
 }
-<<<<<<< HEAD
 
 
 
-void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int nb_layers)
-=======
-void libOpenHevcSetLayer_id(OpenHevc_Handle openHevcHandle, int val)
+void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val, int layer_id)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
-    av_opt_set_int(openHevcContext->c->priv_data, "layer-id", val+1, 0);
+    av_opt_set_int(openHevcContext->c->priv_data, "temporal-layer-id", val+1, 0);
+    if(layer_id >1)
+            av_opt_set_int(openHevcContext->c->priv_data, "temporal-layer-id", val+1, 0);
 }
 
-void libOpenHevcClose(OpenHevc_Handle openHevcHandle)
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
+void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int layer_id)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     avcodec_close(openHevcContext->c);
-    if(nb_layers >1){
+    if(layer_id >1){
         avcodec_close(openHevcContext->ec);
         av_free(openHevcContext->ec);
         av_free(openHevcContext->epicture);

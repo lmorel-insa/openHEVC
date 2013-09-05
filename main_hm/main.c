@@ -64,20 +64,15 @@ static void video_decode_example(const char *filename)
     OpenHevc_Frame openHevcFrame;
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
-<<<<<<< HEAD
-    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers, enable_frame_based);
-    
-    
-    libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags, nb_layers);
-    libOpenHevcSetDisableAU(openHevcHandle, disable_au, nb_layers);
-    libOpenHevcSetLayerId(openHevcHandle, nb_layers);
 
-=======
-    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads);
-    libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
-    libOpenHevcSetDisableAU(openHevcHandle, disable_au);
-    libOpenHevcSetLayer_id(openHevcHandle, layer_id);
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
+    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, layer_id, enable_frame_based);
+    
+    
+    libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags, layer_id);
+    libOpenHevcSetDisableAU(openHevcHandle, disable_au, layer_id);
+    libOpenHevcSetLayerId(openHevcHandle, layer_id);
+    libOpenHevcSetTemporalLayer_id(openHevcHandle, temporal_layer_id, layer_id);
+
     if (!openHevcHandle) {
         fprintf(stderr, "could not open OpenHevc\n");
         exit(1);
@@ -108,21 +103,21 @@ static void video_decode_example(const char *filename)
         if (disable_au == 0) {
             if (stop_dec == 0 && av_read_frame(pFormatCtx, &packet)<0) stop_dec = 1;
             
-            got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++, nb_layers);
+            got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++, layer_id);
         } else {
             if (stop_dec == 0 && feof(f)) stop_dec = 1;
-            got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++, nb_layers);
+            got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++, layer_id);
         }
-        if (got_picture == nb_layers) {
+        if (got_picture == layer_id) {
             fflush(stdout);
             if (init == 1 ) {
-                libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo, nb_layers);
+                libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo, layer_id);
                 if (display_flags == DISPLAY_ENABLE) {
                     Init_SDL((openHevcFrame.frameInfo.nYPitch - openHevcFrame.frameInfo.nWidth)/2, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
                 }
                 if (fout) {
                     int nbData;
-                    libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrameCpy.frameInfo, nb_layers);
+                    libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrameCpy.frameInfo, layer_id);
                     nbData = openHevcFrameCpy.frameInfo.nWidth * openHevcFrameCpy.frameInfo.nHeight;
                     openHevcFrameCpy.pvY = calloc ( nbData    , sizeof(unsigned char));
                     openHevcFrameCpy.pvU = calloc ( nbData / 4, sizeof(unsigned char));
@@ -133,8 +128,8 @@ static void video_decode_example(const char *filename)
             }
             if (display_flags == DISPLAY_ENABLE) {
                 
-                libOpenHevcGetOutput(openHevcHandle, 1, &openHevcFrame, nb_layers);
-                libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo, nb_layers);
+                libOpenHevcGetOutput(openHevcHandle, 1, &openHevcFrame, layer_id);
+                libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo, layer_id);
             
                 SDL_Display((openHevcFrame.frameInfo.nYPitch - openHevcFrame.frameInfo.nWidth)/2, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight,
                         openHevcFrame.pvY, openHevcFrame.pvU, openHevcFrame.pvV);
@@ -156,7 +151,7 @@ static void video_decode_example(const char *filename)
         fclose(fout);
     if (disable_au == 0)
         avformat_close_input(&pFormatCtx);
-    libOpenHevcClose(openHevcHandle, nb_layers);
+    libOpenHevcClose(openHevcHandle, layer_id);
     printf("frame= %d fps= %.0f time=%.2f video_size= %dx%d\n", nbFrame, nbFrame/time, time, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
 }
 

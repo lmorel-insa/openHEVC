@@ -52,11 +52,8 @@ void print_usage() {
     printf("     -n : no display\n");
     printf("     -c : no check md5\n");
     printf("     -a : disable AU\n");
-<<<<<<< HEAD
     printf("     -f : enable frame based multi-threading \n");
-=======
-    printf("     -l : layer temporal id\n");
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
+    printf("     -t <temporal layer id>\n");
     printf("     -p <number of threads> \n");
     printf("     -l <number of layers to decode 1:2> \n");
 }
@@ -130,28 +127,21 @@ int getopt(int nargc, char * const *nargv, const char *ostr) {
 void init_main(int argc, char *argv[]) {
 	// every command line option must be followed by ':' if it takes an
 	// argument, and '::' if this argument is optional
-<<<<<<< HEAD
-	const char *ostr = "i:ncafhp:o:l:";
+	const char *ostr = "i:ncafhp:o:l:t:";
 	int c;
 	display_flags   = DISPLAY_ENABLE;
     check_md5_flags = MD5_ENABLE;
     disable_au      = AU_PARSER_ENABLE;
     enable_frame_based = FRAME_BASED_DISABLE;
     nb_pthreads = 0;
-    nb_layers = 1;
+    layer_id = 1;
+    temporal_layer_id        = 7;
+
     output_file = NULL;
 	program = argv[0];
-=======
-	const char *ostr = "i:ncahp:o:l:";
-	int c;
-	display_flags   = DISPLAY_ENABLE;
-    check_md5_flags = MD5_ENABLE;
-    disable_au      = 0;
-    layer_id        = 7;
-    nb_pthreads     = 1;
-    output_file     = NULL;
-	program         = argv[0];
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
+    
+	
+	    
     
 	c = getopt(argc, argv, ostr);
 
@@ -173,21 +163,17 @@ void init_main(int argc, char *argv[]) {
         case 'a':
              disable_au = AU_PARSER_DISABLE;
              break;
-<<<<<<< HEAD
         case 'f':
              enable_frame_based = FRAME_BASED_ENABLE;
              break;
-
-=======
-        case 'l':
-             layer_id = atoi(optarg);
+        case 't':
+             temporal_layer_id = atoi(optarg);
              break;
->>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
         case 'p':
             nb_pthreads = atoi(optarg);
             break;
         case 'l':
-            nb_layers = atoi(optarg);
+            layer_id = atoi(optarg);
             break;
 		default:
 			print_usage();
