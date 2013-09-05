@@ -3066,7 +3066,7 @@ static av_cold int hevc_decode_free(AVCodecContext *avctx)
     av_frame_free(&s->tmp_frame);
     av_free(s->cabac_state);
 
-    av_free(lc->cabac_state);
+    
     av_free(lc->gb);
     av_free(lc->cc);
     av_free(lc->edge_emu_buffer);
