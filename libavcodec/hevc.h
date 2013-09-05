@@ -858,7 +858,7 @@ typedef struct HEVCThreadContext {
     CodingTree ct;
     CodingUnit cu;
     PredictionUnit pu;
-    int16_t* BufferMC;
+    DECLARE_ALIGNED( 16, int16_t, BufferMC[(MAX_PB_SIZE + 7) * MAX_PB_SIZE] );
     Filter_data *save_boundary_strengths;
     int nb_saved;
 } HEVCThreadContext;
