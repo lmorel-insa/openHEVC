@@ -166,7 +166,7 @@ typedef struct RefPicListTab {
 #define MAX_QP 51
 #define DEFAULT_INTRA_TC_OFFSET 2
 
-#define HEVC_CONTEXTS 183
+#define HEVC_CABAC_CONTEXTS 183
 
 
 
@@ -831,7 +831,7 @@ typedef struct Filter_data{
 }Filter_data;
 
 typedef struct HEVCThreadContext {
-    uint8_t *cabac_state;
+    uint8_t cabac_state[HEVC_CABAC_CONTEXTS];
     int ctx_set;
     int greater1_ctx;
     int last_coeff_abs_level_greater1_flag;
@@ -874,7 +874,7 @@ typedef struct HEVCContext {
     HEVCThreadContext    *HEVClcList[MAX_THREADS];
     HEVCThreadContext    *HEVClc;
 
-    uint8_t *cabac_state; //
+    uint8_t cabac_state[HEVC_CABAC_CONTEXTS]; //
     
     AVFrame *frame;
     AVFrame *sao_frame;
