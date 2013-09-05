@@ -5,11 +5,7 @@
 //  Created by Mickaël Raulet on 11/10/12.
 //
 //
-#ifdef __MINGW32__
 #include "openHevcWrapper.h"
-#else
-#include "gpac/modules/openhevc_dec/openHevcWrapper.h"
-#endif
 #include "getopt.h"
 #include <libavformat/avformat.h>
 
@@ -68,6 +64,7 @@ static void video_decode_example(const char *filename)
     OpenHevc_Frame openHevcFrame;
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
+<<<<<<< HEAD
     OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, nb_layers, enable_frame_based);
     
     
@@ -75,6 +72,12 @@ static void video_decode_example(const char *filename)
     libOpenHevcSetDisableAU(openHevcHandle, disable_au, nb_layers);
     libOpenHevcSetLayerId(openHevcHandle, nb_layers);
 
+=======
+    OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads);
+    libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
+    libOpenHevcSetDisableAU(openHevcHandle, disable_au);
+    libOpenHevcSetLayer_id(openHevcHandle, layer_id);
+>>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
     if (!openHevcHandle) {
         fprintf(stderr, "could not open OpenHevc\n");
         exit(1);

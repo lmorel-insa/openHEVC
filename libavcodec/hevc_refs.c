@@ -380,7 +380,7 @@ int ff_hevc_find_display(HEVCContext *s, AVFrame *out, int flush, int* poc_displ
         }
         /* wait for more frames before output */
         if (!flush && s->seq_output == s->seq_decode &&
-            nb_output <= s->sps->temporal_layer[0].num_reorder_pics+1)
+            nb_output <= s->sps->temporal_layer[s->temporal_id].num_reorder_pics)
             return 0;
 
         if (nb_output) {
@@ -421,6 +421,12 @@ void ff_hevc_compute_poc(HEVCContext *s, int poc_lsb)
         iPOCmsb = iPrevPOCmsb - iMaxPOClsb;
     } else {
         iPOCmsb = iPrevPOCmsb;
+    }
+    if (s->nal_unit_type == NAL_BLA_W_LP ||
+        s->nal_unit_type == NAL_BLA_W_RADL ||
+        s->nal_unit_type == NAL_BLA_N_LP) {
+        // For BLA picture types, POCmsb is set to 0.
+        iPOCmsb = 0;
     }
 
     s->poc = iPOCmsb + poc_lsb;
@@ -531,6 +537,8 @@ static void set_ref_pic_list(HEVCContext *s)
 #endif
         refPicList[list_idx].numPic = num_rps_curr_lx;
         if (s->sh.ref_pic_list_modification_flag_lx[list_idx] == 1) {
+            num_rps_curr_lx = num_ref_idx_lx_act[list_idx];
+            refPicList[list_idx].numPic = num_rps_curr_lx;
             for(i = 0; i < num_rps_curr_lx; i++) {
                 refPicList[list_idx].list[i] = refPicListTmp[list_idx].list[sh->list_entry_lx[list_idx][ i ]];
                 refPicList[list_idx].idx[i]  = refPicListTmp[list_idx].idx[sh->list_entry_lx[list_idx][ i ]];

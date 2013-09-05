@@ -118,16 +118,17 @@ void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth)
                 	c->put_hevc_epel[1][1] = ff_hevc_put_hevc_epel_hv_8_sse;
 
 #endif
-//                	c->sao_edge_filter[0] = ff_hevc_sao_edge_filter_0_8_sse;
+                	c->sao_edge_filter[0] = ff_hevc_sao_edge_filter_0_8_sse;
                 	c->sao_edge_filter[1] = ff_hevc_sao_edge_filter_1_8_sse;
                 	c->sao_edge_filter[2] = ff_hevc_sao_edge_filter_2_8_sse;
                 	c->sao_edge_filter[3] = ff_hevc_sao_edge_filter_3_8_sse;
 
-//                	c->sao_band_filter[0] = ff_hevc_sao_band_filter_0_8_sse;
+                	c->sao_band_filter[0] = ff_hevc_sao_band_filter_0_8_sse;
                 	c->sao_band_filter[1] = ff_hevc_sao_band_filter_1_8_sse;
                 	c->sao_band_filter[2] = ff_hevc_sao_band_filter_2_8_sse;
                 	c->sao_band_filter[3] = ff_hevc_sao_band_filter_3_8_sse;
 
+<<<<<<< HEAD
                     c->dequant[0] = ff_hevc_dequant4x4_sse4;
                     c->dequant[1] = ff_hevc_dequant8x8_sse4;
                     c->dequant[2] = ff_hevc_dequant16x16_sse4;
@@ -136,6 +137,12 @@ void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth)
                     c->upsample_base_layer_frame = ff_upsample_base_layer_frame_sse;
 
                     
+=======
+                    c->dequant[0] = ff_hevc_dequant4x4_8_sse4;
+                    c->dequant[1] = ff_hevc_dequant8x8_8_sse4;
+                    c->dequant[2] = ff_hevc_dequant16x16_8_sse4;
+                    c->dequant[3] = ff_hevc_dequant32x32_8_sse4;
+>>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
                 }
                 if (EXTERNAL_AVX(mm_flags)) {
                 }
@@ -152,6 +159,10 @@ void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth)
 #endif /* HAVE_ALIGNED_STACK */
                 }
                 if (EXTERNAL_SSE4(mm_flags)) {
+                    c->dequant[0] = ff_hevc_dequant4x4_10_sse4;
+                    c->dequant[1] = ff_hevc_dequant8x8_10_sse4;
+                    c->dequant[2] = ff_hevc_dequant16x16_10_sse4;
+                    c->dequant[3] = ff_hevc_dequant32x32_10_sse4;
                 }
                 if (EXTERNAL_AVX(mm_flags)) {
                 }

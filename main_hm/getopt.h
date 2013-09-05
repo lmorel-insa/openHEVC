@@ -58,7 +58,11 @@ char *input_file;
 char display_flags;
 int check_md5_flags;
 int disable_au;
+<<<<<<< HEAD
 int enable_frame_based; 
+=======
+int layer_id;
+>>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
 // Activate multi-threading if possible
 int nb_pthreads;
 int nb_layers;

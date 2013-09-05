@@ -2306,7 +2306,6 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
         if (more_data < 0)
             return more_data;
         ctb_addr_ts++;
-  
         
         
         ff_hevc_save_states(s, ctb_addr_ts);
@@ -2622,7 +2621,10 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         return ret;
 
     ret = hls_nal_unit(s);
-        if (ret < 0) {
+
+    if (s->temporal_id >= s->layer_id)
+        return 0;
+    if (ret < 0) {
         av_log(s->avctx, AV_LOG_ERROR, "Invalid NAL unit %d, skipping.\n",
                 s->nal_unit_type);
         if (s->avctx->err_recognition & AV_EF_EXPLODE) {
@@ -3137,6 +3139,7 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { "disable-au", "disable read frame AU by AU", OFFSET(disable_au),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
+<<<<<<< HEAD
     { "layer-id", "set the layer id of the decoder", OFFSET(decoder_layer),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 2, PAR },
     { "is-decoded", "decode picture", OFFSET(is_decoded),
@@ -3149,6 +3152,10 @@ static const AVOption options[] = {
     { "rbl-picture", "set the base layer picture", OFFSET(BL_frame),
         AV_OPT_TYPE_RBINARY, {.i64 = 0}, 0, 1000000, PAR },
 #endif
+=======
+    { "layer-id", "select layer temporal id", OFFSET(layer_id),
+        AV_OPT_TYPE_INT, {.i64 = 7}, 0, 7, PAR },
+>>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
     { NULL },
 };
 

@@ -231,10 +231,20 @@ void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int nb_layers) {
         av_opt_set_int(openHevcContext->ec->priv_data, "layer-id", 2, 0);
     }
 }
+<<<<<<< HEAD
 
 
 
 void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int nb_layers)
+=======
+void libOpenHevcSetLayer_id(OpenHevc_Handle openHevcHandle, int val)
+{
+    OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
+    av_opt_set_int(openHevcContext->c->priv_data, "layer-id", val+1, 0);
+}
+
+void libOpenHevcClose(OpenHevc_Handle openHevcHandle)
+>>>>>>> 1075430e8b696f1e024403413ac10d1d05270651
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     avcodec_close(openHevcContext->c);
