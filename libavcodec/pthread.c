@@ -1093,30 +1093,28 @@ int ff_thread_init(AVCodecContext *avctx)
 }
 
 
-void ff_thread_report_progress2(AVCodecContext *avctx, int field)
+void ff_thread_report_progress2(AVCodecContext *avctx, int field, int n)
 {
-    ThreadContext *p  = avctx->opaque;
+    ThreadContext *p  = avctx->thread_opaque;
     int *count_entries = p->count_entries;
-
+    if (field == (p->count-1)) return;
+  //  printf("%d %d %d %d %d %d %d %d %d %d %d %d \n", count_entries[0], count_entries[1], count_entries[2], count_entries[3], count_entries[4], count_entries[5], count_entries[6], count_entries[7], count_entries[8], count_entries[9], count_entries[10], count_entries[11] );
+    count_entries[field] +=n;
+    pthread_mutex_lock(&p->progress_mutex[p->count-1]);
+    pthread_cond_signal(&p->progress_cond[field]);
+    pthread_mutex_unlock(&p->progress_mutex[p->count-1]);
     
-    if (!count_entries) return;
-    
-    pthread_mutex_lock(&p->progress_mutex[field-1]);
-    count_entries[field] ++;
-    pthread_cond_broadcast(&p->progress_cond[field-1]);
-    pthread_mutex_unlock(&p->progress_mutex[field-1]);
 }
 #define SHIFT_CTB_WPP 2
 void ff_thread_await_progress2(AVCodecContext *avctx, int field)
 {
-    ThreadContext *p  = avctx->opaque;
+    ThreadContext *p  = avctx->thread_opaque;
     int *count_entries = p->count_entries;
-    
     if (!count_entries || !field) return;
-    
     pthread_mutex_lock(&p->progress_mutex[field-1]);
-    while ( (count_entries[field-1]-count_entries[field]) < SHIFT_CTB_WPP )
+    while ( (count_entries[field-1]-count_entries[field]) < SHIFT_CTB_WPP ){
         pthread_cond_wait(&p->progress_cond[field-1], &p->progress_mutex[field-1]);
+    }
     pthread_mutex_unlock(&p->progress_mutex[field-1]);
 }
 /*
@@ -1134,10 +1132,13 @@ int ff_alloc_entries(AVCodecContext *avctx, int count)
             return AVERROR(ENOMEM);
         }
         p->count = count;
+        p->progress_mutex = av_malloc((count)  * sizeof(pthread_mutex_t));
+        p->progress_cond = av_malloc((count-1)  * sizeof(pthread_cond_t));
         for(i=0; i < count-1; i++){
             pthread_mutex_init(&p->progress_mutex[i], NULL);
             pthread_cond_init(&p->progress_cond[i], NULL);
         }
+        pthread_mutex_init(&p->progress_mutex[i], NULL);
     }
     return 0;
 }

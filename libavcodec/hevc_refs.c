@@ -341,6 +341,7 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc)
         if (!ref->frame->buf[0]) {
             *frame          = ref->frame;
             s->ref  = ref;
+            s->curr_dpb_idx = i;
             ref->poc        = poc;
             ref->frame->pts = s->pts;
 #ifdef SVC_EXTENSION

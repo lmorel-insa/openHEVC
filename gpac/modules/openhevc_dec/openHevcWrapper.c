@@ -89,7 +89,8 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
 
     openHevcContext->avpkt.size = au_len;
     openHevcContext->avpkt.data = buff;
-    //printf("Decode frame ... \n");
+
+    openHevcContext->avpkt.pts  = pts;
     len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
     
     if(nb_layers>1) {
@@ -105,6 +106,8 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         }
         openHevcContext->eavpkt.size = au_len;
         openHevcContext->eavpkt.data = buff;
+        openHevcContext->eavpkt.pts  = pts;
+
         len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture1, &openHevcContext->eavpkt);
         if(got_picture1)    {
             if (len < 0) {
