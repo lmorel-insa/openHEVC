@@ -90,11 +90,12 @@ typedef struct ThreadContext {
     int current_job;
     int done;
     
+#if WPP_PTHREAD_MUTEX
     int *count_entries;
     int count;
-    
     pthread_cond_t *progress_cond;
     pthread_mutex_t *progress_mutex;
+#endif
     
 } ThreadContext;
 
