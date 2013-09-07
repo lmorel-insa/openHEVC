@@ -31,6 +31,7 @@
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
 
+#include "thread.h"
 #include "cabac_functions.h"
 #include "golomb.h"
 #include "up_sample_filter.h"
@@ -2272,7 +2273,7 @@ static int hls_slice_data(HEVCContext *s)
 }
 
 #define SHIFT_CTB_WPP 2
-#define PTHREAD_MUTEX 1
+
 static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int job, int self_id)
 {
     int ret;
@@ -2300,13 +2301,13 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
         int y_ctb = (ctb_addr_rs / ((s->sps->pic_width_in_luma_samples + (ctb_size - 1))>> s->sps->log2_ctb_size)) << s->sps->log2_ctb_size;
         hls_decode_neighbour(s, x_ctb, y_ctb, ctb_addr_ts);
         
-#if PTHREAD_MUTEX
-        ff_thread_await_progress2(s->avctx, ctb_row);
+#if WPP_PTHREAD_MUTEX
+        ff_thread_await_progress2(s->avctx, ctb_row, SHIFT_CTB_WPP);
 #else
         while(ctb_row && (avpriv_atomic_int_get(&s->ctb_entry_count[(ctb_row)-1]) - avpriv_atomic_int_get(&s->ctb_entry_count[(ctb_row)]))<SHIFT_CTB_WPP);
 #endif
         if (avpriv_atomic_int_get(&s1->ERROR)){
-#if PTHREAD_MUTEX
+#if WPP_PTHREAD_MUTEX
             ff_thread_report_progress2(s->avctx, ctb_row ,SHIFT_CTB_WPP);
 #else
             avpriv_atomic_int_add_and_fetch(&s->ctb_entry_count[ctb_row],SHIFT_CTB_WPP);
@@ -2324,7 +2325,7 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
         ctb_addr_ts++;
         
         ff_hevc_save_states(s, ctb_addr_ts);
-#if PTHREAD_MUTEX
+#if WPP_PTHREAD_MUTEX
         ff_thread_report_progress2(s->avctx, ctb_row, 1);
 #else
         avpriv_atomic_int_add_and_fetch(&s->ctb_entry_count[ctb_row],1);
@@ -2335,7 +2336,7 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
 #endif
         if (!more_data && (x_ctb+ctb_size) < s->sps->pic_width_in_luma_samples && ctb_row != s->sh.num_entry_point_offsets) {
         	avpriv_atomic_int_set(&s1->ERROR,  1);
-#if PTHREAD_MUTEX
+#if WPP_PTHREAD_MUTEX
             ff_thread_report_progress2(s->avctx, ctb_row ,SHIFT_CTB_WPP);
 #else
             avpriv_atomic_int_add_and_fetch(&s->ctb_entry_count[ctb_row],SHIFT_CTB_WPP);
@@ -2347,14 +2348,11 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
 #ifdef FILTER_EN
             ff_hevc_hls_filter(s, x_ctb, y_ctb);
 #endif
-#if PTHREAD_MUTEX
+#if WPP_PTHREAD_MUTEX
             ff_thread_report_progress2(s->avctx, ctb_row ,SHIFT_CTB_WPP);
 #else
             avpriv_atomic_int_add_and_fetch(&s->ctb_entry_count[ctb_row],SHIFT_CTB_WPP);
 #endif
-
-            
-            
             return ctb_addr_ts;
         }
         ctb_addr_rs       = s->pps->ctb_addr_ts_to_rs[ctb_addr_ts];
@@ -2364,7 +2362,7 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
             break;
         }
     }
-#if PTHREAD_MUTEX
+#if WPP_PTHREAD_MUTEX
     ff_thread_report_progress2(s->avctx, ctb_row ,SHIFT_CTB_WPP);
 #else
     avpriv_atomic_int_add_and_fetch(&s->ctb_entry_count[ctb_row],SHIFT_CTB_WPP);
@@ -2427,7 +2425,9 @@ static int hls_slice_data_wpp(HEVCContext *s, const uint8_t *nal, int length)
 #endif
     if (!s->ctb_entry_count) {
         s->ctb_entry_count = av_malloc((s->sh.num_entry_point_offsets + 1) * sizeof(int));
+#if WPP_PTHREAD_MUTEX
         ff_alloc_entries(s->avctx, s->sh.num_entry_point_offsets + 1);
+#endif
         if (s->enable_parallel_tiles) {
             s->HEVClcList[0]->save_boundary_strengths = av_malloc(
                     sizeof(Filter_data)
@@ -2517,8 +2517,13 @@ static int hls_slice_data_wpp(HEVCContext *s, const uint8_t *nal, int length)
 
     avpriv_atomic_int_set(&s->ERROR, 0);
 
-    memset(s->ctb_entry_count, 0, (s->sh.num_entry_point_offsets + 1) * sizeof(int));
+ 
+#if WPP_PTHREAD_MUTEX
     ff_reset_entries(s->avctx, s->sh.num_entry_point_offsets + 1);
+#else
+    memset(s->ctb_entry_count, 0, (s->sh.num_entry_point_offsets + 1) * sizeof(int));
+#endif
+    
     for (i = 0; i <= s->sh.num_entry_point_offsets; i++) {
         arg[i] = i;
         ret[i] = 0;

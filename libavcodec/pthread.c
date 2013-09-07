@@ -235,31 +235,7 @@ static void thread_free(AVCodecContext *avctx)
     pthread_mutex_destroy(&c->current_job_lock);
     pthread_cond_destroy(&c->current_job_cond);
     pthread_cond_destroy(&c->last_job_cond);
-    av_free(c->workers);
-    av_freep(&avctx->thread_opaque);
-}
-
-static void thread_free2(AVCodecContext *avctx)
-{
-    ThreadContext *c = avctx->thread_opaque;
-    int i;
-    
-    pthread_mutex_lock(&c->current_job_lock);
-    c->done = 1;
-#if TEST
-    avpriv_atomic_int_set(&c->current_job1, 1);
-#else
-    pthread_cond_broadcast(&c->current_job_cond);
-#endif
-    pthread_mutex_unlock(&c->current_job_lock);
-    
-    for (i=0; i<avctx->thread_count; i++)
-        pthread_join(c->workers[i], NULL);
-    
-    pthread_mutex_destroy(&c->current_job_lock);
-    pthread_cond_destroy(&c->current_job_cond);
-    pthread_cond_destroy(&c->last_job_cond);
-    
+#if WPP_PTHREAD_MUTEX
     for(i=0; i < c->count-1; i++) {
         pthread_mutex_lock(&c->progress_mutex[i]);
         pthread_cond_broadcast(&c->progress_cond[i]);
@@ -269,9 +245,12 @@ static void thread_free2(AVCodecContext *avctx)
     }
     av_free(c->progress_mutex);
     av_free(c->progress_cond);
+#endif
     av_free(c->workers);
     av_freep(&avctx->thread_opaque);
 }
+
+
 
 
 
@@ -1093,7 +1072,7 @@ int ff_thread_init(AVCodecContext *avctx)
     return 0;
 }
 
-
+#if WPP_PTHREAD_MUTEX
 void ff_thread_report_progress2(AVCodecContext *avctx, int field, int n)
 {
     ThreadContext *p  = avctx->thread_opaque;
@@ -1106,20 +1085,19 @@ void ff_thread_report_progress2(AVCodecContext *avctx, int field, int n)
     pthread_mutex_unlock(&p->progress_mutex[field]);
     
 }
-#define SHIFT_CTB_WPP 2
-void ff_thread_await_progress2(AVCodecContext *avctx, int field)
+
+void ff_thread_await_progress2(AVCodecContext *avctx, int field, int shift)
 {
     ThreadContext *p  = avctx->thread_opaque;
     int *count_entries = p->count_entries;
     if (!count_entries || !field) return;
     
     pthread_mutex_lock(&p->progress_mutex[field-1]);
-    while ( (count_entries[field-1]-count_entries[field]) < SHIFT_CTB_WPP ){
+    while ( (count_entries[field-1]-count_entries[field]) < shift ){
         pthread_cond_wait(&p->progress_cond[field-1], &p->progress_mutex[field-1]);
     }
     pthread_mutex_unlock(&p->progress_mutex[field-1]);
 }
-
 
 int ff_alloc_entries(AVCodecContext *avctx, int count)
 {
@@ -1146,12 +1124,12 @@ void ff_reset_entries(AVCodecContext *avctx, int count)
     ThreadContext *p = avctx->thread_opaque;
     memset(p->count_entries, 0, count  * sizeof(int));
 }
-
+#endif
 
 void ff_thread_free(AVCodecContext *avctx)
 {
     if (avctx->active_thread_type&FF_THREAD_FRAME)
         frame_thread_free(avctx, avctx->thread_count);
     else
-        thread_free2(avctx);
+        thread_free(avctx);
 }
