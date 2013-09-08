@@ -2578,6 +2578,15 @@ typedef struct AVCodecContext {
     void *thread_opaque;
 
     /**
+     * thread opaque 2
+     * Can be used for parallel decoding of several decoders (SHVC).
+     * Shared between several decoders
+     * - encoding: set by execute()
+     * - decoding: set by execute()
+     */
+    void *thread_opaque2;
+
+    /**
      * noise vs. sse weight for the nsse comparsion function
      * - encoding: Set by user.
      * - decoding: unused
