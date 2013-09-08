@@ -128,7 +128,7 @@ int ff_thread_ref_frame(ThreadFrame *dst, ThreadFrame *src);
 int ff_thread_init(AVCodecContext *s);
 void ff_thread_free(AVCodecContext *s);
 
-
+int ff_thread_init2(AVCodecContext *avctx, int first);
 #if WPP_PTHREAD_MUTEX
 int ff_alloc_entries(AVCodecContext *avctx, int count);
 void ff_reset_entries(AVCodecContext *avctx);

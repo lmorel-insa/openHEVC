@@ -798,6 +798,60 @@ static void frame_thread_free(AVCodecContext *avctx, int thread_count)
     av_freep(&avctx->thread_opaque);
 }
 
+static int first_decoder_thread_init(AVCodecContext *avctx) {
+    int thread_count = 2; // Only supporting 2 decoders
+    FrameThreadContext *fctx;
+    int i, err = 0;
+    
+    avctx->thread_opaque2 = fctx = av_mallocz(sizeof(FrameThreadContext));
+    fctx->threads = av_mallocz(sizeof(PerThreadContext) * thread_count);
+    pthread_mutex_init(&fctx->buffer_mutex, NULL);
+    fctx->delaying = 1;
+    if (!avctx->thread_opaque2 || !fctx->threads) {
+        err = AVERROR(ENOMEM);
+        goto error;
+    }
+    for(i =0; i < thread_count; i++) {
+        PerThreadContext *p  = &fctx->threads[i];
+        
+        pthread_mutex_init(&p->mutex, NULL);
+        pthread_mutex_init(&p->progress_mutex, NULL);
+        pthread_cond_init(&p->input_cond, NULL);
+        pthread_cond_init(&p->progress_cond, NULL);
+        pthread_cond_init(&p->output_cond, NULL);
+        p->parent = fctx;
+        
+        if(!i)  {
+            p->avctx  = avctx;
+            if (!pthread_create(&p->thread, NULL, frame_worker_thread, p))
+                p->thread_init = 1;
+        }
+    }
+    return 0;
+error:
+    frame_thread_free(avctx, 1);
+    
+    return err;
+}
+static int second_decoder_thread_init(AVCodecContext *avctx) {
+    FrameThreadContext *fctx = avctx->thread_opaque2;
+    PerThreadContext *p  = &fctx->threads[1];
+    int err = 0;
+    
+    if (!avctx->thread_opaque2 || !fctx->threads) {
+        err = AVERROR(ENOMEM);
+        goto error;
+    }
+    
+    p->avctx  = avctx;
+    if (!pthread_create(&p->thread, NULL, frame_worker_thread, p))
+        p->thread_init = 1;
+    
+    return 0;
+error:
+    return err;
+}
+
 static int frame_thread_init(AVCodecContext *avctx)
 {
     int thread_count = avctx->thread_count;
@@ -1080,7 +1134,12 @@ void ff_thread_free(AVCodecContext *avctx)
         thread_free(avctx);
 }
 
-
+int ff_thread_init2(AVCodecContext *avctx, int first) {
+    if(first)
+        return first_decoder_thread_init(avctx);
+    else
+        return second_decoder_thread_init(avctx);
+}
 
 #if WPP_PTHREAD_MUTEX
 void ff_thread_report_progress2(AVCodecContext *avctx, int field, int thread, int n)

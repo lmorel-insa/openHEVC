@@ -53,7 +53,8 @@ static int volatile entangled_thread_counter = 0;
 static int (*lockmgr_cb)(void **mutex, enum AVLockOp op);
 static void *codec_mutex;
 static void *avformat_mutex;
-
+static int volatile is_first_codec = 1;
+static void * thread_opaque2; 
 #define attribute_align_arg
 
 
@@ -1049,6 +1050,26 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
         }
     }
 
+    if (HAVE_THREADS /*&& (avctx->active_thread_type & FF_THREAD_DECODER)*/) {  // Call function that creat new thread API for multiple-decoders
+        if(is_first_codec) {
+            printf("Initialize the first decoder \n"); 
+            ret = ff_thread_init2(avctx, is_first_codec);
+            is_first_codec = 0;
+            if (ret < 0) {
+                goto free_and_end;
+            }
+            thread_opaque2 = avctx->thread_opaque2;
+        } else {
+            printf("Initialize the second decoder \n");
+            avctx->thread_opaque2 = thread_opaque2;
+            ret = ff_thread_init2(avctx, is_first_codec);
+        }
+        if (ret < 0) {
+            goto free_and_end;
+        }
+    }
+    
+    
     if (av_codec_is_decoder(avctx->codec)) {
         /* validate channel layout from the decoder */
         if (avctx->channel_layout) {
@@ -1379,7 +1400,10 @@ int attribute_align_arg avcodec_decode_video2(AVCodecContext *avctx, AVFrame *pi
         if (HAVE_THREADS && avctx->active_thread_type & FF_THREAD_FRAME)
             ret = ff_thread_decode_frame(avctx, picture, got_picture_ptr,
                                          avpkt);
-        else {
+        else if(HAVE_THREADS && avctx->active_thread_type & FF_THREAD_DECODER)
+            ret = ff_thread_decode_frame(avctx, picture, got_picture_ptr,
+                                         avpkt);
+            else    {
 
             ret = avctx->codec->decode(avctx, picture, got_picture_ptr,
                                        avpkt);
