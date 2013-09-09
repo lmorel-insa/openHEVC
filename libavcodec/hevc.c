@@ -674,6 +674,7 @@ static int hls_slice_header(HEVCContext *s)
             if ((ret = ff_hevc_set_new_ref(s, &s->EL_frame, s->poc, 1))< 0)
                 return ret;
             s->hevcdsp.upsample_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf);
+            ff_thread_report_progress2(&s->ThCodec, 1, 0); // Signal that the upsampling is performed successfully
         }
 #endif
         
@@ -2813,9 +2814,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
             s->is_decoded = 1;
             // Signal progress that the frame is decoded 
             if(!s->layer_id)
-                ff_thread_report_progress2(s->ThCodec, 1, 0);
-            
-            
+                ff_thread_report_progress2(&s->ThCodec, 1, 0);
         }
 
         if (ctb_addr_ts < 0)
@@ -3092,6 +3091,8 @@ static av_cold int hevc_decode_init(AVCodecContext *avctx)
     if (avctx->extradata_size > 0 && avctx->extradata)
         return decode_nal_units(s, s->avctx->extradata, s->avctx->extradata_size);
     s->width = s->height = 0;
+    
+    ff_thread_get_buffer2(avctx, &s->ThCodec, 0);
 
     return 0;
 }
@@ -3102,6 +3103,7 @@ static av_cold int hevc_decode_free(AVCodecContext *avctx)
     HEVCContext *s = avctx->priv_data;
 
     HEVCThreadContext *lc = s->HEVClc;
+    ff_thread_release_buffer2(avctx, &s->ThCodec);
     pic_arrays_free(s);
     av_free(s->rbsp_buffer);
     av_free(s->skipped_bytes_pos);

@@ -52,7 +52,7 @@ void print_usage() {
     printf("     -n : no display\n");
     printf("     -c : no check md5\n");
     printf("     -a : disable AU\n");
-    printf("     -f : enable frame based multi-threading \n");
+    printf("     -f : <Parallel processing configuration 0:1:2:3> \n");
     printf("     -t <temporal layer id>\n");
     printf("     -p <number of threads> \n");
     printf("     -l <number of layers to decode 1:2> \n");
@@ -132,7 +132,7 @@ void init_main(int argc, char *argv[]) {
 	display_flags   = DISPLAY_ENABLE;
     check_md5_flags = MD5_ENABLE;
     disable_au      = AU_PARSER_ENABLE;
-    enable_frame_based = FRAME_BASED_DISABLE;
+    enable_frame_based = DISABLE;
     nb_pthreads = 0;
     layer_id = 1;
     temporal_layer_id        = 7;

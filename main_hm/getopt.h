@@ -47,8 +47,10 @@
 #define AU_PARSER_DISABLE 1
 #define AU_PARSER_ENABLE  0
 
-#define FRAME_BASED_DISABLE 0
-#define FRAME_BASED_ENABLE  1
+#define DISABLE 0
+#define SLICE_BASED  1
+#define FRAME_BASED  2
+#define CODEC_BASED  3
 
 
 // input file

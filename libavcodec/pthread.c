@@ -549,7 +549,7 @@ static int submit_packet(PerThreadContext *p, AVPacket *avpkt)
             pthread_mutex_unlock(&prev_thread->progress_mutex);
         }
 
-//        err = update_context_from_thread(p->avctx, prev_thread->avctx, 0);
+        err = update_context_from_thread(p->avctx, prev_thread->avctx, 0);
         if (err) {
             pthread_mutex_unlock(&p->mutex);
             return err;
@@ -599,6 +599,81 @@ static int submit_packet(PerThreadContext *p, AVPacket *avpkt)
     fctx->prev_thread = p;
     fctx->next_decoding++;
 
+    return 0;
+}
+
+
+static int submit_packet2(PerThreadContext *p, AVPacket *avpkt)
+{
+    FrameThreadContext *fctx = p->parent;
+    PerThreadContext *prev_thread = fctx->prev_thread;
+    const AVCodec *codec = p->avctx->codec;
+    
+    if (!avpkt->size && !(codec->capabilities & CODEC_CAP_DELAY)) return 0;
+    
+    pthread_mutex_lock(&p->mutex);
+    
+    release_delayed_buffers(p);
+    
+    if (prev_thread) {
+        int err = 0;
+        if (prev_thread->state == STATE_SETTING_UP) {
+            pthread_mutex_lock(&prev_thread->progress_mutex);
+            while (prev_thread->state == STATE_SETTING_UP)
+                pthread_cond_wait(&prev_thread->progress_cond, &prev_thread->progress_mutex);
+            pthread_mutex_unlock(&prev_thread->progress_mutex);
+        }
+        
+        //        err = update_context_from_thread(p->avctx, prev_thread->avctx, 0);
+        if (err) {
+            pthread_mutex_unlock(&p->mutex);
+            return err;
+        }
+    }
+    
+    av_buffer_unref(&p->avpkt.buf);
+    p->avpkt = *avpkt;
+    if (avpkt->buf)
+        p->avpkt.buf = av_buffer_ref(avpkt->buf);
+    else {
+        av_fast_malloc(&p->buf, &p->allocated_buf_size, avpkt->size + FF_INPUT_BUFFER_PADDING_SIZE);
+        p->avpkt.data = p->buf;
+        memcpy(p->buf, avpkt->data, avpkt->size);
+        memset(p->buf + avpkt->size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+    }
+    
+    p->state = STATE_SETTING_UP;
+    pthread_cond_signal(&p->input_cond);
+    pthread_mutex_unlock(&p->mutex);
+    
+    /*
+     * If the client doesn't have a thread-safe get_buffer(),
+     * then decoding threads call back to the main thread,
+     * and it calls back to the client here.
+     */
+    
+    if (!p->avctx->thread_safe_callbacks && (
+#if FF_API_GET_BUFFER
+                                             p->avctx->get_buffer ||
+#endif
+                                             p->avctx->get_buffer2 != avcodec_default_get_buffer2)) {
+        while (p->state != STATE_SETUP_FINISHED && p->state != STATE_INPUT_READY) {
+            pthread_mutex_lock(&p->progress_mutex);
+            while (p->state == STATE_SETTING_UP)
+                pthread_cond_wait(&p->progress_cond, &p->progress_mutex);
+            
+            if (p->state == STATE_GET_BUFFER) {
+                p->result = ff_get_buffer(p->avctx, p->requested_frame, p->requested_flags);
+                p->state  = STATE_SETTING_UP;
+                pthread_cond_signal(&p->progress_cond);
+            }
+            pthread_mutex_unlock(&p->progress_mutex);
+        }
+    }
+    
+    fctx->prev_thread = p;
+    fctx->next_decoding++;
+    
     return 0;
 }
 
@@ -694,7 +769,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
     p = &fctx->threads[fctx->next_decoding];
 //    err = update_context_from_user(p->avctx, avctx);
 //    if (err) return err;
-    err = submit_packet(p, avpkt);
+    err = submit_packet2(p, avpkt);
     if (err) return err;
     
     /*
@@ -1129,37 +1204,64 @@ int ff_thread_get_buffer(AVCodecContext *avctx, ThreadFrame *f, int flags)
 
     return err;
 }
-
+int ff_thread_get_buffer2(AVCodecContext *avctx, ThreadCodec *f, int flags)
+{
+    PerThreadContext *p = avctx->thread_opaque2;
+    
+    f->owner = avctx;
+    
+    if (!(avctx->active_thread_type & FF_THREAD_DECODER))
+        return 0;
+    
+    if (p->state != STATE_SETTING_UP &&
+        (avctx->codec->update_thread_context || !avctx->thread_safe_callbacks)) {
+        av_log(avctx, AV_LOG_ERROR, "get_buffer() cannot be called after ff_thread_finish_setup()\n");
+        return -1;
+    }
+    
+    if (avctx->internal->allocate_progress) {
+        int *progress;
+        f->progress = av_buffer_alloc(2 * sizeof(int));
+        if (!f->progress) {
+            return AVERROR(ENOMEM);
+        }
+        progress = (int*)f->progress->data;
+        progress[0] = progress[1] = -1;
+    }
+    
+    
+    return 0;
+}
 void ff_thread_release_buffer(AVCodecContext *avctx, ThreadFrame *f)
 {
     PerThreadContext *p = avctx->thread_opaque;
     FrameThreadContext *fctx;
     AVFrame *dst, *tmp;
     int can_direct_free = !(avctx->active_thread_type & FF_THREAD_FRAME) ||
-                          avctx->thread_safe_callbacks                   ||
-                          (
+    avctx->thread_safe_callbacks                   ||
+    (
 #if FF_API_GET_BUFFER
-                           !avctx->get_buffer &&
+     !avctx->get_buffer &&
 #endif
-                           avctx->get_buffer2 == avcodec_default_get_buffer2);
-
+     avctx->get_buffer2 == avcodec_default_get_buffer2);
+    
     if (!f->f->data[0])
         return;
-
+    
     if (avctx->debug & FF_DEBUG_BUFFERS)
         av_log(avctx, AV_LOG_DEBUG, "thread_release_buffer called on pic %p\n", f);
-
+    
     av_buffer_unref(&f->progress);
     f->owner    = NULL;
-
+    
     if (can_direct_free) {
         av_frame_unref(f->f);
         return;
     }
-
+    
     fctx = p->parent;
     pthread_mutex_lock(&fctx->buffer_mutex);
-
+    
     if (p->num_released_buffers + 1 >= INT_MAX / sizeof(*p->released_buffers))
         goto fail;
     tmp = av_fast_realloc(p->released_buffers, &p->released_buffers_allocated,
@@ -1168,14 +1270,23 @@ void ff_thread_release_buffer(AVCodecContext *avctx, ThreadFrame *f)
     if (!tmp)
         goto fail;
     p->released_buffers = tmp;
-
+    
     dst = &p->released_buffers[p->num_released_buffers];
     av_frame_move_ref(dst, f->f);
-
+    
     p->num_released_buffers++;
-
+    
 fail:
     pthread_mutex_unlock(&fctx->buffer_mutex);
+}
+
+void ff_thread_release_buffer2(AVCodecContext *avctx, ThreadCodec *f)
+{
+    if (avctx->debug & FF_DEBUG_BUFFERS)
+        av_log(avctx, AV_LOG_DEBUG, "thread_release_buffer called on pic %p\n", f);
+
+    av_buffer_unref(&f->progress);
+    f->owner    = NULL;
 }
 
 /**
