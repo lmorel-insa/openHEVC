@@ -32,6 +32,8 @@
 #include "hevcpred.h"
 #include "hevcdsp.h"
 
+#include "thread.h"
+
 
 #define MAX_DPB_SIZE 16 // A.4.1
 #define MAX_THREADS 16
@@ -972,6 +974,7 @@ typedef struct HEVCContext {
     HEVCFrame *BL_frame;
     int heightBL;
     int widthBL;
+    ThreadCodec *ThCodec;
 #endif
     int                 layer_id;
     int                 temporal_layer_id;

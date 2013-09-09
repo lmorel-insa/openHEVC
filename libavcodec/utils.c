@@ -1401,7 +1401,7 @@ int attribute_align_arg avcodec_decode_video2(AVCodecContext *avctx, AVFrame *pi
             ret = ff_thread_decode_frame(avctx, picture, got_picture_ptr,
                                          avpkt);
         else if(HAVE_THREADS && avctx->active_thread_type & FF_THREAD_DECODER)
-            ret = ff_thread_decode_frame(avctx, picture, got_picture_ptr,
+            ret = ff_thread_decode_frame2(avctx, picture, got_picture_ptr,
                                          avpkt);
             else    {
 

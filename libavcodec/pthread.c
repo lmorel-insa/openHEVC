@@ -541,7 +541,7 @@ static int submit_packet(PerThreadContext *p, AVPacket *avpkt)
     release_delayed_buffers(p);
 
     if (prev_thread) {
-        int err;
+        int err = 0;
         if (prev_thread->state == STATE_SETTING_UP) {
             pthread_mutex_lock(&prev_thread->progress_mutex);
             while (prev_thread->state == STATE_SETTING_UP)
@@ -549,7 +549,7 @@ static int submit_packet(PerThreadContext *p, AVPacket *avpkt)
             pthread_mutex_unlock(&prev_thread->progress_mutex);
         }
 
-        err = update_context_from_thread(p->avctx, prev_thread->avctx, 0);
+//        err = update_context_from_thread(p->avctx, prev_thread->avctx, 0);
         if (err) {
             pthread_mutex_unlock(&p->mutex);
             return err;
@@ -676,6 +676,82 @@ int ff_thread_decode_frame(AVCodecContext *avctx,
     return (p->result >= 0) ? avpkt->size : p->result;
 }
 
+
+
+int ff_thread_decode_frame2(AVCodecContext *avctx,
+                           AVFrame *picture, int *got_picture_ptr,
+                           AVPacket *avpkt)
+{
+    FrameThreadContext *fctx = avctx->thread_opaque2;
+    int finished = fctx->next_finished;
+    PerThreadContext *p;
+    int err;
+    
+    /*
+     * Submit a packet to the next decoding thread.
+     */
+    
+    p = &fctx->threads[fctx->next_decoding];
+//    err = update_context_from_user(p->avctx, avctx);
+//    if (err) return err;
+    err = submit_packet(p, avpkt);
+    if (err) return err;
+    
+    /*
+     * If we're still receiving the initial packets, don't return a frame.
+     */
+    
+    if (fctx->delaying) {
+        if (fctx->next_decoding >= (avctx->thread_count-1))
+            fctx->delaying = 0;
+        
+        *got_picture_ptr=0;
+        if (avpkt->size)
+            return avpkt->size;
+    }
+    
+    /*
+     * Return the next available frame from the oldest thread.
+     * If we're at the end of the stream, then we have to skip threads that
+     * didn't output a frame, because we don't want to accidentally signal
+     * EOF (avpkt->size == 0 && *got_picture_ptr == 0).
+     */
+    
+    do {
+        p = &fctx->threads[finished++];
+        if (p->state != STATE_INPUT_READY) {
+            pthread_mutex_lock(&p->progress_mutex);
+            while (p->state != STATE_INPUT_READY){
+                pthread_cond_wait(&p->output_cond, &p->progress_mutex);
+            }
+            pthread_mutex_unlock(&p->progress_mutex);
+        }
+        
+        av_frame_move_ref(picture, &p->frame);
+        *got_picture_ptr = p->got_frame;
+        picture->pkt_dts = p->avpkt.dts;
+        
+        /*
+         * A later call with avkpt->size == 0 may loop over all threads,
+         * including this one, searching for a frame to return before being
+         * stopped by the "finished != fctx->next_finished" condition.
+         * Make sure we don't mistakenly return the same frame again.
+         */
+        p->got_frame = 0;
+        
+        if (finished >= avctx->thread_count) finished = 0;
+    } while (!avpkt->size && !*got_picture_ptr && finished != fctx->next_finished);
+    
+    update_context_from_thread(avctx, p->avctx, 1);
+    
+    if (fctx->next_decoding >= avctx->thread_count) fctx->next_decoding = 0;
+    
+    fctx->next_finished = finished;
+    
+    /* return the size of the consumed packet if no error occurred */
+    return (p->result >= 0) ? avpkt->size : p->result;
+}
+
 void ff_thread_report_progress(ThreadFrame *f, int n, int field)
 {
     PerThreadContext *p;
@@ -693,6 +769,30 @@ void ff_thread_report_progress(ThreadFrame *f, int n, int field)
     pthread_cond_broadcast(&p->progress_cond);
     pthread_mutex_unlock(&p->progress_mutex);
 }
+
+void ff_thread_report_progress2(ThreadCodec *f, int n, int field){
+
+    PerThreadContext *p;
+    int *progress = f->progress ? (int*)f->progress->data : NULL;
+    
+    if (!progress || progress[field] >= n) return;
+    
+    p = f->owner->thread_opaque;
+    
+    if (f->owner->debug&FF_DEBUG_THREADS)
+        av_log(f->owner, AV_LOG_DEBUG, "%p finished %d field %d\n", progress, n, field);
+    
+    pthread_mutex_lock(&p->progress_mutex);
+    progress[field] = n;
+    pthread_cond_broadcast(&p->progress_cond);
+    pthread_mutex_unlock(&p->progress_mutex);
+
+
+
+}
+
+
+
 
 void ff_thread_await_progress(ThreadFrame *f, int n, int field)
 {

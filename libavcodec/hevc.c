@@ -2289,7 +2289,9 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
     int ctb_row = ctb_row_p[job];
     int ctb_addr_rs = s1->sh.slice_ctb_addr_rs + (ctb_row) * ((s1->sps->pic_width_in_luma_samples + (ctb_size - 1))>> s1->sps->log2_ctb_size);
     int ctb_addr_ts = s1->pps->ctb_addr_rs_to_ts[ctb_addr_rs];
+#if WPP_PTHREAD_MUTEX
     int thread = ctb_row%s1->threads_number;
+#endif
     s = s1->sList[self_id];
     lc = s->HEVClc;
 
@@ -2809,6 +2811,11 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
                 ff_unref_upsampled_frame(s);
 
             s->is_decoded = 1;
+            // Signal progress that the frame is decoded 
+            if(!s->layer_id)
+                ff_thread_report_progress2(s->ThCodec, 1, 0);
+            
+            
         }
 
         if (ctb_addr_ts < 0)

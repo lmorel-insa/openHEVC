@@ -43,6 +43,17 @@ typedef struct ThreadFrame {
     AVBufferRef *progress;
 } ThreadFrame;
 
+
+
+typedef struct ThreadCodec {
+    AVCodecContext *owner;
+    // progress->data is an array of 2 ints holding progress for top/bottom
+    // fields
+    AVBufferRef *progress;
+} ThreadCodec;
+
+
+
 /**
  * Wait for decoding threads to finish and reset internal state.
  * Called by avcodec_flush_buffers().
@@ -129,6 +140,21 @@ int ff_thread_init(AVCodecContext *s);
 void ff_thread_free(AVCodecContext *s);
 
 int ff_thread_init2(AVCodecContext *avctx, int first);
+/**
+ * Submit a new frame to a decoding thread.
+ * Returns the next available frame in picture. *got_picture_ptr
+ * will be 0 if none is available.
+ * The return value on success is the size of the consumed packet for
+ * compatibility with avcodec_decode_video2(). This means the decoder
+ * has to consume the full packet.
+ *
+ * Parameters are the same as avcodec_decode_video2().
+ */
+int ff_thread_decode_frame2(AVCodecContext *avctx, AVFrame *picture,
+                           int *got_picture_ptr, AVPacket *avpkt);
+
+void ff_thread_report_progress2(ThreadCodec *f, int n, int field); 
+
 #if WPP_PTHREAD_MUTEX
 int ff_alloc_entries(AVCodecContext *avctx, int count);
 void ff_reset_entries(AVCodecContext *avctx);
