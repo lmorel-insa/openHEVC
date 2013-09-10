@@ -386,6 +386,7 @@ static attribute_align_arg void *frame_worker_thread(void *arg)
         pthread_mutex_lock(&p->mutex);
         avcodec_get_frame_defaults(&p->frame);
         p->got_frame = 0;
+        printf("Decode the frame \n");
         p->result = codec->decode(avctx, &p->frame, &p->got_frame, &p->avpkt);
         /* many decoders assign whole AVFrames, thus overwriting extended_data;
          * make sure it's set correctly */
@@ -619,8 +620,11 @@ static int submit_packet2(PerThreadContext *p, AVPacket *avpkt)
         int err = 0;
         if (prev_thread->state == STATE_SETTING_UP) {
             pthread_mutex_lock(&prev_thread->progress_mutex);
-            while (prev_thread->state == STATE_SETTING_UP)
+            while (prev_thread->state == STATE_SETTING_UP) {
+                printf("Waiting for the prev thread \n"); 
                 pthread_cond_wait(&prev_thread->progress_cond, &prev_thread->progress_mutex);
+                printf("Leave waiting for the prev thread \n");
+            }
             pthread_mutex_unlock(&prev_thread->progress_mutex);
         }
         
@@ -769,6 +773,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
     p = &fctx->threads[fctx->next_decoding];
 //    err = update_context_from_user(p->avctx, avctx);
 //    if (err) return err;
+    printf("Submit packet   \n");
     err = submit_packet2(p, avpkt);
     if (err) return err;
     
@@ -852,11 +857,11 @@ void ff_thread_report_progress2(ThreadCodec *f, int n, int field){
     
     if (!progress || progress[field] >= n) return;
     
-    p = f->owner->thread_opaque;
+    p = f->owner->thread_opaque2;
     
     if (f->owner->debug&FF_DEBUG_THREADS)
         av_log(f->owner, AV_LOG_DEBUG, "%p finished %d field %d\n", progress, n, field);
-    
+    printf("Signal progress and waik-up the next thread \n");
     pthread_mutex_lock(&p->progress_mutex);
     progress[field] = n;
     pthread_cond_broadcast(&p->progress_cond);
@@ -876,7 +881,7 @@ void ff_thread_await_progress(ThreadFrame *f, int n, int field)
 
     if (!progress || progress[field] >= n) return;
 
-    p = f->owner->thread_opaque;
+    p = f->owner->thread_opaque2;
 
     if (f->owner->debug&FF_DEBUG_THREADS)
         av_log(f->owner, AV_LOG_DEBUG, "thread awaiting %d field %d from %p\n", n, field, progress);
@@ -1213,13 +1218,13 @@ int ff_thread_get_buffer2(AVCodecContext *avctx, ThreadCodec *f, int flags)
     if (!(avctx->active_thread_type & FF_THREAD_DECODER))
         return 0;
     
-    if (p->state != STATE_SETTING_UP &&
+    /*if (p->state != STATE_SETTING_UP &&
         (avctx->codec->update_thread_context || !avctx->thread_safe_callbacks)) {
         av_log(avctx, AV_LOG_ERROR, "get_buffer() cannot be called after ff_thread_finish_setup()\n");
         return -1;
-    }
+    }*/
     
-    if (avctx->internal->allocate_progress) {
+    //if (avctx->internal->allocate_progress) {
         int *progress;
         f->progress = av_buffer_alloc(2 * sizeof(int));
         if (!f->progress) {
@@ -1227,7 +1232,7 @@ int ff_thread_get_buffer2(AVCodecContext *avctx, ThreadCodec *f, int flags)
         }
         progress = (int*)f->progress->data;
         progress[0] = progress[1] = -1;
-    }
+    //}
     
     
     return 0;
@@ -1311,6 +1316,8 @@ static void validate_thread_parameters(AVCodecContext *avctx)
     } else if (avctx->codec->capabilities & CODEC_CAP_SLICE_THREADS &&
                avctx->thread_type & FF_THREAD_SLICE) {
         avctx->active_thread_type = FF_THREAD_SLICE;
+    } else if(avctx->thread_type & FF_THREAD_DECODER) {
+        avctx->active_thread_type = FF_THREAD_DECODER;
     } else if (!(avctx->codec->capabilities & CODEC_CAP_AUTO_THREADS)) {
         avctx->thread_count       = 1;
         avctx->active_thread_type = 0;
@@ -1327,7 +1334,6 @@ int ff_thread_init(AVCodecContext *avctx)
 #if HAVE_W32THREADS
     w32thread_init();
 #endif
-
     validate_thread_parameters(avctx);
     if (avctx->active_thread_type&FF_THREAD_SLICE)
         return thread_init(avctx);

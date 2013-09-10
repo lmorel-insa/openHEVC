@@ -166,7 +166,7 @@ void ff_thread_report_progress2(ThreadCodec *f, int n, int field);
 int ff_thread_get_buffer2(AVCodecContext *avctx, ThreadCodec *f, int flags);
 void ff_thread_release_buffer2(AVCodecContext *avctx, ThreadCodec *f);
 #if WPP_PTHREAD_MUTEX
-int ff_alloc_entries(AVCodecContext *avctx, int count);
+int     ff_alloc_entries(AVCodecContext *avctx, int count);
 void ff_reset_entries(AVCodecContext *avctx);
 void ff_thread_report_progress2(AVCodecContext *avctx, int field, int thread, int n);
 void ff_thread_await_progress2(AVCodecContext *avctx,  int field, int thread, int shift);

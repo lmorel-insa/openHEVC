@@ -1042,17 +1042,9 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
         if (!avctx->rc_initial_buffer_occupancy)
             avctx->rc_initial_buffer_occupancy = avctx->rc_buffer_size * 3 / 4;
     }
-
-    if (avctx->codec->init && !(avctx->active_thread_type & FF_THREAD_FRAME)) {
-        ret = avctx->codec->init(avctx);
-        if (ret < 0) {
-            goto free_and_end;
-        }
-    }
-
-    if (HAVE_THREADS /*&& (avctx->active_thread_type & FF_THREAD_DECODER)*/) {  // Call function that creat new thread API for multiple-decoders
+    if (HAVE_THREADS && (avctx->active_thread_type & FF_THREAD_DECODER)) {  // Call function that creat new thread API for multiple-decoders
         if(is_first_codec) {
-            printf("Initialize the first decoder \n"); 
+            printf("Initialize the first decoder \n");
             ret = ff_thread_init2(avctx, is_first_codec);
             is_first_codec = 0;
             if (ret < 0) {
@@ -1068,7 +1060,15 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
             goto free_and_end;
         }
     }
-    
+
+    if (avctx->codec->init && !(avctx->active_thread_type & FF_THREAD_FRAME)) {
+        ret = avctx->codec->init(avctx);
+        if (ret < 0) {
+            goto free_and_end;
+        }
+    }
+
+        
     
     if (av_codec_is_decoder(avctx->codec)) {
         /* validate channel layout from the decoder */
@@ -1395,15 +1395,16 @@ int attribute_align_arg avcodec_decode_video2(AVCodecContext *avctx, AVFrame *pi
 
     if (!avctx->refcounted_frames)
         av_frame_unref(&avci->to_free);
-
+    
     if ((avctx->codec->capabilities & CODEC_CAP_DELAY) || avpkt->size || (avctx->active_thread_type & FF_THREAD_FRAME)) {
         if (HAVE_THREADS && avctx->active_thread_type & FF_THREAD_FRAME)
             ret = ff_thread_decode_frame(avctx, picture, got_picture_ptr,
                                          avpkt);
-        else if(HAVE_THREADS && avctx->active_thread_type & FF_THREAD_DECODER)
+        else if(HAVE_THREADS && avctx->active_thread_type & FF_THREAD_DECODER){
+            printf("Decode frame here \n");
             ret = ff_thread_decode_frame2(avctx, picture, got_picture_ptr,
                                          avpkt);
-            else    {
+        }   else    {
 
             ret = avctx->codec->decode(avctx, picture, got_picture_ptr,
                                        avpkt);
