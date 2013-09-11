@@ -83,12 +83,14 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
             fprintf(stderr, "could not open codec\n");
             return NULL;
         }
+        openHevcContext->ec->is_base_layer = 0;
+        openHevcContext->c->is_base_layer = 1;
         av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", 0, 0);
     }
     return (OpenHevc_Handle) openHevcContext;
 }
 static int first = 1;
-static int first0 = 1;
+
 int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts, int nb_layers)
 {
     int got_picture, got_picture1, len;
@@ -99,29 +101,29 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     else
         layer_id = ((buff[3]&0x01)<<5) + ((buff[4]&0xF8)>>3);
         
-    printf("layer_id %d \n", layer_id);
-    
-    if(!layer_id || first0){
-        if(layer_id) first0 = 0;
+     
+    if(!layer_id ){
+        
         openHevcContext->avpkt.size = au_len;
         openHevcContext->avpkt.data = buff;
 
         openHevcContext->avpkt.pts  = pts;
     
-        printf("Decode the base BL ... \n");
-        len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
+         len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
     }
     
     if(nb_layers>1) {
         int out_value=1;
-        av_opt_set_int(openHevcContext->ec->priv_data, "bl-height",openHevcContext->c->height , 0);
-        av_opt_set_int(openHevcContext->ec->priv_data, "bl-width",openHevcContext->c->width   , 0);
+        openHevcContext->ec->BLheight = openHevcContext->c->height;
+        openHevcContext->ec->BLwidth = openHevcContext->c->width;
         av_opt_get_int(openHevcContext->c->priv_data, "is-decoded", 0, &out_value);
         if(out_value)   {
-            void* sp = av_malloc(sizeof(HEVCFrame));
+            void* sp;
+            if(!first)
+                sp = av_malloc(sizeof(HEVCFrame));
             av_opt_get_void(openHevcContext->c->priv_data,  "rbl-picture", sp, sizeof(HEVCFrame),  0);
-            av_opt_set_void(openHevcContext->ec->priv_data, "wbl-picture", sp, sizeof(HEVCFrame),  0);
-            av_free(sp);
+            openHevcContext->ec->based_frame = sp;
+ //           av_free(sp);
         }
         if(buff[0] == 0 && buff[1] == 0 && buff[2] ==0)
             layer_id = ((buff[4]&0x01)<<5) + ((buff[5]&0xF8)>>3);
@@ -133,8 +135,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
             openHevcContext->eavpkt.data = buff;
             openHevcContext->eavpkt.pts  = pts;
             first = 0; 
-            printf("Decode the EL ...  \n");
-            len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture1, &openHevcContext->eavpkt);
+             len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture1, &openHevcContext->eavpkt);
         }
         if(got_picture1)    {
             if (len < 0) {

@@ -2994,7 +2994,12 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
         *got_output = ret;
         return 0;
     }
-
+    if(s->decoder_layer==2) {
+        printf("Set the base layer frame \n"); 
+        s->BL_frame = avctx->based_frame;
+        s->widthBL = 1280;
+        s->heightBL = 720;
+    }
     if ((ret = decode_nal_units(s, avpkt->data, avpkt->size)) < 0) {
         return ret;
     }

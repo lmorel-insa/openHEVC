@@ -2581,7 +2581,7 @@ typedef struct AVCodecContext {
     /**
      * thread opaque 2
      * Can be used for parallel decoding of several decoders (SHVC).
-     * Shared between several decoders
+     * Can be used with Slice and WPP in parallel 
      * - encoding: set by execute()
      * - decoding: set by execute()
      */
@@ -2727,6 +2727,9 @@ typedef struct AVCodecContext {
      * - decoding: unused.
      */
     uint64_t vbv_delay;
+    int is_base_layer;
+    void *based_frame;
+    int BLwidth, BLheight;
 } AVCodecContext;
 
 /**
