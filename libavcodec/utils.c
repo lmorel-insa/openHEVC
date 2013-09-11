@@ -1061,7 +1061,7 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
         }
     }
 
-    if (avctx->codec->init && !(avctx->active_thread_type & FF_THREAD_FRAME)) {
+    if (avctx->codec->init && !(avctx->active_thread_type & FF_THREAD_FRAME) && !(avctx->active_thread_type & FF_THREAD_DECODER)) {
         ret = avctx->codec->init(avctx);
         if (ret < 0) {
             goto free_and_end;

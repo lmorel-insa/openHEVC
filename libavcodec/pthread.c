@@ -144,6 +144,7 @@ typedef struct PerThreadContext {
 
     AVFrame *requested_frame;       ///< AVFrame the codec passed to get_buffer()
     int      requested_flags;       ///< flags passed to get_buffer() for requested_frame
+    int      is_base_layer; 
 } PerThreadContext;
 
 /**
@@ -386,8 +387,9 @@ static attribute_align_arg void *frame_worker_thread(void *arg)
         pthread_mutex_lock(&p->mutex);
         avcodec_get_frame_defaults(&p->frame);
         p->got_frame = 0;
-        printf("Decode the frame \n");
+        printf("Decode the frame is base layer %d \n", p->is_base_layer);
         p->result = codec->decode(avctx, &p->frame, &p->got_frame, &p->avpkt);
+        printf("Frame decoded is base layer %d %d \n", p->is_base_layer, p->result);
         /* many decoders assign whole AVFrames, thus overwriting extended_data;
          * make sure it's set correctly */
         p->frame.extended_data = p->frame.data;
@@ -618,13 +620,13 @@ static int submit_packet2(PerThreadContext *p, AVPacket *avpkt)
     
     if (prev_thread) {
         int err = 0;
-        if (prev_thread->state == STATE_SETTING_UP) {
+        if (!p->is_base_layer && prev_thread->state == STATE_SETTING_UP) {
             pthread_mutex_lock(&prev_thread->progress_mutex);
-            while (prev_thread->state == STATE_SETTING_UP) {
-                printf("Waiting for the prev thread \n"); 
+            //while (prev_thread->state == STATE_SETTING_UP) {
+                printf("EL: Waiting for the prev thread \n");
                 pthread_cond_wait(&prev_thread->progress_cond, &prev_thread->progress_mutex);
-                printf("Leave waiting for the prev thread \n");
-            }
+                printf("EL: Leave waiting for the prev thread \n");
+            //}
             pthread_mutex_unlock(&prev_thread->progress_mutex);
         }
         
@@ -775,6 +777,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
 //    if (err) return err;
     printf("Submit packet   \n");
     err = submit_packet2(p, avpkt);
+    printf("Packet submited   \n");
     if (err) return err;
     
     /*
@@ -782,6 +785,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
      */
     
     if (fctx->delaying) {
+        printf("Go to decode next frame fctx->delaying %d  \n", 1);
         if (fctx->next_decoding >= (avctx->thread_count-1))
             fctx->delaying = 0;
         
@@ -802,8 +806,10 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
         if (p->state != STATE_INPUT_READY) {
             pthread_mutex_lock(&p->progress_mutex);
             while (p->state != STATE_INPUT_READY){
+                printf("Wait for the first thread  delaying %d  \n", 0);
                 pthread_cond_wait(&p->output_cond, &p->progress_mutex);
             }
+            printf("Leave waiting for the first thread  delaying %d  \n", 0);
             pthread_mutex_unlock(&p->progress_mutex);
         }
         
@@ -821,7 +827,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
         
         if (finished >= avctx->thread_count) finished = 0;
     } while (!avpkt->size && !*got_picture_ptr && finished != fctx->next_finished);
-    
+    printf("Go to parse bitstream \n");
     update_context_from_thread(avctx, p->avctx, 1);
     
     if (fctx->next_decoding >= avctx->thread_count) fctx->next_decoding = 0;
@@ -981,6 +987,8 @@ static void frame_thread_free(AVCodecContext *avctx, int thread_count)
 static int first_decoder_thread_init(AVCodecContext *avctx) {
     int thread_count = 2; // Only supporting 2 decoders
     FrameThreadContext *fctx;
+    const AVCodec *codec = avctx->codec;
+
     int i, err = 0;
     
     avctx->thread_opaque2 = fctx = av_mallocz(sizeof(FrameThreadContext));
@@ -991,7 +999,10 @@ static int first_decoder_thread_init(AVCodecContext *avctx) {
         err = AVERROR(ENOMEM);
         goto error;
     }
+    
     for(i =0; i < thread_count; i++) {
+        AVCodecContext *copy = av_mallocz(sizeof(AVCodecContext));
+        *copy = *avctx;
         PerThreadContext *p  = &fctx->threads[i];
         
         pthread_mutex_init(&p->mutex, NULL);
@@ -1001,8 +1012,19 @@ static int first_decoder_thread_init(AVCodecContext *avctx) {
         pthread_cond_init(&p->output_cond, NULL);
         p->parent = fctx;
         
+        
+        p->avctx  = copy;
+        p->is_base_layer = !i;
+        
+        
+        
+        copy->thread_opaque2 = p;
+        copy->pkt = &p->avpkt;
+        
         if(!i)  {
-            p->avctx  = avctx;
+            //p->avctx  = avctx;
+            if(codec->init)
+                codec->init(copy); 
             if (!pthread_create(&p->thread, NULL, frame_worker_thread, p))
                 p->thread_init = 1;
         }
@@ -1016,14 +1038,16 @@ error:
 static int second_decoder_thread_init(AVCodecContext *avctx) {
     FrameThreadContext *fctx = avctx->thread_opaque2;
     PerThreadContext *p  = &fctx->threads[1];
+    const AVCodec *codec = avctx->codec;
     int err = 0;
-    
     if (!avctx->thread_opaque2 || !fctx->threads) {
         err = AVERROR(ENOMEM);
         goto error;
     }
     
-    p->avctx  = avctx;
+    *p->avctx  = *avctx;
+    if(codec->init)
+        codec->init(p->avctx);
     if (!pthread_create(&p->thread, NULL, frame_worker_thread, p))
         p->thread_init = 1;
     
