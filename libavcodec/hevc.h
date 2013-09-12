@@ -974,9 +974,7 @@ typedef struct HEVCContext {
     HEVCFrame *BL_frame;
     int heightBL;
     int widthBL;
-    ThreadCodec ThCodec;
 #endif
-    int                 layer_id;
     int                 temporal_layer_id;
     int                 width;
     int                 height;

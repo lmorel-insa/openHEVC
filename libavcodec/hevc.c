@@ -674,7 +674,7 @@ static int hls_slice_header(HEVCContext *s)
             if ((ret = ff_hevc_set_new_ref(s, &s->EL_frame, s->poc, 1))< 0)
                 return ret;
             s->hevcdsp.upsample_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf);
-            ff_thread_report_progress2(&s->ThCodec, 1, 0); // Signal that the upsampling is performed successfully
+            //ff_thread_report_progress2(&s->ThCodec, 1, 0); // Signal that the upsampling is performed successfully
         }
 #endif
         
@@ -2293,6 +2293,7 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
 #if WPP_PTHREAD_MUTEX
     int thread = ctb_row%s1->threads_number;
 #endif
+    
     s = s1->sList[self_id];
     lc = s->HEVClc;
 
@@ -2595,14 +2596,14 @@ static int hls_nal_unit(HEVCContext *s)
 static void printf_ref_pic_list(HEVCContext *s)
 {
     RefPicList  *refPicList = s->ref->refPicList;
-
+    
     uint8_t i, list_idx;
     if (s->sh.slice_type == I_SLICE)
-        printf("\nPOC %4d TId: %1d ( I-SLICE, QP%3d ) ", s->poc, s->temporal_id, s->sh.slice_qp);
+        printf("\nPOC %4d TId: %1d LId: %2d ( I-SLICE, QP%3d ) ", s->poc, s->temporal_id, s->nuh_layer_id, s->sh.slice_qp);
     else if (s->sh.slice_type == B_SLICE)
-        printf("\nPOC %4d TId: %1d ( B-SLICE, QP%3d ) ", s->poc, s->temporal_id, s->sh.slice_qp);
+        printf("\nPOC %4d TId: %1d LId: %2d ( B-SLICE, QP%3d ) ", s->poc, s->temporal_id, s->nuh_layer_id, s->sh.slice_qp);
     else
-        printf("\nPOC %4d TId: %1d ( P-SLICE, QP%3d ) ", s->poc, s->temporal_id, s->sh.slice_qp);
+        printf("\nPOC %4d TId: %1d LId: %2d ( P-SLICE, QP%3d ) ", s->poc, s->temporal_id, s->nuh_layer_id, s->sh.slice_qp);
 
     for ( list_idx = 0; list_idx < 2; list_idx++) {
         printf("[L%d ",list_idx);
@@ -2772,9 +2773,9 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
                     return ret;
 #ifdef SVC_EXTENSION
                 else    {
-                    if(s->nuh_layer_id ==0) {
-                        s->BL_frame = &s->DPB[ff_hevc_find_ref_idx(s, s->poc)];
-                    }
+                    if(s->nuh_layer_id ==0)
+                        s->avctx->based_frame = &s->DPB[ff_hevc_find_ref_idx(s, s->poc)];
+                    
                 }
 #endif
             } else {
@@ -2789,7 +2790,9 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 #ifdef FILTER_EN
 #ifdef SVC_EXTENSION
                 else
-                    s->BL_frame = s->frame;
+                    if(s->nuh_layer_id ==0)
+                        s->avctx->based_frame = &s->DPB[ff_hevc_find_ref_idx(s, s->poc)];
+
 #endif
                     }
 #endif
@@ -2813,8 +2816,8 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
             s->is_decoded = 1;
             // Signal progress that the frame is decoded 
-            if(!s->layer_id)
-                ff_thread_report_progress2(&s->ThCodec, 1, 0);
+         //   if(!s->layer_id)
+           //     ff_thread_report_progress2(&s->ThCodec, 1, 0);
         }
 
         if (ctb_addr_ts < 0)
@@ -2995,10 +2998,9 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
         return 0;
     }
     if(s->decoder_layer==2) {
-        printf("Set the base layer frame \n"); 
         s->BL_frame = avctx->based_frame;
-        s->widthBL = 1280;
-        s->heightBL = 720;
+        s->widthBL = avctx->BLwidth;
+        s->heightBL = avctx->BLheight;
     }
     if ((ret = decode_nal_units(s, avpkt->data, avpkt->size)) < 0) {
         return ret;
@@ -3092,12 +3094,12 @@ static av_cold int hevc_decode_init(AVCodecContext *avctx)
         s->threads_number = 1;
     s->decoder_layer = 1;
     s->is_decoded = 0;
-
+    
     if (avctx->extradata_size > 0 && avctx->extradata)
         return decode_nal_units(s, s->avctx->extradata, s->avctx->extradata_size);
     s->width = s->height = 0;
     
-    ff_thread_get_buffer2(avctx, &s->ThCodec, 0);
+    
 
     return 0;
 }
@@ -3108,17 +3110,17 @@ static av_cold int hevc_decode_free(AVCodecContext *avctx)
     HEVCContext *s = avctx->priv_data;
 
     HEVCThreadContext *lc = s->HEVClc;
-    ff_thread_release_buffer2(avctx, &s->ThCodec);
+   
     pic_arrays_free(s);
-    av_free(s->rbsp_buffer);
-    av_free(s->skipped_bytes_pos);
+    av_freep(&s->rbsp_buffer);
+    av_freep(&s->skipped_bytes_pos);
     av_frame_free(&s->tmp_frame);
-    av_free(s->cabac_state);
+    av_freep(&s->cabac_state);
 
     
-    av_free(lc->gb);
-    av_free(lc->cc);
-    av_free(lc->edge_emu_buffer);
+    av_freep(&lc->gb);
+    av_freep(&lc->cc);
+    av_freep(&lc->edge_emu_buffer);
  
 
     for (i = 0; i < MAX_TRANSFORM_DEPTH; i++) {
@@ -3135,19 +3137,19 @@ static av_cold int hevc_decode_free(AVCodecContext *avctx)
 
         for (i = 1; i < s->threads_number; i++) {
             lc = s->HEVClcList[i];
-            av_free(lc->gb);
-            av_free(lc->cc);
-            av_free(lc->edge_emu_buffer);
+            av_freep(&lc->gb);
+            av_freep(&lc->cc);
+            av_freep(&lc->edge_emu_buffer);
             for (j = 0; j < MAX_TRANSFORM_DEPTH; j++) {
                 av_freep(&lc->tt.cbf_cb[j]);
                 av_freep(&lc->tt.cbf_cr[j]);
             }
             if (s->enable_parallel_tiles)
-                av_free(lc->save_boundary_strengths);
-            av_free(lc);
-            av_free(s->sList[i]);
+                av_freep(&lc->save_boundary_strengths);
+            av_freep(&s->HEVClcList[i]);
+            av_freep(&s->sList[i]);
         }
-        av_free(s->ctb_entry_count);
+        av_freep(&s->ctb_entry_count);
     }
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         av_frame_free(&s->DPB[i].frame);
@@ -3190,8 +3192,8 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 5000, PAR },
     { "bl-width", "set the base layer width", OFFSET(widthBL),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1000000, PAR },
-    { "rbl-picture", "set the base layer picture", OFFSET(BL_frame),
-        AV_OPT_TYPE_RBINARY, {.i64 = 0}, 0, 1000000, PAR },
+  /*  { "rbl-picture", "set the base layer picture", OFFSET(BL_frame),
+        AV_OPT_TYPE_RBINARY, {.i64 = 0}, 0, 1000000, PAR },*/
 #endif
     { "temporal-layer-id", "select layer temporal id", OFFSET(temporal_layer_id),
         AV_OPT_TYPE_INT, {.i64 = 8}, 0, 8, PAR },
@@ -3210,8 +3212,8 @@ static const AVOption options_shvc[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 5000, PAR },
     { "bl-width", "set the base layer width", OFFSET(widthBL),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1000000, PAR },
-    { "wbl-picture", "set the base layer picture", OFFSET(BL_frame),
-        AV_OPT_TYPE_BINARY, {.i64 = 0}, 0, 1000000, PAR },
+   /* { "wbl-picture", "set the base layer picture", OFFSET(BL_frame),
+        AV_OPT_TYPE_BINARY, {.i64 = 0}, 0, 1000000, PAR },*/
 #endif
     { "temporal-layer-id", "select layer temporal id", OFFSET(temporal_layer_id),
         AV_OPT_TYPE_INT, {.i64 = 7}, 0, 7, PAR },

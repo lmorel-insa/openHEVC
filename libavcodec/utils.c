@@ -53,7 +53,7 @@ static int volatile entangled_thread_counter = 0;
 static int (*lockmgr_cb)(void **mutex, enum AVLockOp op);
 static void *codec_mutex;
 static void *avformat_mutex;
-static int volatile is_first_codec = 1;
+static int volatile bl_codec = 1; /*    Only the first decoder is the base layer decoder    */
 static void * thread_opaque2; 
 #define attribute_align_arg
 
@@ -1043,18 +1043,16 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
             avctx->rc_initial_buffer_occupancy = avctx->rc_buffer_size * 3 / 4;
     }
     if (HAVE_THREADS && (avctx->active_thread_type & FF_THREAD_DECODER)) {  // Call function that creat new thread API for multiple-decoders
-        if(is_first_codec) {
-            printf("Initialize the first decoder \n");
-            ret = ff_thread_init2(avctx, is_first_codec);
-            is_first_codec = 0;
+        if(bl_codec) {
+            ret = ff_thread_init2(avctx, 1);
+            bl_codec = 0;
             if (ret < 0) {
                 goto free_and_end;
             }
             thread_opaque2 = avctx->thread_opaque2;
         } else {
-            printf("Initialize the second decoder \n");
             avctx->thread_opaque2 = thread_opaque2;
-            ret = ff_thread_init2(avctx, is_first_codec);
+            ret = ff_thread_init2(avctx, 0);
         }
         if (ret < 0) {
             goto free_and_end;
@@ -1404,7 +1402,6 @@ int attribute_align_arg avcodec_decode_video2(AVCodecContext *avctx, AVFrame *pi
             ret = ff_thread_decode_frame2(avctx, picture, got_picture_ptr,
                                          avpkt);
         }   else    {
-
             ret = avctx->codec->decode(avctx, picture, got_picture_ptr,
                                        avpkt);
             picture->pkt_dts = avpkt->dts;
@@ -1547,7 +1544,7 @@ av_cold int avcodec_close(AVCodecContext *avctx)
     if (avcodec_is_open(avctx)) {
         FramePool *pool = avctx->internal->pool;
         int i;
-        if (HAVE_THREADS && avctx->thread_opaque)
+        if (HAVE_THREADS && ((avctx->thread_opaque) || (avctx->thread_opaque2)))
             ff_thread_free(avctx);
         if (avctx->codec && avctx->codec->close)
             avctx->codec->close(avctx);

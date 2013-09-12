@@ -44,15 +44,18 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
 
     /* open it */
     if(nb_pthreads)	{
-        printf("nb_pthreads %d \n", enable_frame_based);
-        if(enable_frame_based==2)
-            av_opt_set(openHevcContext->c, "thread_type", "codec", 0);
+        if(enable_frame_based==3)
+            av_opt_set(openHevcContext->c, "thread_type", "shvccodec", 0);
         else
-            if(enable_frame_based==1)
-                av_opt_set(openHevcContext->c, "thread_type", "frame", 0);
+            if(enable_frame_based==2){
+                av_opt_set(openHevcContext->c, "thread_type", "codec", 0);
+            }
             else
-                av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
-
+                if(enable_frame_based==1)
+                    av_opt_set(openHevcContext->c, "thread_type", "frame", 0);
+                else {
+                    av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
+                 }
         av_opt_set_int(openHevcContext->c, "threads", nb_pthreads, 0);
     }
     if (avcodec_open2(openHevcContext->c, openHevcContext->codec, NULL) < 0) {
@@ -70,13 +73,16 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
             openHevcContext->ec->flags |= CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
 
         if(nb_pthreads)	{
-            if(enable_frame_based==2)
-                av_opt_set(openHevcContext->ec, "thread_type", "codec", 0);
+            if(enable_frame_based==3)
+                av_opt_set(openHevcContext->ec, "thread_type", "shvccodec", 0);
             else
-                if(enable_frame_based==1)
-                    av_opt_set(openHevcContext->ec, "thread_type", "frame", 0);
+                if(enable_frame_based==2)
+                    av_opt_set(openHevcContext->ec, "thread_type", "codec", 0);
                 else
-                    av_opt_set(openHevcContext->ec, "thread_type", "slice", 0);
+                    if(enable_frame_based==1)
+                        av_opt_set(openHevcContext->ec, "thread_type", "frame", 0);
+                    else
+                        av_opt_set(openHevcContext->ec, "thread_type", "slice", 0);
             av_opt_set_int(openHevcContext->ec, "threads", nb_pthreads, 0);
         }
         if (avcodec_open2(openHevcContext->ec, openHevcContext->ecodec, NULL) < 0) {
@@ -90,47 +96,35 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
     return (OpenHevc_Handle) openHevcContext;
 }
 static int first = 1;
+static int read_layer_id(const unsigned char *buff) {
+    if(buff[0] == 0 && buff[1] == 0 && buff[2] ==0)
+        return ((buff[4]&0x01)<<5) + ((buff[5]&0xF8)>>3);
+    else
+        return ((buff[3]&0x01)<<5) + ((buff[4]&0xF8)>>3);
+}
+
 
 int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts, int nb_layers)
 {
     int got_picture, got_picture1, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
-    int layer_id;
-    if(buff[0] == 0 && buff[1] == 0 && buff[2] ==0)
-        layer_id = ((buff[4]&0x01)<<5) + ((buff[5]&0xF8)>>3);
-    else
-        layer_id = ((buff[3]&0x01)<<5) + ((buff[4]&0xF8)>>3);
-        
-     
+    int layer_id = 0;
+    if(au_len > 3)
+        layer_id = read_layer_id(buff);
+    
     if(!layer_id ){
-        
         openHevcContext->avpkt.size = au_len;
         openHevcContext->avpkt.data = buff;
-
         openHevcContext->avpkt.pts  = pts;
-    
-         len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
+        len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
     }
     
     if(nb_layers>1) {
-        int out_value=1;
-        openHevcContext->ec->BLheight = openHevcContext->c->height;
-        openHevcContext->ec->BLwidth = openHevcContext->c->width;
-        av_opt_get_int(openHevcContext->c->priv_data, "is-decoded", 0, &out_value);
-        if(out_value)   {
-            void* sp;
-            if(!first)
-                sp = av_malloc(sizeof(HEVCFrame));
-            av_opt_get_void(openHevcContext->c->priv_data,  "rbl-picture", sp, sizeof(HEVCFrame),  0);
-            openHevcContext->ec->based_frame = sp;
- //           av_free(sp);
-        }
-        if(buff[0] == 0 && buff[1] == 0 && buff[2] ==0)
-            layer_id = ((buff[4]&0x01)<<5) + ((buff[5]&0xF8)>>3);
-        else
-            layer_id = ((buff[3]&0x01)<<5) + ((buff[4]&0xF8)>>3);
-        
         if(layer_id || first) {
+            openHevcContext->ec->BLheight = openHevcContext->c->height;
+            openHevcContext->ec->BLwidth = openHevcContext->c->width;
+            openHevcContext->ec->based_frame = openHevcContext->c->based_frame;
+
             openHevcContext->eavpkt.size = au_len;
             openHevcContext->eavpkt.data = buff;
             openHevcContext->eavpkt.pts  = pts;
@@ -149,7 +143,6 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
     }
-    got_picture = 0; 
     return got_picture;
 }
 

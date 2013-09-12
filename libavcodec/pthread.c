@@ -387,9 +387,10 @@ static attribute_align_arg void *frame_worker_thread(void *arg)
         pthread_mutex_lock(&p->mutex);
         avcodec_get_frame_defaults(&p->frame);
         p->got_frame = 0;
-        printf("Is decoding ...  base layer %d \n", p->is_base_layer);
+        
+
         p->result = codec->decode(avctx, &p->frame, &p->got_frame, &p->avpkt);
-        printf("Frame decoded ... %d \n", p->is_base_layer);
+        
         /* many decoders assign whole AVFrames, thus overwriting extended_data;
          * make sure it's set correctly */
         p->frame.extended_data = p->frame.data;
@@ -398,7 +399,6 @@ static attribute_align_arg void *frame_worker_thread(void *arg)
             ff_thread_finish_setup(avctx);
 
         p->state = STATE_INPUT_READY;
-
         pthread_mutex_lock(&p->progress_mutex);
         pthread_cond_signal(&p->output_cond);
         pthread_mutex_unlock(&p->progress_mutex);
@@ -422,11 +422,15 @@ static int update_context_from_thread(AVCodecContext *dst, AVCodecContext *src, 
 
     if (dst != src) {
         
-        dst->BLheight = src->based_frame;
-        dst->BLwidth = src->BLwidth;
+        dst->based_frame = src->based_frame;
+        dst->BLwidth = src->width;
+        dst->BLheight = src->height;
+        
+        
         dst->time_base = src->time_base;
         dst->width     = src->width;
         dst->height    = src->height;
+        
         dst->pix_fmt   = src->pix_fmt;
 
         dst->coded_width  = src->coded_width;
@@ -475,12 +479,13 @@ static int update_context_from_thread(AVCodecContext *dst, AVCodecContext *src, 
 static int update_context_from_user(AVCodecContext *dst, AVCodecContext *src)
 {
 #define copy_fields(s, e) memcpy(&dst->s, &src->s, (char*)&dst->e - (char*)&dst->s);
+    
+    /*dst->based_frame    = src->based_frame;
+    dst->BLheight       = src->height;
+    dst->BLwidth        = src->width;
+    */
+    
     dst->flags          = src->flags;
-    dst->based_frame          = src->based_frame;
-    dst->BLheight = src->based_frame;
-    dst->BLwidth = src->BLwidth;
-    
-    
     dst->draw_horiz_band= src->draw_horiz_band;
     dst->get_buffer2    = src->get_buffer2;
 #if FF_API_GET_BUFFER
@@ -616,7 +621,7 @@ static int submit_packet(PerThreadContext *p, AVPacket *avpkt)
 static int submit_packet2(PerThreadContext *p, AVPacket *avpkt)
 {
     FrameThreadContext *fctx = p->parent;
-    PerThreadContext *prev_thread = fctx->prev_thread;
+    PerThreadContext *bl_thread = &fctx->threads[0];
     const AVCodec *codec = p->avctx->codec;
     
     if (!avpkt->size && !(codec->capabilities & CODEC_CAP_DELAY)) return 0;
@@ -624,18 +629,26 @@ static int submit_packet2(PerThreadContext *p, AVPacket *avpkt)
     pthread_mutex_lock(&p->mutex);
     
     release_delayed_buffers(p);
-    
-    if (prev_thread) {
+     
+    if (bl_thread) {
         int err = 0;
-        if (!p->is_base_layer && prev_thread->state == STATE_SETTING_UP) {
-            pthread_mutex_lock(&prev_thread->progress_mutex);
-                pthread_cond_wait(&prev_thread->progress_cond, &prev_thread->progress_mutex);
-            pthread_mutex_unlock(&prev_thread->progress_mutex);
+        if (!p->is_base_layer && bl_thread->state == STATE_SETTING_UP) {
+            pthread_mutex_lock(&bl_thread->progress_mutex);
+            while(bl_thread->state == STATE_SETTING_UP)
+                pthread_cond_wait(&bl_thread->progress_cond, &bl_thread->progress_mutex);
+            
+            pthread_mutex_unlock(&bl_thread->progress_mutex);
         }
         if (err) {
             pthread_mutex_unlock(&p->mutex);
             return err;
         }
+    }
+
+    if(!p->is_base_layer){
+        p->avctx->based_frame = bl_thread->avctx->based_frame;
+        p->avctx->BLwidth = bl_thread->avctx->width;
+        p->avctx->BLheight = bl_thread->avctx->height;
     }
     
     av_buffer_unref(&p->avpkt.buf);
@@ -677,10 +690,7 @@ static int submit_packet2(PerThreadContext *p, AVPacket *avpkt)
             pthread_mutex_unlock(&p->progress_mutex);
         }
     }
-    
-    fctx->prev_thread = p;
     fctx->next_decoding++;
-    
     return 0;
 }
 
@@ -765,17 +775,18 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
                            AVPacket *avpkt)
 {
     FrameThreadContext *fctx = avctx->thread_opaque2;
-    int finished = fctx->next_finished;
     PerThreadContext *p;
+    int finished = fctx->next_finished;
     int err;
     
     /*
      * Submit a packet to the next decoding thread.
      */
     
-    p = &fctx->threads[!avctx->is_base_layer];
+    p = &fctx->threads[!avctx->is_base_layer];  /*  Select the right decoder */
     err = update_context_from_user(p->avctx, avctx);
     if (err) return err;
+    
     err = submit_packet2(p, avpkt);
     
     if (err) return err;
@@ -801,12 +812,13 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
      */
     
     do {
-        p = &fctx->threads[finished++];
+        finished++;
+        p = &fctx->threads[avctx->is_base_layer]; /*    Wait for the next decoder to use    */
         if (p->state != STATE_INPUT_READY) {
             pthread_mutex_lock(&p->progress_mutex);
-            while (p->state != STATE_INPUT_READY){
+            while (p->state != STATE_INPUT_READY)
                 pthread_cond_wait(&p->output_cond, &p->progress_mutex);
-            }
+            
             pthread_mutex_unlock(&p->progress_mutex);
         }
         
@@ -821,15 +833,12 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
          * Make sure we don't mistakenly return the same frame again.
          */
         p->got_frame = 0;
-        
         if (finished >= avctx->thread_count) finished = 0;
     } while (!avpkt->size && !*got_picture_ptr && finished != fctx->next_finished);
     update_context_from_thread(avctx, p->avctx, 1);
-    
     if (fctx->next_decoding >= avctx->thread_count) fctx->next_decoding = 0;
     
     fctx->next_finished = finished;
-    
     /* return the size of the consumed packet if no error occurred */
     return (p->result >= 0) ? avpkt->size : p->result;
 }
@@ -850,24 +859,6 @@ void ff_thread_report_progress(ThreadFrame *f, int n, int field)
     progress[field] = n;
     pthread_cond_broadcast(&p->progress_cond);
     pthread_mutex_unlock(&p->progress_mutex);
-}
-
-void ff_thread_report_progress2(ThreadCodec *f, int n, int field){
-
-    PerThreadContext *p;
-    int *progress = f->progress ? (int*)f->progress->data : NULL;
-    
-    if (!progress || progress[field] >= n) return;
-    
-    p = f->owner->thread_opaque2;
-    
-    if (f->owner->debug&FF_DEBUG_THREADS)
-        av_log(f->owner, AV_LOG_DEBUG, "%p finished %d field %d\n", progress, n, field);
-    pthread_mutex_lock(&p->progress_mutex);
-    progress[field] = n;
-    pthread_cond_broadcast(&p->progress_cond);
-    pthread_mutex_unlock(&p->progress_mutex);
-
 }
 
 
@@ -892,10 +883,10 @@ void ff_thread_await_progress(ThreadFrame *f, int n, int field)
 }
 
 void ff_thread_finish_setup(AVCodecContext *avctx) {
-    PerThreadContext *p = avctx->thread_opaque;
+    PerThreadContext *p = avctx->thread_opaque2 ? avctx->thread_opaque2:avctx->thread_opaque;
 
-    if (!(avctx->active_thread_type&FF_THREAD_FRAME)) return;
-
+    if (!(avctx->active_thread_type&FF_THREAD_FRAME) && !(avctx->active_thread_type&FF_THREAD_DECODER)) return;
+    
     pthread_mutex_lock(&p->progress_mutex);
     p->state = STATE_SETUP_FINISHED;
     pthread_cond_broadcast(&p->progress_cond);
@@ -942,7 +933,7 @@ static void frame_thread_free(AVCodecContext *avctx, int thread_count)
         if (p->thread_init)
             pthread_join(p->thread, NULL);
 
-        if (codec->close && codec->init_thread_copy)
+        if (codec->close)
             codec->close(p->avctx);
 
         avctx->codec = NULL;
@@ -977,8 +968,75 @@ static void frame_thread_free(AVCodecContext *avctx, int thread_count)
     av_freep(&avctx->thread_opaque);
 }
 
-static int first_decoder_thread_init(AVCodecContext *avctx) {
-    int thread_count = 2; // Base layer and Enhanced layer
+
+
+static void frame_thread_free2(AVCodecContext *avctx, int thread_count)
+{
+    FrameThreadContext *fctx = avctx->thread_opaque2;
+    const AVCodec *codec = avctx->codec;
+    int i;
+    if(!avctx->is_base_layer){
+        avctx->codec = NULL;
+        avctx->priv_data = NULL;
+        //avctx->internal = NULL;
+        avctx->slice_offset = NULL;
+
+        return;
+    }
+    park_frame_worker_threads(fctx, thread_count);
+    
+    if (fctx->prev_thread && fctx->prev_thread != fctx->threads)
+        update_context_from_thread(fctx->threads->avctx, fctx->prev_thread->avctx, 0);
+    
+    fctx->die = 1;
+    
+    for (i = 0; i < thread_count; i++) {
+        PerThreadContext *p = &fctx->threads[i];
+        
+        pthread_mutex_lock(&p->mutex);
+        pthread_cond_signal(&p->input_cond);
+        pthread_mutex_unlock(&p->mutex);
+        
+        if (p->thread_init)
+            pthread_join(p->thread, NULL);
+        
+        if (codec->close)
+            codec->close(p->avctx);
+        
+        avctx->codec = NULL;
+        
+        release_delayed_buffers(p);
+        av_frame_unref(&p->frame);
+    }
+    
+    for (i = 0; i < thread_count; i++) {
+        PerThreadContext *p = &fctx->threads[i];
+        
+        pthread_mutex_destroy(&p->mutex);
+        pthread_mutex_destroy(&p->progress_mutex);
+        pthread_cond_destroy(&p->input_cond);
+        pthread_cond_destroy(&p->progress_cond);
+        pthread_cond_destroy(&p->output_cond);
+        av_buffer_unref(&p->avpkt.buf);
+        av_freep(&p->buf);
+        av_freep(&p->released_buffers);
+        
+        if (i) {
+            av_freep(&p->avctx->priv_data);
+            //av_freep(&p->avctx->internal);
+            av_freep(&p->avctx->slice_offset);
+        }
+        
+        av_freep(&p->avctx);
+    }
+    
+    av_freep(&fctx->threads);
+    pthread_mutex_destroy(&fctx->buffer_mutex);
+    av_freep(&avctx->thread_opaque2);
+}
+
+static int bl_decoder_thread_init(AVCodecContext *avctx) { /*   Create the main thread and initialize the base layer decoder    */
+    int thread_count = 2; /* TO DO : This solution could support N decoders */
     FrameThreadContext *fctx;
     const AVCodec *codec = avctx->codec;
     int i, err = 0;
@@ -1005,12 +1063,12 @@ static int first_decoder_thread_init(AVCodecContext *avctx) {
         p->parent = fctx;
         
         p->avctx  = copy;
-        p->is_base_layer = !i;
+        p->is_base_layer = i?0:1;/* The first decoder is the base layer Decoder  */
         
         copy->thread_opaque2 = p;
         copy->pkt = &p->avpkt;
         
-        if(!i)  {   // Initialize the base layer decoder
+        if(!i)  {   /*  Initialize the base layer decoder   */
             if(codec->init)
                 codec->init(copy); 
             if (!pthread_create(&p->thread, NULL, frame_worker_thread, p))
@@ -1019,11 +1077,13 @@ static int first_decoder_thread_init(AVCodecContext *avctx) {
     }
     return 0;
 error:
-    frame_thread_free(avctx, 1);
+    frame_thread_free2(avctx, 1);
     
     return err;
 }
-static int second_decoder_thread_init(AVCodecContext *avctx) {
+
+
+static int el_decoder_thread_init(AVCodecContext *avctx) {      /*   Initialize the enhancement layer decoder    */
     FrameThreadContext *fctx = avctx->thread_opaque2;
     PerThreadContext *p  = &fctx->threads[1];
     const AVCodec *codec = avctx->codec;
@@ -1036,7 +1096,7 @@ static int second_decoder_thread_init(AVCodecContext *avctx) {
     *p->avctx  = *avctx;
     p->avctx->thread_opaque2 = p;
     
-    if(codec->init) // Initialize the EL decoder 
+    if(codec->init)     /*  Initialize the enhancement layer decoder   */
         codec->init(p->avctx);
     if (!pthread_create(&p->thread, NULL, frame_worker_thread, p))
         p->thread_init = 1;
@@ -1223,34 +1283,8 @@ int ff_thread_get_buffer(AVCodecContext *avctx, ThreadFrame *f, int flags)
 
     return err;
 }
-int ff_thread_get_buffer2(AVCodecContext *avctx, ThreadCodec *f, int flags)
-{
-    PerThreadContext *p = avctx->thread_opaque2;
-    
-    f->owner = avctx;
-    
-    if (!(avctx->active_thread_type & FF_THREAD_DECODER))
-        return 0;
-    
-    /*if (p->state != STATE_SETTING_UP &&
-        (avctx->codec->update_thread_context || !avctx->thread_safe_callbacks)) {
-        av_log(avctx, AV_LOG_ERROR, "get_buffer() cannot be called after ff_thread_finish_setup()\n");
-        return -1;
-    }*/
-    
-    //if (avctx->internal->allocate_progress) {
-        int *progress;
-        f->progress = av_buffer_alloc(2 * sizeof(int));
-        if (!f->progress) {
-            return AVERROR(ENOMEM);
-        }
-        progress = (int*)f->progress->data;
-        progress[0] = progress[1] = -1;
-    //}
-    
-    
-    return 0;
-}
+
+
 void ff_thread_release_buffer(AVCodecContext *avctx, ThreadFrame *f)
 {
     PerThreadContext *p = avctx->thread_opaque;
@@ -1299,15 +1333,6 @@ fail:
     pthread_mutex_unlock(&fctx->buffer_mutex);
 }
 
-void ff_thread_release_buffer2(AVCodecContext *avctx, ThreadCodec *f)
-{
-    if (avctx->debug & FF_DEBUG_BUFFERS)
-        av_log(avctx, AV_LOG_DEBUG, "thread_release_buffer called on pic %p\n", f);
-
-    av_buffer_unref(&f->progress);
-    f->owner    = NULL;
-}
-
 /**
  * Set the threading algorithms used.
  *
@@ -1325,6 +1350,10 @@ static void validate_thread_parameters(AVCodecContext *avctx)
                                 && !(avctx->flags2 & CODEC_FLAG2_CHUNKS);
     if (avctx->thread_count == 1) {
         avctx->active_thread_type = 0;
+    } else if (CODEC_CAP_SLICE_THREADS && (avctx->thread_type & (FF_THREAD_DECODER_SLICE&0x08))) {
+        avctx->active_thread_type = FF_THREAD_DECODER_SLICE;
+    } else if (CODEC_CAP_SLICE_THREADS && (avctx->thread_type & (FF_THREAD_DECODER&0x40))) {
+        avctx->active_thread_type = FF_THREAD_DECODER;
     } else if (frame_threading_supported && (avctx->thread_type & FF_THREAD_FRAME)) {
         avctx->active_thread_type = FF_THREAD_FRAME;
     } else if (avctx->codec->capabilities & CODEC_CAP_SLICE_THREADS &&
@@ -1359,17 +1388,20 @@ int ff_thread_init(AVCodecContext *avctx)
 
 void ff_thread_free(AVCodecContext *avctx)
 {
-    if (avctx->active_thread_type&FF_THREAD_FRAME)
+    if ((avctx->active_thread_type&FF_THREAD_FRAME))
         frame_thread_free(avctx, avctx->thread_count);
+    else
+        if ((avctx->active_thread_type&FF_THREAD_DECODER) )
+            frame_thread_free2(avctx, avctx->thread_count);
     else
         thread_free(avctx);
 }
 
-int ff_thread_init2(AVCodecContext *avctx, int first) {
-    if(first)
-        return first_decoder_thread_init(avctx);
+int ff_thread_init2(AVCodecContext *avctx, int is_bl_decoder) {
+    if(is_bl_decoder)
+        return bl_decoder_thread_init(avctx);
     else
-        return second_decoder_thread_init(avctx);
+        return el_decoder_thread_init(avctx);
 }
 
 #if WPP_PTHREAD_MUTEX

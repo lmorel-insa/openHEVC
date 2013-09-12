@@ -102,7 +102,7 @@ static void video_decode_example(const char *filename)
     while(!stop) {
         if (disable_au == 0) {
             if (stop_dec == 0 && av_read_frame(pFormatCtx, &packet)<0) stop_dec = 1;
-            
+          
             got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++, layer_id);
         } else {
             if (stop_dec == 0 && feof(f)) stop_dec = 1;
@@ -142,7 +142,8 @@ static void video_decode_example(const char *filename)
                 fwrite( openHevcFrameCpy.pvV , sizeof(uint8_t) , nbData / 4, fout);
             }
             nbFrame++;
-        } else  if (stop_dec==1 && nbFrame)
+        }
+        if (stop_dec==1 && nbFrame)
             stop = 1;
     }
     time = SDL_GetTime()/1000.0;

@@ -140,6 +140,8 @@ int ff_thread_init(AVCodecContext *s);
 void ff_thread_free(AVCodecContext *s);
 
 int ff_thread_init2(AVCodecContext *avctx, int first);
+
+
 /**
  * Submit a new frame to a decoding thread.
  * Returns the next available frame in picture. *got_picture_ptr
@@ -153,18 +155,7 @@ int ff_thread_init2(AVCodecContext *avctx, int first);
 int ff_thread_decode_frame2(AVCodecContext *avctx, AVFrame *picture,
                            int *got_picture_ptr, AVPacket *avpkt);
 
-void ff_thread_report_progress2(ThreadCodec *f, int n, int field); 
 
-/**
- * Wrapper around get_buffer() for frame-multithreaded codecs.
- * Call this function instead of ff_get_buffer(f).
- * Cannot be called after the codec has called ff_thread_finish_setup().
- *
- * @param avctx The current context.
- * @param f The frame to write into.
- */
-int ff_thread_get_buffer2(AVCodecContext *avctx, ThreadCodec *f, int flags);
-void ff_thread_release_buffer2(AVCodecContext *avctx, ThreadCodec *f);
 #if WPP_PTHREAD_MUTEX
 int     ff_alloc_entries(AVCodecContext *avctx, int count);
 void ff_reset_entries(AVCodecContext *avctx);

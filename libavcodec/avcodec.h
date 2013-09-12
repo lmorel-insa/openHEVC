@@ -2518,9 +2518,11 @@ typedef struct AVCodecContext {
      * - decoding: Set by user, otherwise the default is used.
      */
     int thread_type;
-#define FF_THREAD_FRAME   1 ///< Decode more than one frame at once
-#define FF_THREAD_SLICE   2 ///< Decode more than one part of a single frame at once
-#define FF_THREAD_DECODER   4    
+#define FF_THREAD_FRAME             1 ///< Decode more than one frame at once
+#define FF_THREAD_SLICE             2 ///< Decode more than one part of a single frame at once
+#define FF_THREAD_DECODER           4
+#define FF_THREAD_DECODER_SLICE     14
+    
 
     /**
      * Which multithreading methods are in use by the codec.
@@ -2581,7 +2583,7 @@ typedef struct AVCodecContext {
     /**
      * thread opaque 2
      * Can be used for parallel decoding of several decoders (SHVC).
-     * Can be used with Slice and WPP in parallel 
+     * Can be used for both Slice and frame based in parallel 
      * - encoding: set by execute()
      * - decoding: set by execute()
      */
