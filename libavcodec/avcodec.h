@@ -2590,6 +2590,16 @@ typedef struct AVCodecContext {
     void *thread_opaque2;
 
     /**
+     * thread opaque 2
+     * Can be used for parallel upsampling of the base layer.
+     * Can be used for both Slice and frame based in parallel
+     * - encoding: set by execute()
+     * - decoding: set by execute()
+     */
+    void *thread_opaque3;
+
+    
+    /**
      * noise vs. sse weight for the nsse comparsion function
      * - encoding: Set by user.
      * - decoding: unused

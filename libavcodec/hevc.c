@@ -454,6 +454,19 @@ static void pred_weight_table(HEVCContext *sc, GetBitContext *gb)
         }
     }
 }
+static void hls_upsample_v_bl_picture(AVCodecContext *avctxt, void *input_ctb_row){
+    HEVCContext *s = avctxt->priv_data;
+    int *channel = input_ctb_row;
+    s->hevcdsp.upsample_v_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf, *channel);
+    
+}
+static void hls_upsample_h_bl_picture(AVCodecContext *avctxt, void *input_ctb_row){
+    HEVCContext *s = avctxt->priv_data;
+    int *channel = input_ctb_row;
+    s->hevcdsp.upsample_h_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf, *channel);
+    
+}
+
 
 static int hls_slice_header(HEVCContext *s)
 {
@@ -673,7 +686,30 @@ static int hls_slice_header(HEVCContext *s)
             
             if ((ret = ff_hevc_set_new_ref(s, &s->EL_frame, s->poc, 1))< 0)
                 return ret;
-            s->hevcdsp.upsample_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf);
+         //  s->hevcdsp.upsample_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf, 0);
+            int nb   = s->BL_frame->frame->height <= s->EL_frame->height ? s->BL_frame->frame->height:s->EL_frame->height;  // min( FrameBL->height, heightEL);
+          //  printf("nb %d ", nb);
+            
+            nb = (nb / 64) + 1;
+            int arg[35];
+            int ret[35];
+
+          //  printf("nb %d ", nb);
+            for(i=0; i < nb; i++)
+                arg[i] = i;
+                
+             
+            s->avctx->execute(s->avctx, (void *) hls_upsample_h_bl_picture, arg, ret, nb, sizeof(int));
+            nb   = s->EL_frame->width;
+            nb = (nb / 64);
+            for(i=0; i < nb; i++)
+                arg[i] = i;
+            
+            
+             s->avctx->execute(s->avctx, (void *) hls_upsample_v_bl_picture, arg, ret, nb, sizeof(int));
+            
+
+
             //ff_thread_report_progress2(&s->ThCodec, 1, 0); // Signal that the upsampling is performed successfully
         }
 #endif

@@ -56,7 +56,7 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
                 else {
                     av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
                  }
-        av_opt_set_int(openHevcContext->c, "threads", nb_pthreads, 0);
+        av_opt_set_int(openHevcContext->c, "threads", 2, 0);
     }
     if (avcodec_open2(openHevcContext->c, openHevcContext->codec, NULL) < 0) {
         fprintf(stderr, "could not open codec\n");
@@ -106,7 +106,7 @@ static int read_layer_id(const unsigned char *buff) {
 
 int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts, int nb_layers)
 {
-    int got_picture, got_picture1, len;
+    int got_picture = 0, got_picture1 = 0, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     int layer_id = 0;
     if(au_len > 3)

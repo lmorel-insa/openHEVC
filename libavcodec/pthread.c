@@ -202,7 +202,6 @@ static void* attribute_align_arg worker(void *v)
             }
         }
         pthread_mutex_unlock(&c->current_job_lock);
-
         c->rets[our_job%c->rets_count] = c->func ? c->func(avctx, (char*)c->args + our_job*c->job_size):
                                                    c->func2(avctx, c->args, our_job, self_id);
 
@@ -321,7 +320,7 @@ static int thread_init(AVCodecContext *avctx)
         avctx->active_thread_type = 0;
         return 0;
     }
-
+ 
     c = av_mallocz(sizeof(ThreadContext));
     if (!c)
         return -1;
@@ -388,9 +387,9 @@ static attribute_align_arg void *frame_worker_thread(void *arg)
         avcodec_get_frame_defaults(&p->frame);
         p->got_frame = 0;
         
-
-        p->result = codec->decode(avctx, &p->frame, &p->got_frame, &p->avpkt);
         
+        p->result = codec->decode(avctx, &p->frame, &p->got_frame, &p->avpkt);
+
         /* many decoders assign whole AVFrames, thus overwriting extended_data;
          * make sure it's set correctly */
         p->frame.extended_data = p->frame.data;
@@ -990,7 +989,7 @@ static void frame_thread_free2(AVCodecContext *avctx, int thread_count)
     
     fctx->die = 1;
     
-    for (i = 0; i < thread_count; i++) {
+    for (i = 0; i < 2; i++) {
         PerThreadContext *p = &fctx->threads[i];
         
         pthread_mutex_lock(&p->mutex);
@@ -1009,7 +1008,7 @@ static void frame_thread_free2(AVCodecContext *avctx, int thread_count)
         av_frame_unref(&p->frame);
     }
     
-    for (i = 0; i < thread_count; i++) {
+    for (i = 0; i < 2; i++) {
         PerThreadContext *p = &fctx->threads[i];
         
         pthread_mutex_destroy(&p->mutex);

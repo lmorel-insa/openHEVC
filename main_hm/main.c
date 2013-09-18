@@ -112,6 +112,7 @@ static void video_decode_example(const char *filename)
             fflush(stdout);
             if (init == 1 ) {
                 libOpenHevcGetPictureSize2(openHevcHandle, &openHevcFrame.frameInfo, layer_id);
+                printf(" %d %d %d \n", openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight, openHevcFrame.frameInfo.nYPitch);
                 if (display_flags == DISPLAY_ENABLE) {
                     Init_SDL((openHevcFrame.frameInfo.nYPitch - openHevcFrame.frameInfo.nWidth)/2, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
                 }

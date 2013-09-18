@@ -829,10 +829,6 @@ typedef struct UpsamplInf {
 #define HEVC_FRAME_FLAG_SHORT_REF (1 << 1)
 #define HEVC_FRAME_FLAG_LT_REF    (1 << 2)
 
-
-
-#define HEVC_FRAME_FLAG_OUTPUT    (1 << 0)
-#define HEVC_FRAME_FLAG_SHORT_REF (1 << 1)
 typedef struct Filter_data{
 	int x;
 	int y;

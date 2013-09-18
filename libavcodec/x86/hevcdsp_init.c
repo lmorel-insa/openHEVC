@@ -129,6 +129,8 @@ void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth)
                 	c->sao_band_filter[3] = ff_hevc_sao_band_filter_3_8_sse;
 
                     c->upsample_base_layer_frame = ff_upsample_base_layer_frame_sse;
+                    c->upsample_h_base_layer_frame = ff_upsample_base_layer_frame_sse_h;
+                    c->upsample_v_base_layer_frame = ff_upsample_base_layer_frame_sse_v;
 
                     
                 }

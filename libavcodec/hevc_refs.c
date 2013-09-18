@@ -48,8 +48,8 @@ int ff_hevc_find_ref_idx(HEVCContext *s, int poc)
                 return i;
         }
     }
-    av_log(s->avctx, AV_LOG_ERROR,
-           "Could not find ref with POC %d\n", poc);
+   // av_log(s->avctx, AV_LOG_ERROR,
+     //      "Could not find ref with POC %d\n", poc);
     return 0;
 }
 
@@ -64,8 +64,8 @@ static int find_upsample_ref_idx(HEVCContext *s, int poc)
                 return i;
 	    }
     }
-    av_log(s->avctx, AV_LOG_ERROR,
-           "Could not find ref with POC %d\n", poc);
+   // av_log(s->avctx, AV_LOG_ERROR,
+     //      "Could not find ref with POC %d\n", poc);
     return 0;
 }
 
