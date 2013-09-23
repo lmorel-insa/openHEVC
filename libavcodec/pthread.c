@@ -425,6 +425,9 @@ static int update_context_from_thread(AVCodecContext *dst, AVCodecContext *src, 
         dst->BLwidth = src->width;
         dst->BLheight = src->height;
         
+
+
+
         
         dst->time_base = src->time_base;
         dst->width     = src->width;
@@ -483,7 +486,7 @@ static int update_context_from_user(AVCodecContext *dst, AVCodecContext *src)
     dst->BLheight       = src->height;
     dst->BLwidth        = src->width;
     */
-    
+
     dst->flags          = src->flags;
     dst->draw_horiz_band= src->draw_horiz_band;
     dst->get_buffer2    = src->get_buffer2;

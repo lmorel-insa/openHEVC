@@ -62,7 +62,7 @@ void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val, int
 
 void libOpenHevcFlush(OpenHevc_Handle openHevcHandle);
 const char *libOpenHevcVersion(OpenHevc_Handle openHevcHandle);
-
+void libGetDecodingtime(OpenHevc_Handle openHevcHandle, float *de_BL, float *de_EL, float *de_UP);
 #ifdef __cplusplus
 }
 #endif

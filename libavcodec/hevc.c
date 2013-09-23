@@ -683,7 +683,7 @@ static int hls_slice_header(HEVCContext *s)
 #endif
 #ifdef SVC_EXTENSION
         if(s->nuh_layer_id && sh->first_slice_in_pic_flag){
-            
+        	float init;
             if ((ret = ff_hevc_set_new_ref(s, &s->EL_frame, s->poc, 1))< 0)
                 return ret;
          //  s->hevcdsp.upsample_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf, 0);
@@ -699,7 +699,15 @@ static int hls_slice_header(HEVCContext *s)
                 arg[i] = i;
                 
              
+
+            init = SDL_GetTime();
+
+
+
+
+
             s->avctx->execute(s->avctx, (void *) hls_upsample_h_bl_picture, arg, ret, nb, sizeof(int));
+        	s->avctx->dec_UP += (SDL_GetTime()-init);
             nb   = s->EL_frame->width;
             nb = (nb / 64);
             for(i=0; i < nb; i++)
@@ -2569,9 +2577,17 @@ static int hls_slice_data_wpp(HEVCContext *s, const uint8_t *nal, int length)
         ret[i] = 0;
     }
 
-    if (s->pps->entropy_coding_sync_enabled_flag)
+    if (s->pps->entropy_coding_sync_enabled_flag){
+    	float init = SDL_GetTime();
         s->avctx->execute2(s->avctx, (void *) hls_decode_entry_wpp, arg, ret, s->sh.num_entry_point_offsets + 1);
-    else {
+
+        if(s->nuh_layer_id)
+        	s->avctx->dec_EL += (SDL_GetTime()-init);
+        else
+        	s->avctx->dec_BL += (SDL_GetTime()-init);
+
+
+    }else {
         int ctb_size = 1 << s->sps->log2_ctb_size, y_ctb, x_ctb;
         for (i = 0; i < s->threads_number; i++) {
             s->HEVClcList[i]->nb_saved = 0;
@@ -2713,7 +2729,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         return 0;
     } else if (ret != (s->decoder_layer-1) && s->nal_unit_type != NAL_VPS)
         return 0;
-
+    s->avctx->size += length;
     switch (s->nal_unit_type) {
     case NAL_VPS:
         ff_hevc_decode_nal_vps(s);
@@ -2843,7 +2859,12 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         if(s->threads_number>1 && s->sh.num_entry_point_offsets > 0 ) {
             ctb_addr_ts = hls_slice_data_wpp(s, nal, length);
         } else {
+            float init = SDL_GetTime();
             ctb_addr_ts = hls_slice_data(s);
+            if(s->nuh_layer_id)
+            	s->avctx->dec_EL += (SDL_GetTime()-init);
+            else
+            	s->avctx->dec_BL += (SDL_GetTime()-init);
         }
 
         if (ctb_addr_ts >= (s->sps->pic_width_in_ctbs * s->sps->pic_height_in_ctbs))  {
@@ -3134,7 +3155,10 @@ static av_cold int hevc_decode_init(AVCodecContext *avctx)
     if (avctx->extradata_size > 0 && avctx->extradata)
         return decode_nal_units(s, s->avctx->extradata, s->avctx->extradata_size);
     s->width = s->height = 0;
-    
+    avctx->dec_BL = 0;
+    avctx->dec_EL = 0;
+    avctx->dec_UP = 0;
+    avctx->size = 0;
     
 
     return 0;
@@ -3146,7 +3170,11 @@ static av_cold int hevc_decode_free(AVCodecContext *avctx)
     HEVCContext *s = avctx->priv_data;
 
     HEVCThreadContext *lc = s->HEVClc;
-   
+    if(s->decoder_layer == 2)
+    	printf("1 %d %.0f %.0f ", s->avctx->size, s->avctx->dec_EL, s->avctx->dec_UP);
+    else
+    	printf("0 %d %.0f ", s->avctx->size, s->avctx->dec_BL);
+
     pic_arrays_free(s);
     av_freep(&s->rbsp_buffer);
     av_freep(&s->skipped_bytes_pos);

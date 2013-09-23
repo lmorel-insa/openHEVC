@@ -266,7 +266,13 @@ void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val, int
     if(layer_id >1)
             av_opt_set_int(openHevcContext->c->priv_data, "temporal-layer-id", val+1, 0);
 }
-
+void libGetDecodingtime(OpenHevc_Handle openHevcHandle, float *de_BL, float *de_EL, float *de_UP)
+{
+    OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
+    *de_BL = openHevcContext->c->dec_BL;
+    *de_EL = openHevcContext->ec->dec_EL;
+    *de_UP = openHevcContext->ec->dec_UP;
+}
 void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int layer_id)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;

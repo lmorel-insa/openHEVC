@@ -33,7 +33,7 @@
 #include "avcodec.h"
 
 
-#define WPP_PTHREAD_MUTEX 0
+#define WPP_PTHREAD_MUTEX 1
 
 typedef struct ThreadFrame {
     AVFrame *f;
