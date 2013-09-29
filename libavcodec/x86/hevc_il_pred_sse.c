@@ -52,7 +52,7 @@ void ff_upsample_base_layer_frame_sse_h(struct AVFrame *FrameEL, struct AVFrame 
     int strideEL = FrameEL->linesize[0];
     
     
-    
+    int CTB = 64;
     int refPos16 = 0;
     int phase    = 0;
     int refPos   = 0;
@@ -62,11 +62,11 @@ void ff_upsample_base_layer_frame_sse_h(struct AVFrame *FrameEL, struct AVFrame 
     
     widthBL   = FrameBL->width;
     heightBL  = FrameBL->height <= heightEL ? FrameBL->height:heightEL;  // min( FrameBL->height, heightEL);
-    int start = channel * 64;
-    heightBL = heightBL <= ((channel+1) * 64) ? heightBL:((channel+1) * 64);
+    int start = channel * CTB;
+    heightBL = heightBL <= ((channel+1) * CTB) ? heightBL:((channel+1) * CTB);
     int leftStartL = Enhscal->left_offset;
     int rightEndL  = FrameEL->width - Enhscal->right_offset;
-    //printf("start %d %d \n", start, heightBL);
+
     if(1 ) {
         int32_t* coeff;
         int i,j;
@@ -139,7 +139,7 @@ void ff_upsample_base_layer_frame_sse_h(struct AVFrame *FrameEL, struct AVFrame 
         heightBL >>= 1;
         
         
-        start = channel * 32;
+        start = channel * CTB/2;
 
         int32_t* coeff;
         int i,j;
@@ -162,7 +162,7 @@ void ff_upsample_base_layer_frame_sse_h(struct AVFrame *FrameEL, struct AVFrame 
         
         
         
-        heightBL = heightBL <= ((channel+1) * 32) ? heightBL:((channel+1) * 32);
+        heightBL = heightBL <= ((channel+1) * CTB/2) ? heightBL:((channel+1) * CTB/2);
         
         
         //========== horizontal upsampling ===========
@@ -261,13 +261,13 @@ void ff_upsample_base_layer_frame_sse_v(struct AVFrame *FrameEL, struct AVFrame 
     
     widthBL   = FrameBL->width;
     heightBL  = FrameBL->height <= heightEL ? FrameBL->height:heightEL;  // min( FrameBL->height, heightEL);
-    
+    int CTB = 64;
     int leftStartL = Enhscal->left_offset;
     
     int topStartL  = Enhscal->top_offset;
     int bottomEndL = FrameEL->height - Enhscal->bottom_offset;
-    int start = channel * 64;
-    int end = widthEL <= (channel+1) * 64 ? widthEL:(channel+1) * 64;
+    int start = channel * CTB;
+    int end = widthEL <= (channel+1) * CTB ? widthEL:(channel+1) * CTB;
     int rightEndL  = widthEL - Enhscal->right_offset;
     const int nShift = US_FILTER_PREC*2;
     int iOffset = 1 << (nShift - 1);
@@ -501,8 +501,8 @@ void ff_upsample_base_layer_frame_sse_v(struct AVFrame *FrameEL, struct AVFrame 
         
         heightBL >>= 1;
         
-        start = channel * 32;
-        end = widthEL <= (channel+1) * 32 ? widthEL:(channel+1) * 32;
+        start = channel * CTB/2;
+        end = widthEL <= (channel+1) * CTB/2 ? widthEL:(channel+1) * CTB/2;
         
         
         
@@ -763,7 +763,7 @@ void ff_upsample_base_layer_frame_sse(struct AVFrame *FrameEL, struct AVFrame *F
     const int nShift = US_FILTER_PREC*2;
     int iOffset = 1 << (nShift - 1);
     r15= _mm_set1_epi32(iOffset);
-    if(0 ) {
+    if(1 ) {
         int32_t* coeff;
       
     
@@ -986,7 +986,7 @@ void ff_upsample_base_layer_frame_sse(struct AVFrame *FrameEL, struct AVFrame *F
         }
        
     }
-    if(channel == 1 ) {
+    if( 1 ) {
        
         int32_t* coeff;
         int i,j, k;

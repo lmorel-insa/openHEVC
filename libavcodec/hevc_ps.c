@@ -992,7 +992,9 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
 
     // Coded parameters
     pps_id = get_ue_golomb(gb);
+
     if (pps_id >= MAX_PPS_COUNT) {
+
         av_log(s->avctx, AV_LOG_ERROR, "PPS id out of range: %d\n", pps_id);
         ret = AVERROR_INVALIDDATA;
         goto err;
@@ -1290,7 +1292,6 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
 
     if (s->pps_list[pps_id] != NULL)
         ff_hevc_pps_free(&s->pps_list[pps_id]);
-
     s->pps_list[pps_id] = pps;
     return 0;
 

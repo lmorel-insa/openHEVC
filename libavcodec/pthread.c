@@ -249,6 +249,7 @@ static void thread_free(AVCodecContext *avctx)
 #endif
     av_free(c->workers);
     av_freep(&avctx->thread_opaque);
+
 }
 
 
@@ -306,6 +307,9 @@ static int thread_init(AVCodecContext *avctx)
     ThreadContext *c;
     int thread_count = avctx->thread_count;
 
+
+
+
     if (!thread_count) {
         int nb_cpus = av_cpu_count();
         av_log(avctx, AV_LOG_DEBUG, "detected %d logical cores\n", nb_cpus);
@@ -316,10 +320,10 @@ static int thread_init(AVCodecContext *avctx)
             thread_count = avctx->thread_count = 1;
     }
 
-    if (thread_count <= 1) {
+    /*if (thread_count <= 1) {
         avctx->active_thread_type = 0;
         return 0;
-    }
+    }*/
  
     c = av_mallocz(sizeof(ThreadContext));
     if (!c)
@@ -780,7 +784,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
     PerThreadContext *p;
     int finished = fctx->next_finished;
     int err;
-    
+    int thread_count = 2;	// To remove
     /*
      * Submit a packet to the next decoding thread.
      */
@@ -788,7 +792,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
     p = &fctx->threads[!avctx->is_base_layer];  /*  Select the right decoder */
     err = update_context_from_user(p->avctx, avctx);
     if (err) return err;
-    
+
     err = submit_packet2(p, avpkt);
     
     if (err) return err;
@@ -798,7 +802,7 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
      */
     
     if (fctx->delaying) {
-        if (fctx->next_decoding >= (avctx->thread_count-1))
+        if (fctx->next_decoding >= (thread_count-1))
             fctx->delaying = 0;
         
         *got_picture_ptr=0;
@@ -835,10 +839,10 @@ int ff_thread_decode_frame2(AVCodecContext *avctx,
          * Make sure we don't mistakenly return the same frame again.
          */
         p->got_frame = 0;
-        if (finished >= avctx->thread_count) finished = 0;
+        if (finished >= thread_count) finished = 0;
     } while (!avpkt->size && !*got_picture_ptr && finished != fctx->next_finished);
     update_context_from_thread(avctx, p->avctx, 1);
-    if (fctx->next_decoding >= avctx->thread_count) fctx->next_decoding = 0;
+    if (fctx->next_decoding >= thread_count) fctx->next_decoding = 0;
     
     fctx->next_finished = finished;
     /* return the size of the consumed packet if no error occurred */
@@ -912,6 +916,7 @@ static void park_frame_worker_threads(FrameThreadContext *fctx, int thread_count
     }
 }
 
+
 static void frame_thread_free(AVCodecContext *avctx, int thread_count)
 {
     FrameThreadContext *fctx = avctx->thread_opaque;
@@ -977,6 +982,7 @@ static void frame_thread_free2(AVCodecContext *avctx, int thread_count)
     FrameThreadContext *fctx = avctx->thread_opaque2;
     const AVCodec *codec = avctx->codec;
     int i;
+
     if(!avctx->is_base_layer){
         avctx->codec = NULL;
         avctx->priv_data = NULL;
@@ -985,8 +991,9 @@ static void frame_thread_free2(AVCodecContext *avctx, int thread_count)
 
         return;
     }
-    park_frame_worker_threads(fctx, thread_count);
-    
+
+    park_frame_worker_threads(fctx, 2);
+
     if (fctx->prev_thread && fctx->prev_thread != fctx->threads)
         update_context_from_thread(fctx->threads->avctx, fctx->prev_thread->avctx, 0);
     
@@ -1001,7 +1008,7 @@ static void frame_thread_free2(AVCodecContext *avctx, int thread_count)
         
         if (p->thread_init)
             pthread_join(p->thread, NULL);
-        
+
         if (codec->close)
             codec->close(p->avctx);
         
@@ -1350,7 +1357,7 @@ static void validate_thread_parameters(AVCodecContext *avctx)
                                 && !(avctx->flags & CODEC_FLAG_TRUNCATED)
                                 && !(avctx->flags & CODEC_FLAG_LOW_DELAY)
                                 && !(avctx->flags2 & CODEC_FLAG2_CHUNKS);
-    if (avctx->thread_count == 1) {
+    if (avctx->thread_count == 1 && avctx->thread_type != FF_THREAD_DECODER_SLICE) {
         avctx->active_thread_type = 0;
     } else if (CODEC_CAP_SLICE_THREADS && (avctx->thread_type & (FF_THREAD_DECODER_SLICE&0x08))) {
         avctx->active_thread_type = FF_THREAD_DECODER_SLICE;
@@ -1390,6 +1397,7 @@ int ff_thread_init(AVCodecContext *avctx)
 
 void ff_thread_free(AVCodecContext *avctx)
 {
+
     if ((avctx->active_thread_type&FF_THREAD_FRAME))
         frame_thread_free(avctx, avctx->thread_count);
     else
@@ -1423,7 +1431,7 @@ void ff_thread_await_progress2(AVCodecContext *avctx, int field, int thread, int
 {
     ThreadContext *p  = avctx->thread_opaque;
     int *count_entries = p->entries;
-   
+
     if (!count_entries || !field) return;
     thread = thread ? thread-1:p->thread_count-1;
 

@@ -9,6 +9,22 @@
 #include "getopt.h"
 #include <libavformat/avformat.h>
 
+
+static long unsigned int GetTimeMs64()
+{
+ /* Linux */
+ struct timeval tv;
+
+ gettimeofday(&tv, NULL);
+
+ long unsigned int ret = tv.tv_usec;
+
+ ret += (tv.tv_sec * 1000000);
+
+ return ret;
+
+}
+
 int find_start_code (unsigned char *Buf, int zeros_in_startcode)
 {
     int i;
@@ -61,14 +77,14 @@ static void video_decode_example(const char *filename)
     int stop_dec= 0;
     int got_picture;
     float time  = 0.0;
-    float de_BL = 0, de_EL = 0, de_UP = 0;
+    long unsigned int time1;
     OpenHevc_Frame openHevcFrame;
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
 
     OpenHevc_Handle openHevcHandle = libOpenHevcInit(nb_pthreads, layer_id, enable_frame_based);
     
-    
+
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags, layer_id);
     libOpenHevcSetDisableAU(openHevcHandle, disable_au, layer_id);
     libOpenHevcSetLayerId(openHevcHandle, layer_id);
@@ -80,15 +96,18 @@ static void video_decode_example(const char *filename)
     }
   
     if(disable_au == 0) {
+
         av_register_all();
+
         pFormatCtx = avformat_alloc_context();
+
         file_iformat = av_find_input_format("hevc");
 
         if(avformat_open_input(&pFormatCtx, filename, file_iformat, NULL)!=0) {
             printf("%s",filename);
             exit(1); // Couldn't open file
         }
-       
+
     } else {
         f = fopen(filename, "rb");
         if (!f) {
@@ -100,10 +119,12 @@ static void video_decode_example(const char *filename)
     if (output_file) {
         fout = fopen(output_file, "wb");
     }
+
     while(!stop) {
         if (disable_au == 0) {
+
             if (stop_dec == 0 && av_read_frame(pFormatCtx, &packet)<0) stop_dec = 1;
-          
+
             got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++, layer_id);
         } else {
             if (stop_dec == 0 && feof(f)) stop_dec = 1;
@@ -125,6 +146,7 @@ static void video_decode_example(const char *filename)
                     openHevcFrameCpy.pvV = calloc ( nbData / 4, sizeof(unsigned char));
                 }
                 Init_Time();
+                time1 = GetTimeMs64();
                 init = 0;
             }
             if (display_flags == DISPLAY_ENABLE) {
@@ -147,15 +169,20 @@ static void video_decode_example(const char *filename)
         if (stop_dec==1 && nbFrame)
             stop = 1;
     }
+    time1 = (GetTimeMs64()-time1);
     time = SDL_GetTime(); ///1000.0;
     CloseSDLDisplay();
     if (fout)
         fclose(fout);
     if (disable_au == 0)
         avformat_close_input(&pFormatCtx);
+
+
     libOpenHevcClose(openHevcHandle, layer_id);
-    libGetDecodingtime( openHevcHandle, &de_BL, &de_EL, &de_UP);
-    printf("%d %.0f %.2f  %d \n", nbFrame, nbFrame/(time/1000), time, openHevcFrame.frameInfo.nHeight);
+    printf("frames= %d %.0f %ld   %d \n", nbFrame, nbFrame/(time/1000), time1, openHevcFrame.frameInfo.nHeight);
+
+
+
 }
 
 int main(int argc, char *argv[]) {

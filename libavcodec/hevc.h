@@ -974,6 +974,9 @@ typedef struct HEVCContext {
     int                 temporal_layer_id;
     int                 width;
     int                 height;
+    long unsigned int   dec_EL, dec_UP;
+    long unsigned int dec_BL;
+        int size;
 
 } HEVCContext;
 

@@ -2742,8 +2742,7 @@ typedef struct AVCodecContext {
     int is_base_layer;
     void *based_frame;
     int BLwidth, BLheight;
-    float dec_BL, dec_EL, dec_UP;
-    int size;
+
 } AVCodecContext;
 
 /**

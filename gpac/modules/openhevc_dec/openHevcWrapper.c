@@ -43,6 +43,7 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
          available in the bitstream. */
 
     /* open it */
+
     if(nb_pthreads)	{
         if(enable_frame_based==3)
             av_opt_set(openHevcContext->c, "thread_type", "shvccodec", 0);
@@ -56,14 +57,18 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
                 else {
                     av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
                  }
-        av_opt_set_int(openHevcContext->c, "threads", 2, 0);
+        if(nb_pthreads !=1)
+        	av_opt_set_int(openHevcContext->c, "threads", nb_pthreads, 0);
+        else
+        	av_opt_set_int(openHevcContext->c, "threads", 1, 0);
     }
+    openHevcContext->c->is_base_layer = 1;
     if (avcodec_open2(openHevcContext->c, openHevcContext->codec, NULL) < 0) {
         fprintf(stderr, "could not open codec\n");
         return NULL;
     }
     av_opt_set_int(openHevcContext->c->priv_data, "disable-au", 0, 0);
-    
+
     if(nb_layers>1)  {// Create the second decoder
         av_init_packet(&openHevcContext->eavpkt);
         openHevcContext->ecodec  = avcodec_find_decoder(AV_CODEC_ID_SHVC);
@@ -85,12 +90,13 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
                         av_opt_set(openHevcContext->ec, "thread_type", "slice", 0);
             av_opt_set_int(openHevcContext->ec, "threads", nb_pthreads, 0);
         }
+        openHevcContext->ec->is_base_layer = 0;
         if (avcodec_open2(openHevcContext->ec, openHevcContext->ecodec, NULL) < 0) {
             fprintf(stderr, "could not open codec\n");
             return NULL;
         }
-        openHevcContext->ec->is_base_layer = 0;
-        openHevcContext->c->is_base_layer = 1;
+
+
         av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", 0, 0);
     }
     return (OpenHevc_Handle) openHevcContext;
@@ -111,7 +117,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     int layer_id = 0;
     if(au_len > 3)
         layer_id = read_layer_id(buff);
-    
+
     if(!layer_id ){
         openHevcContext->avpkt.size = au_len;
         openHevcContext->avpkt.data = buff;
@@ -266,22 +272,19 @@ void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val, int
     if(layer_id >1)
             av_opt_set_int(openHevcContext->c->priv_data, "temporal-layer-id", val+1, 0);
 }
-void libGetDecodingtime(OpenHevc_Handle openHevcHandle, float *de_BL, float *de_EL, float *de_UP)
-{
-    OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
-    *de_BL = openHevcContext->c->dec_BL;
-    *de_EL = openHevcContext->ec->dec_EL;
-    *de_UP = openHevcContext->ec->dec_UP;
-}
+
 void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int layer_id)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
+
     avcodec_close(openHevcContext->c);
     if(layer_id >1){
+
         avcodec_close(openHevcContext->ec);
         av_free(openHevcContext->ec);
         av_free(openHevcContext->epicture);
     }
+
     av_free(openHevcContext->c);
     av_free(openHevcContext->picture);
     av_free(openHevcContext);

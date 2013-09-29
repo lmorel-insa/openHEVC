@@ -165,32 +165,41 @@ static void init_upsampled_mv_fields(HEVCContext *s) {
     }
 }
 
-static void scale_upsampled_mv_field(HEVCContext *s) {
+static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row) {
+	HEVCContext *s = avctxt->priv_data;
     int xEL, yEL, xBL, yBL, list, i, j;
     HEVCFrame  *refBL, *refEL;
     int pic_width_in_min_pu = s->sps->pic_width_in_luma_samples>>s->sps->log2_min_pu_size;
     int pic_height_in_min_pu = s->sps->pic_height_in_luma_samples>>s->sps->log2_min_pu_size;
     int pic_width_in_min_puBL = s->widthBL >> ((HEVCContext*)s->avctx->priv_data)->sps->log2_min_pu_size;
-
+    int *index = input_ctb_row;
     refBL = s->BL_frame;
-    malloc_refPicListTab_index(s, find_upsample_ref_idx( s,  s->poc));
+
     refEL = &s->DPB[find_upsample_ref_idx( s,  s->poc)];
-    
-    for(list = 0; list < 2; list++) {
-        refEL->refPicList[list].numPic = refBL->refPicList[list].numPic;
+    if( *index ==0 ) {
+    	malloc_refPicListTab_index(s, find_upsample_ref_idx( s,  s->poc));
+    	for(list = 0; list < 2; list++) {
+    		refEL->refPicList[list].numPic = refBL->refPicList[list].numPic;
         
-        for(i=0; i< refBL->refPicList[list].numPic; i++){
-            refEL->refPicList[list].list[i] = refBL->refPicList[list].list[i];
-            //refEL->refPicList[list].idx[i] = ff_hevc_find_ref_idx(s,refBL->refPicList[list].list[i]);
-            refEL->refPicList[list].is_long_term[i] = refBL->refPicList[list].is_long_term[i];
-        }
-        for(i=refBL->refPicList[list].numPic; i< REF_LIST_SIZE; i++)   {
-            refEL->refPicList[list].list[i] = 0;
-            refEL->refPicList[list].idx[i] = 0;
-            refEL->refPicList[list].is_long_term[i] = 0;
-        }
-    }
-    for(yEL=0; yEL < s->sps->pic_height_in_luma_samples; yEL+=16){
+    		for(i=0; i< refBL->refPicList[list].numPic; i++){
+    			refEL->refPicList[list].list[i] = refBL->refPicList[list].list[i];
+    			//refEL->refPicList[list].idx[i] = ff_hevc_find_ref_idx(s,refBL->refPicList[list].list[i]);
+    			refEL->refPicList[list].is_long_term[i] = refBL->refPicList[list].is_long_term[i];
+    		}
+    		for(i=refBL->refPicList[list].numPic; i< REF_LIST_SIZE; i++)   {
+    			refEL->refPicList[list].list[i] = 0;
+    			refEL->refPicList[list].idx[i] = 0;
+    			refEL->refPicList[list].is_long_term[i] = 0;
+    		}
+    	}
+	}
+
+    int start = (*index) *64;
+    int end = ((*index)+1) *64;
+
+    end = end > s->sps->pic_height_in_luma_samples? s->sps->pic_height_in_luma_samples:end ;
+   // printf("index %d start %d end %d %d \n", *index, start, end, s->sps->pic_height_in_luma_samples);
+    for(yEL=start; yEL < end; yEL+=16){
         for(xEL=0; xEL < s->sps->pic_width_in_luma_samples ; xEL+=16) {
             int xELIndex = xEL>>2;
             int yELIndex = yEL>>2;
@@ -465,7 +474,21 @@ static void set_ref_pic_list(HEVCContext *s)
 #endif
     {
         if(!(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) && s->sps->set_mfm_enabled_flag)  {
-            scale_upsampled_mv_field(s);
+
+
+
+        	int nb   = s->sps->pic_height_in_luma_samples;
+
+
+        	nb = (nb / 64) + (nb%64 ? 1:0);
+        	int arg[150];
+        	int ret[150];
+        	for(i=0; i < nb; i++)
+        		arg[i] = i;
+        	s->avctx->execute(s->avctx, (void *) scale_upsampled_mv_field, arg, ret, nb, sizeof(int));
+
+
+            //scale_upsampled_mv_field(s);
         }   else    {
             init_upsampled_mv_fields(s);
         }
