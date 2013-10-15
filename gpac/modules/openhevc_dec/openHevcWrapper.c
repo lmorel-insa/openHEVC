@@ -58,7 +58,7 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
                     av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
                  }
         if(nb_pthreads !=1)
-        	av_opt_set_int(openHevcContext->c, "threads", 2, 0);
+        	av_opt_set_int(openHevcContext->c, "threads", nb_pthreads, 0);
         else
         	av_opt_set_int(openHevcContext->c, "threads", 1, 0);
     }
@@ -262,8 +262,6 @@ void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int layer_id) {
         av_opt_set_int(openHevcContext->ec->priv_data, "layer-id", 2, 0);
     }
 }
-
-
 
 void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val, int layer_id)
 {

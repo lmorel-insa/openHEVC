@@ -44,12 +44,12 @@ int ff_hevc_find_ref_idx(HEVCContext *s, int poc)
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         HEVCFrame *ref = &s->DPB[i];
         if (ref->frame->buf[0] && (ref->sequence == s->seq_decode) && (!ref->up_sample_base) ) {
-            if ((ref->flags & HEVC_FRAME_FLAG_SHORT_REF) != 0 && (ref->poc == poc || (ref->poc & LtMask) == poc))
+            if ((ref->flags & (HEVC_FRAME_FLAG_SHORT_REF)) != 0 && (ref->poc == poc || (ref->poc & LtMask) == poc))
                 return i;
         }
     }
-   // av_log(s->avctx, AV_LOG_ERROR,
-     //      "Could not find ref with POC %d\n", poc);
+    av_log(s->avctx, AV_LOG_ERROR,
+           "Could not find ref with POC %d\n", poc);
     return 0;
 }
 
@@ -64,8 +64,14 @@ static int find_upsample_ref_idx(HEVCContext *s, int poc)
                 return i;
 	    }
     }
-   // av_log(s->avctx, AV_LOG_ERROR,
-     //      "Could not find ref with POC %d\n", poc);
+    av_log(s->avctx, AV_LOG_ERROR,
+           "Could not find upsampled ref with POC %d\n", poc);
+    for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
+        HEVCFrame *ref = &s->DPB[i];
+        if (ref->frame->buf[0]) {
+            printf("up: %d poc: %d flag: %d \n",ref->up_sample_base, ref->poc, ref->flags);
+        }
+    }
     return 0;
 }
 
@@ -133,6 +139,7 @@ static void init_upsampled_mv_fields(HEVCContext *s) {
     int i, list;
     int pic_width_in_min_pu = s->sps->pic_width_in_luma_samples >> s->sps->log2_min_pu_size;
     int pic_height_in_min_pu = s->sps->pic_height_in_luma_samples >> s->sps->log2_min_pu_size;
+    HEVCFrame *refBL = s->BL_frame;
     
     malloc_refPicListTab_index(s, find_upsample_ref_idx( s,  s->poc));
     HEVCFrame *refEL = &s->DPB[find_upsample_ref_idx( s,  s->poc)];
@@ -146,11 +153,11 @@ static void init_upsampled_mv_fields(HEVCContext *s) {
     
     
     for(list = 0; list < 2; list++) {
-        refPicList[list].numPic = 0; //refBL->refPicList[list].numPic;
+        refPicList[list].numPic = refBL->refPicList[list].numPic;
         for(i=0; i< REF_LIST_SIZE; i++)   {
-            refPicList[list].list[i] = 0; //refBL->refPicList[list].list[i];
-            refPicList[list].idx[i] = 0; //refBL->refPicList[list].idx[i];
-            refPicList[list].is_long_term[i] = 0; //refBL->refPicList[list].isLongTerm[i];
+            refPicList[list].list[i] = refBL->refPicList[list].list[i];
+            refPicList[list].idx[i] = refBL->refPicList[list].idx[i];
+            refPicList[list].is_long_term[i] = 		refBL->refPicList[list].is_long_term[i];
         }
     }
 
@@ -183,7 +190,7 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
         
     		for(i=0; i< refBL->refPicList[list].numPic; i++){
     			refEL->refPicList[list].list[i] = refBL->refPicList[list].list[i];
-    			//refEL->refPicList[list].idx[i] = ff_hevc_find_ref_idx(s,refBL->refPicList[list].list[i]);
+    			refEL->refPicList[list].idx[i] = 0;//ff_hevc_find_ref_idx(s,refBL->refPicList[list].list[i]);
     			refEL->refPicList[list].is_long_term[i] = refBL->refPicList[list].is_long_term[i];
     		}
     		for(i=refBL->refPicList[list].numPic; i< REF_LIST_SIZE; i++)   {
@@ -277,8 +284,9 @@ static void update_refs(HEVCContext *s)
     }
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         HEVCFrame *ref = &s->DPB[i];
-        if (ref->frame->buf[0] && !used[i])
+        if (ref->frame->buf[0] && !used[i] && !ref->up_sample_base){
             ref->flags &= ~(HEVC_FRAME_FLAG_SHORT_REF | HEVC_FRAME_FLAG_LT_REF);
+        }
         if (ref->frame->buf[0] && !ref->flags) {
 #ifdef TEST_DPB
             printf("\t\t\t\t\t\t%d\t%d\n",i, ref->poc);
@@ -354,8 +362,11 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc)
             ref->frame->pts = s->pts;
 #ifdef SVC_EXTENSION
             ref->up_sample_base = up_sample;
+            if(ref->up_sample_base)
+                ref->flags = HEVC_FRAME_FLAG_OUTPUT | HEVC_FRAME_FLAG_LT_REF  ;
 #endif
-            ref->flags = HEVC_FRAME_FLAG_OUTPUT | HEVC_FRAME_FLAG_SHORT_REF;
+            if(!ref->up_sample_base)
+        	        ref->flags = HEVC_FRAME_FLAG_OUTPUT | HEVC_FRAME_FLAG_SHORT_REF;
             ref->sequence = s->seq_decode;
 #ifdef TEST_DPB
             printf("%d\t%d\n",i, poc);
@@ -437,7 +448,7 @@ void ff_hevc_compute_poc(HEVCContext *s, int poc_lsb)
         // For BLA picture types, POCmsb is set to 0.
         iPOCmsb = 0;
     }
-
+    
     s->poc = iPOCmsb + poc_lsb;
 }
 
@@ -589,7 +600,6 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
     RefPicList   *refPocList = s->sh.refPocList;
     int MaxPicOrderCntLsb = 1 << s->sps->log2_max_poc_lsb;
     if (rps != NULL) {
-
 #if REF_IDX_FRAMEWORK
         VPS *vps = s->vps;
 #if ZERO_NUM_DIRECT_LAYERS
@@ -601,7 +611,7 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
 #endif
         {
 #endif
-
+            
             for (i = 0; i < rps->num_negative_pics; i ++) {
                 if ( rps->used[i] == 1 ) {
                     refPocList[ST_CURR_BEF].list[j] = s->poc + rps->delta_poc[i];
@@ -643,29 +653,30 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
                     k++;
                 }
 */
-        }
-        refPocList[ST_CURR_AFT].numPic = j;
-        refPocList[ST_FOLL].numPic = k;
-        for( i = 0, j= 0, k = 0; i < long_rps->num_long_term_sps + long_rps->num_long_term_pics; i++) {
-            int pocLt = long_rps->PocLsbLt[i];
-            if (long_rps->delta_poc_msb_present_flag[i])
-                pocLt += s->poc - long_rps->DeltaPocMsbCycleLt[i] * MaxPicOrderCntLsb - s->sh.pic_order_cnt_lsb;
-            if (long_rps->UsedByCurrPicLt[i]) {
-                refPocList[LT_CURR].idx[j]  = ff_hevc_find_ref_idx(s, pocLt);
-                refPocList[LT_CURR].list[j] = s->DPB[refPocList[LT_CURR].idx[j]].poc;
-                s->DPB[refPocList[LT_CURR].idx[j]].flags |= HEVC_FRAME_FLAG_LT_REF;
-                j++;
-            } else {
-                refPocList[LT_FOLL].idx[k]  = ff_hevc_find_ref_idx(s, pocLt);
-                refPocList[LT_FOLL].list[k] = s->DPB[refPocList[LT_FOLL].idx[k]].poc;
-                s->DPB[refPocList[LT_CURR].idx[j]].flags &= ~HEVC_FRAME_FLAG_LT_REF;
-                k++;
+        
+            refPocList[ST_CURR_AFT].numPic = j;
+            refPocList[ST_FOLL].numPic = k;
+            for( i = 0, j= 0, k = 0; i < long_rps->num_long_term_sps + long_rps->num_long_term_pics; i++) {
+                int pocLt = long_rps->PocLsbLt[i];
+                if (long_rps->delta_poc_msb_present_flag[i])
+                    pocLt += s->poc - long_rps->DeltaPocMsbCycleLt[i] * MaxPicOrderCntLsb - s->sh.pic_order_cnt_lsb;
+                if (long_rps->UsedByCurrPicLt[i]) {
+                    refPocList[LT_CURR].idx[j]  = ff_hevc_find_ref_idx(s, pocLt);
+                    refPocList[LT_CURR].list[j] = s->DPB[refPocList[LT_CURR].idx[j]].poc;
+                    s->DPB[refPocList[LT_CURR].idx[j]].flags |= HEVC_FRAME_FLAG_LT_REF;
+                    j++;
+                } else {
+                    refPocList[LT_FOLL].idx[k]  = ff_hevc_find_ref_idx(s, pocLt);
+                    refPocList[LT_FOLL].list[k] = s->DPB[refPocList[LT_FOLL].idx[k]].poc;
+                    s->DPB[refPocList[LT_CURR].idx[j]].flags &= ~HEVC_FRAME_FLAG_LT_REF;
+                    k++;
 
+                }
+                refPocList[LT_CURR].numPic = j;
+                refPocList[LT_FOLL].numPic = k;
             }
-            refPocList[LT_CURR].numPic = j;
-            refPocList[LT_FOLL].numPic = k;
 #if REF_IDX_FRAMEWORK
-        }
+        }	
 #endif
         set_ref_pic_list(s);
 #if REF_IDX_FRAMEWORK

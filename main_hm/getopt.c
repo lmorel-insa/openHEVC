@@ -134,7 +134,7 @@ void init_main(int argc, char *argv[]) {
     disable_au      = AU_PARSER_ENABLE;
     enable_frame_based = DISABLE;
     nb_pthreads = 0;
-    layer_id = 1;
+    layer_id = 2;
     temporal_layer_id        = 7;
 
     output_file = NULL;

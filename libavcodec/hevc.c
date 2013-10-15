@@ -702,7 +702,6 @@ static int hls_slice_header(HEVCContext *s)
 #endif
 #ifdef SVC_EXTENSION
         if(s->nuh_layer_id && sh->first_slice_in_pic_flag){
-        	float init;
             if ((ret = ff_hevc_set_new_ref(s, &s->EL_frame, s->poc, 1))< 0)
                 return ret;
            //s->hevcdsp.upsample_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window, &s->up_filter_inf, 0);
@@ -719,7 +718,7 @@ static int hls_slice_header(HEVCContext *s)
                 
              
             long unsigned int init1 = GetTimeMs64();
-            init = SDL_GetTicks();
+           // init = SDL_GetTicks();
 
 
 
@@ -2337,7 +2336,7 @@ static int hls_slice_data(HEVCContext *s)
         s->SliceAddrRs = (s->sh.dependent_slice_segment_flag == 0 ? s->sh.slice_address : s->SliceAddrRs);
     }
     avpriv_atomic_int_set(&s->coding_tree_count, 0);
-    float init = SDL_GetTicks();
+//    float init = SDL_GetTicks();
     long unsigned int init1 = GetTimeMs64();
     s->avctx->execute(s->avctx, hls_decode_entry, arg, ret , 1, sizeof(int));
 
@@ -2610,8 +2609,8 @@ static int hls_slice_data_wpp(HEVCContext *s, const uint8_t *nal, int length)
         ret[i] = 0;
     }
 
-    if (s->pps->entropy_coding_sync_enabled_flag){
-    	float init = SDL_GetTicks();
+    if (s->pps->entropy_coding_sync_enabled_flag){//
+ //   	float init = SDL_GetTicks();
     	long unsigned int init1 = GetTimeMs64();
         s->avctx->execute2(s->avctx, (void *) hls_decode_entry_wpp, arg, ret, s->sh.num_entry_point_offsets + 1);
 
