@@ -217,9 +217,9 @@ static const uint8_t diag_scan8x8_inv[8][8] = {
 };
 
 
-static long unsigned int GetTimeMs64()
+/*static long unsigned int GetTimeMs64()
 {
- /* Linux */
+
  struct timeval tv;
 
  gettimeofday(&tv, NULL);
@@ -230,7 +230,7 @@ static long unsigned int GetTimeMs64()
 
  return ret;
 
-}
+}*/
 
 
 
@@ -717,7 +717,7 @@ static int hls_slice_header(HEVCContext *s)
                 arg[i] = i;
                 
              
-            long unsigned int init1 = GetTimeMs64();
+          //  long unsigned int init1 = GetTimeMs64();
            // init = SDL_GetTicks();
 
 
@@ -737,7 +737,7 @@ static int hls_slice_header(HEVCContext *s)
              s->avctx->execute(s->avctx, (void *) hls_upsample_v_bl_picture, arg, ret, nb, sizeof(int));
             
              //s->dec_UP += (SDL_GetTicks()-init);
-             s->dec_UP += GetTimeMs64()-init1;
+            // s->dec_UP += GetTimeMs64()-init1;
             //ff_thread_report_progress2(&s->ThCodec, 1, 0); // Signal that the upsampling is performed successfully
         }
 #endif
@@ -2337,16 +2337,16 @@ static int hls_slice_data(HEVCContext *s)
     }
     avpriv_atomic_int_set(&s->coding_tree_count, 0);
 //    float init = SDL_GetTicks();
-    long unsigned int init1 = GetTimeMs64();
+ //   long unsigned int init1 = GetTimeMs64();
     s->avctx->execute(s->avctx, hls_decode_entry, arg, ret , 1, sizeof(int));
 
-    if(s->nuh_layer_id)
+   /* if(s->nuh_layer_id)
     	s->dec_EL += GetTimeMs64()-init1;
     else{
 
     	s->dec_BL += GetTimeMs64()-init1; // (SDL_GetTicks()-init);
 
-    }
+    }*/
 
     return ret[0];
 }
@@ -2611,16 +2611,16 @@ static int hls_slice_data_wpp(HEVCContext *s, const uint8_t *nal, int length)
 
     if (s->pps->entropy_coding_sync_enabled_flag){//
  //   	float init = SDL_GetTicks();
-    	long unsigned int init1 = GetTimeMs64();
+    	//long unsigned int init1 = GetTimeMs64();
         s->avctx->execute2(s->avctx, (void *) hls_decode_entry_wpp, arg, ret, s->sh.num_entry_point_offsets + 1);
 
-        if(s->nuh_layer_id)
+       /* if(s->nuh_layer_id)
         	s->dec_EL += GetTimeMs64()-init1;
         else{
 
         	s->dec_BL += GetTimeMs64()-init1; // (SDL_GetTicks()-init);
 
-        }
+        }*/
 
 
     }else {
