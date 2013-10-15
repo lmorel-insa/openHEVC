@@ -16,6 +16,7 @@ typedef struct OpenHevcWrapperContext {
     AVCodecContext *ec;
     AVFrame *epicture;
     AVPacket eavpkt;
+    int nb_layers;
 } OpenHevcWrapperContext;
 
 OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame_based)
@@ -24,6 +25,7 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
     avcodec_register_all();
 
     OpenHevcWrapperContext * openHevcContext = av_malloc(sizeof(OpenHevcWrapperContext));
+    openHevcContext->nb_layers = nb_layers; 
     av_init_packet(&openHevcContext->avpkt);
     openHevcContext->codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
     if (!openHevcContext->codec) {
@@ -110,11 +112,12 @@ static int read_layer_id(const unsigned char *buff) {
 }
 
 
-int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts, int nb_layers)
+int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts/*, int nb_layers*/)
 {
     int got_picture = 0, got_picture1 = 0, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     int layer_id = 0;
+    int nb_layers = openHevcContext->nb_layers;
     if(au_len > 3)
         layer_id = read_layer_id(buff);
 
@@ -152,12 +155,12 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     return got_picture;
 }
 
-void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo, int nb_layers)
+void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     AVFrame *picture;
     AVCodecContext *c;
-    if(nb_layers>1) {
+    if(openHevcContext->nb_layers>1) {
         c = openHevcContext->ec;
         picture= openHevcContext->epicture;
     } else {
@@ -180,11 +183,11 @@ void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInf
     openHevcFrameInfo->nTimeStamp = picture->pts;
 }
 
-void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo, int nb_layers)
+void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
-    libOpenHevcGetPictureInfo(openHevcHandle, openHevcFrameInfo, nb_layers);
-    if(nb_layers>1) {
+    libOpenHevcGetPictureInfo(openHevcHandle, openHevcFrameInfo);
+    if(openHevcContext->nb_layers>1) {
         openHevcFrameInfo->nYPitch = openHevcContext->epicture->linesize[0];
         openHevcFrameInfo->nUPitch = openHevcContext->epicture->linesize[1];
         openHevcFrameInfo->nVPitch = openHevcContext->epicture->linesize[2];
@@ -195,11 +198,11 @@ void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameIn
     }
 }
 
-int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame *openHevcFrame, int nb_layers)
+int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame *openHevcFrame)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     AVFrame *picture;
-    if(nb_layers>1)
+    if(openHevcContext->nb_layers>1)
         picture = openHevcContext->epicture;
     else
         picture = openHevcContext->picture;
@@ -207,7 +210,7 @@ int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHe
         openHevcFrame->pvY       = (void *) picture->data[0];
         openHevcFrame->pvU       = (void *) picture->data[1];
         openHevcFrame->pvV       = (void *) picture->data[2];
-        libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrame->frameInfo, nb_layers);
+        libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrame->frameInfo);
     }
     return 1;
 }
@@ -234,49 +237,49 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
             y_offset  += openHevcContext->picture->linesize[1];
             y_offset2 += openHevcContext->c->width / 2;
         }
-        libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrame->frameInfo, 1);
+        libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrame->frameInfo);
     }
     return 1;
 }
-void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val, int layer_id)
+void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "decode-checksum", val, 0);
-    if(layer_id >1){
+    if(openHevcContext->nb_layers>1){
         av_opt_set_int(openHevcContext->ec->priv_data, "decode-checksum", val, 0);
     }
     
 }
-void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val, int layer_id)
+void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "disable-au", val, 0);
-    if(layer_id >1){
+    if(openHevcContext->nb_layers >1){
         av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", val, 0);
     }
 }
-void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int layer_id) {
+void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle) {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "layer-id", 1, 0);
-    if(layer_id >1) {
+    if(openHevcContext->nb_layers >1) {
         av_opt_set_int(openHevcContext->ec->priv_data, "layer-id", 2, 0);
     }
 }
 
-void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val, int layer_id)
+void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     av_opt_set_int(openHevcContext->c->priv_data, "temporal-layer-id", val+1, 0);
-    if(layer_id >1)
+    if(openHevcContext->nb_layers >1)
             av_opt_set_int(openHevcContext->c->priv_data, "temporal-layer-id", val+1, 0);
 }
 
-void libOpenHevcClose(OpenHevc_Handle openHevcHandle, int layer_id)
+void libOpenHevcClose(OpenHevc_Handle openHevcHandle)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
 
     avcodec_close(openHevcContext->c);
-    if(layer_id >1){
+    if(openHevcContext->nb_layers >1){
 
         avcodec_close(openHevcContext->ec);
         av_free(openHevcContext->ec);
