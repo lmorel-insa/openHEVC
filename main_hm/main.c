@@ -87,7 +87,7 @@ static void video_decode_example(const char *filename)
 
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
     libOpenHevcSetDisableAU(openHevcHandle, disable_au);
-    libOpenHevcSetLayerId(openHevcHandle);
+  //  libOpenHevcSetLayerId(openHevcHandle);
     libOpenHevcSetTemporalLayer_id(openHevcHandle, temporal_layer_id);
 
     if (!openHevcHandle) {
@@ -119,12 +119,9 @@ static void video_decode_example(const char *filename)
     if (output_file) {
         fout = fopen(output_file, "wb");
     }
-
     while(!stop) {
         if (disable_au == 0) {
-
             if (stop_dec == 0 && av_read_frame(pFormatCtx, &packet)<0) stop_dec = 1;
-
             got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++);
         } else {
             if (stop_dec == 0 && feof(f)) stop_dec = 1;

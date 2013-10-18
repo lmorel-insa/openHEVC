@@ -102,6 +102,10 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int nb_layers, int enable_frame
 
         av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", 0, 0);
     }
+    av_opt_set_int(openHevcContext->c->priv_data, "layer-id", 1, 0);
+    if(openHevcContext->nb_layers >1) {
+    	av_opt_set_int(openHevcContext->ec->priv_data, "layer-id", 2, 0);
+    }
     return (OpenHevc_Handle) openHevcContext;
 }
 static int first = 1;
@@ -132,9 +136,8 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
 #if    !NAL_UNITS
     }
 #endif
-
-#if	!NAL_UNITS
     if(nb_layers>1) {
+#if	!NAL_UNITS
         if(layer_id || first) {
 #endif
             openHevcContext->ec->BLheight = openHevcContext->c->height;
@@ -149,16 +152,17 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
 #if	!NAL_UNITS
         }
 #endif
-        if(got_picture1)    {
+        if(nb_layers>1)
+        if(got_picture1 )    {
             if (len < 0) {
                 fprintf(stderr, "Error while decoding frame \n");
                 return -1;
             }
             return 2;
-        }
-#if	!NAL_UNITS
+        } else
+        	return 0;
     }
-#endif
+
     if (len < 0) {
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
@@ -197,16 +201,17 @@ void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInf
 void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
+    AVFrame *picture;
     libOpenHevcGetPictureInfo(openHevcHandle, openHevcFrameInfo);
-    if(openHevcContext->nb_layers>1) {
-        openHevcFrameInfo->nYPitch = openHevcContext->epicture->linesize[0];
-        openHevcFrameInfo->nUPitch = openHevcContext->epicture->linesize[1];
-        openHevcFrameInfo->nVPitch = openHevcContext->epicture->linesize[2];
-    } else {
-        openHevcFrameInfo->nYPitch = openHevcContext->picture->linesize[0];
-        openHevcFrameInfo->nUPitch = openHevcContext->picture->linesize[1];
-        openHevcFrameInfo->nVPitch = openHevcContext->picture->linesize[2];
-    }
+    if(openHevcContext->nb_layers>1)
+    	picture = openHevcContext->epicture;
+    else
+    	picture = openHevcContext->picture;
+
+    openHevcFrameInfo->nYPitch = picture->linesize[0];
+    openHevcFrameInfo->nUPitch = picture->linesize[1];
+    openHevcFrameInfo->nVPitch = picture->linesize[2];
+
 }
 
 int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame *openHevcFrame)
@@ -230,23 +235,33 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
 {
     int y;
     int y_offset, y_offset2;
+    AVFrame *picture;
+    AVCodecContext *c;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
+
+    if(openHevcContext->nb_layers>1){
+    	picture = openHevcContext->epicture;
+    	c = openHevcContext->ec;
+    } else{
+    	picture = openHevcContext->picture;
+    	c = openHevcContext->c;
+    }
     if( got_picture ) {
         unsigned char *Y = (unsigned char *) openHevcFrame->pvY;
         unsigned char *U = (unsigned char *) openHevcFrame->pvU;
         unsigned char *V = (unsigned char *) openHevcFrame->pvV;
         y_offset = y_offset2 = 0;
-        for(y = 0; y < openHevcContext->c->height; y++) {
-            memcpy(&Y[y_offset2], &openHevcContext->picture->data[0][y_offset], openHevcContext->c->width);
-            y_offset  += openHevcContext->picture->linesize[0];
-            y_offset2 += openHevcContext->c->width;
+        for(y = 0; y < c->height; y++) {
+            memcpy(&Y[y_offset2], &picture->data[0][y_offset], c->width);
+            y_offset  += picture->linesize[0];
+            y_offset2 += c->width;
         }
         y_offset = y_offset2 = 0;
-        for(y = 0; y < openHevcContext->c->height/2; y++) {
-            memcpy(&U[y_offset2], &openHevcContext->picture->data[1][y_offset], openHevcContext->c->width/2);
-            memcpy(&V[y_offset2], &openHevcContext->picture->data[2][y_offset], openHevcContext->c->width/2);
-            y_offset  += openHevcContext->picture->linesize[1];
-            y_offset2 += openHevcContext->c->width / 2;
+        for(y = 0; y < c->height/2; y++) {
+            memcpy(&U[y_offset2], &picture->data[1][y_offset], c->width/2);
+            memcpy(&V[y_offset2], &picture->data[2][y_offset], c->width/2);
+            y_offset  += picture->linesize[1];
+            y_offset2 += c->width / 2;
         }
         libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrame->frameInfo);
     }

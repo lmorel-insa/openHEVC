@@ -2670,6 +2670,7 @@ static int hls_nal_unit(HEVCContext *s)
     s->nal_unit_type = get_bits(gb, 6);
 
     s->nuh_layer_id = get_bits(gb, 6);
+
     s->temporal_id = get_bits(gb, 3) - 1;
     if (s->temporal_id < 0)
         return AVERROR_INVALIDDATA;
