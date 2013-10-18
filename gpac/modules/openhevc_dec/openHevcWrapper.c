@@ -5,6 +5,7 @@
 #include "libavutil/mem.h"
 #include "libavutil/opt.h"
 
+#define NAL_UNITS	1
 typedef struct OpenHevcWrapperContext {
     AVCodec *codec;
     AVCodecContext *c;
@@ -118,18 +119,24 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     int layer_id = 0;
     int nb_layers = openHevcContext->nb_layers;
+
     if(au_len > 3)
         layer_id = read_layer_id(buff);
-
+#if    !NAL_UNITS
     if(!layer_id ){
+#endif
         openHevcContext->avpkt.size = au_len;
         openHevcContext->avpkt.data = buff;
         openHevcContext->avpkt.pts  = pts;
         len = avcodec_decode_video2(openHevcContext->c, openHevcContext->picture, &got_picture, &openHevcContext->avpkt);
+#if    !NAL_UNITS
     }
-    
+#endif
+
+#if	!NAL_UNITS
     if(nb_layers>1) {
         if(layer_id || first) {
+#endif
             openHevcContext->ec->BLheight = openHevcContext->c->height;
             openHevcContext->ec->BLwidth = openHevcContext->c->width;
             openHevcContext->ec->based_frame = openHevcContext->c->based_frame;
@@ -139,7 +146,9 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
             openHevcContext->eavpkt.pts  = pts;
             first = 0; 
              len = avcodec_decode_video2(openHevcContext->ec, openHevcContext->epicture, &got_picture1, &openHevcContext->eavpkt);
+#if	!NAL_UNITS
         }
+#endif
         if(got_picture1)    {
             if (len < 0) {
                 fprintf(stderr, "Error while decoding frame \n");
@@ -147,7 +156,9 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
             }
             return 2;
         }
+#if	!NAL_UNITS
     }
+#endif
     if (len < 0) {
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
