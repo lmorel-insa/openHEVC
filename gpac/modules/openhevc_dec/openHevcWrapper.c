@@ -117,13 +117,18 @@ static int read_layer_id(const unsigned char *buff) {
 }
 
 
-int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts/*, int nb_layers*/)
+int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts, int nb)
 {
     int got_picture = 0, got_picture1 = 0, len;
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
-    int layer_id = 0;
-    int nb_layers = openHevcContext->nb_layers;
-
+    int layer_id = 0, nb_layers;
+    if(nb) {
+    	nb_layers = 1;
+    	openHevcContext->nb_layers = 1;
+    } else {
+    	nb_layers = 2;
+    	openHevcContext->nb_layers = 2;
+    }
     if(au_len > 3)
         layer_id = read_layer_id(buff);
 #if    !NAL_UNITS
@@ -162,7 +167,6 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         } else
         	return 0;
     }
-
     if (len < 0) {
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
@@ -188,7 +192,6 @@ void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInf
     openHevcFrameInfo->nBitDepth  = 8;
     openHevcFrameInfo->nWidth     = c->width;
     openHevcFrameInfo->nHeight    = c->height;
-
     openHevcFrameInfo->sample_aspect_ratio.num = picture->sample_aspect_ratio.num;
     openHevcFrameInfo->sample_aspect_ratio.den = picture->sample_aspect_ratio.den;
     openHevcFrameInfo->display_picture_number = picture->display_picture_number;
@@ -202,6 +205,7 @@ void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameIn
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     AVFrame *picture;
+
     libOpenHevcGetPictureInfo(openHevcHandle, openHevcFrameInfo);
     if(openHevcContext->nb_layers>1)
     	picture = openHevcContext->epicture;
@@ -212,12 +216,14 @@ void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameIn
     openHevcFrameInfo->nUPitch = picture->linesize[1];
     openHevcFrameInfo->nVPitch = picture->linesize[2];
 
+
 }
 
 int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame *openHevcFrame)
 {
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
     AVFrame *picture;
+
     if(openHevcContext->nb_layers>1)
         picture = openHevcContext->epicture;
     else
@@ -251,6 +257,7 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
         unsigned char *U = (unsigned char *) openHevcFrame->pvU;
         unsigned char *V = (unsigned char *) openHevcFrame->pvV;
         y_offset = y_offset2 = 0;
+
         for(y = 0; y < c->height; y++) {
             memcpy(&Y[y_offset2], &picture->data[0][y_offset], c->width);
             y_offset  += picture->linesize[0];
@@ -284,12 +291,10 @@ void libOpenHevcSetDisableAU(OpenHevc_Handle openHevcHandle, int val)
         av_opt_set_int(openHevcContext->ec->priv_data, "disable-au", val, 0);
     }
 }
-void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle) {
+void libOpenHevcSetLayerId(OpenHevc_Handle openHevcHandle, int layers) {
+
     OpenHevcWrapperContext * openHevcContext = (OpenHevcWrapperContext *) openHevcHandle;
-    av_opt_set_int(openHevcContext->c->priv_data, "layer-id", 1, 0);
-    if(openHevcContext->nb_layers >1) {
-        av_opt_set_int(openHevcContext->ec->priv_data, "layer-id", 2, 0);
-    }
+    openHevcContext->nb_layers = layers;
 }
 
 void libOpenHevcSetTemporalLayer_id(OpenHevc_Handle openHevcHandle, int val)

@@ -78,6 +78,10 @@ static void video_decode_example(const char *filename)
     int got_picture;
     float time  = 0.0;
     long unsigned int time1;
+    int sel_layer = 0;
+    if(layer_id == 1)
+    	sel_layer = 1;
+
     OpenHevc_Frame openHevcFrame;
     OpenHevc_Frame_cpy openHevcFrameCpy;
 
@@ -122,10 +126,10 @@ static void video_decode_example(const char *filename)
     while(!stop) {
         if (disable_au == 0) {
             if (stop_dec == 0 && av_read_frame(pFormatCtx, &packet)<0) stop_dec = 1;
-            got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++);
+            got_picture = libOpenHevcDecode(openHevcHandle, packet.data, !stop_dec ? packet.size : 0, pts++, sel_layer);
         } else {
             if (stop_dec == 0 && feof(f)) stop_dec = 1;
-            got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++);
+            got_picture = libOpenHevcDecode(openHevcHandle, buf, (!stop_dec ? get_next_nal(f, buf) : 0), pts++, sel_layer);
         }
         if (got_picture == layer_id) {
             fflush(stdout);
