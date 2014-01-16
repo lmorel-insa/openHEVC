@@ -27,7 +27,8 @@
 
 #ifdef SVC_EXTENSION
     #define VPS_EXTENSION
-    #define SCALED_REF_LAYER_OFFSETS 1
+    #define VPS_EXTN_MASK_AND_DIM_INFO 1
+    #define SCALED_REF_LAYER_OFFSETS   1
     #define MAX_LAYERS  2
     #define PHASE_DERIVATION_IN_INTEGER 1
     #define ILP_DECODED_PICTURE 1

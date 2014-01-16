@@ -90,7 +90,16 @@
 
 
 unsigned long int layers_time[3];
-static int first; 
+
+enum ScalabilityType
+{
+    VIEW_ORDER_INDEX  = 1,
+    SCALABILITY_ID = 2,
+};
+
+
+
+
 /**
  * Table 7-3: NAL unit type codes
  */
@@ -376,6 +385,7 @@ typedef struct PTL {
     int sub_layer_level_idc[MAX_SUB_LAYERS];
 } PTL;
 
+
 typedef struct HEVCVPS {
     uint8_t vps_temporal_id_nesting_flag;
     int vps_max_layers;
@@ -397,7 +407,7 @@ typedef struct HEVCVPS {
 
     int vps_extension_flag;
 #ifdef VPS_EXTENSION
-    int  avc_base_layer_flag;
+    int avc_base_layer_flag;
     int splitting_flag;
     int scalability_mask[MAX_VPS_NUM_SCALABILITY_TYPES];
     int dimension_id_len[MAX_VPS_NUM_SCALABILITY_TYPES];
@@ -411,11 +421,28 @@ typedef struct HEVCVPS {
     int         m_layerSetLayerIdList[MAX_VPS_LAYER_SETS_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
     int         m_numLayerInIdList[MAX_VPS_LAYER_SETS_PLUS1];
 #endif
-#if VPS_EXTN_DIRECT_REF_LAYERS
-    unsigned int    m_numDirectRefLayers[MAX_VPS_LAYER_ID_PLUS1];
-    unsigned int    direct_dependency_flag[MAX_VPS_LAYER_ID_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
-    unsigned int    m_refLayerId[MAX_VPS_LAYER_ID_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
+    
+#if VIEW_ID_RELATED_SIGNALING
+    Int         m_viewIdLenMinus1;
+    Int         m_viewIdVal                [MAX_LAYERS];
 #endif
+    
+#if VPS_EXTN_MASK_AND_DIM_INFO
+    unsigned int      m_avcBaseLayerFlag;                                // For now, always set to true.
+    unsigned int       m_splittingFlag;
+    unsigned int       m_scalabilityMask[MAX_VPS_NUM_SCALABILITY_TYPES];
+    unsigned int       m_dimensionIdLen[MAX_VPS_NUM_SCALABILITY_TYPES];
+    unsigned int       m_nuhLayerIdPresentFlag;
+    unsigned int       m_layerIdInNuh[MAX_VPS_LAYER_ID_PLUS1];            // Maps layer ID in the VPS with layer_id_in_nuh
+    unsigned int       m_dimensionId[MAX_VPS_LAYER_ID_PLUS1][MAX_VPS_NUM_SCALABILITY_TYPES];
+    
+   // Below are derived variables
+   //  unsigned int       m_numScalabilityTypes;
+   //  unsigned int       m_layerIdInVps[MAX_VPS_LAYER_ID_PLUS1];            // Maps layer_id_in_nuh with the layer ID in the VPS
+#endif
+
+    
+    
 #if VPS_EXTN_PROFILE_INFO
     unsigned int    vps_profile_present_flag[MAX_VPS_LAYER_SETS_PLUS1];    // The value with index 0 will not be used.
     unsigned int    profile_ref[MAX_VPS_LAYER_SETS_PLUS1];    // The value with index 0 will not be used.
@@ -434,10 +461,35 @@ typedef struct HEVCVPS {
     unsigned int       m_numOutputLayerSets;
     unsigned int       output_layer_set_idx[MAX_VPS_LAYER_SETS_PLUS1];
     int       output_layer_flag[MAX_VPS_LAYER_SETS_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
+    
+    
+    
+#if VPS_EXTN_DIRECT_REF_LAYERS
+    unsigned int   m_directDependencyFlag[MAX_VPS_LAYER_ID_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
+    unsigned int   m_numDirectRefLayers[MAX_VPS_LAYER_ID_PLUS1];
+    unsigned int   m_refLayerId[MAX_VPS_LAYER_ID_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
+#if M0457_PREDICTION_INDICATIONS
+    unsigned int   m_directDepTypeLen;
+#if O0096_DEFAULT_DEPENDENCY_TYPE
+    unsigned int   m_defaultDirectDependencyTypeFlag;
+    unsigned int   m_defaultDirectDependencyType;
 #endif
+    unsigned int   m_directDependencyType[MAX_VPS_LAYER_ID_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
+#endif
+#endif
+#endif
+    
+    
 #if JCTVC_M0458_INTERLAYER_RPS_SIG
     int       max_one_active_ref_layer_flag;
 #endif
+#if O0062_POC_LSB_NOT_PRESENT_FLAG
+    int       m_pocLsbNotPresentFlag[MAX_VPS_LAYER_ID_PLUS1];
+#endif
+#if O0215_PHASE_ALIGNMENT
+    int       m_phaseAlignFlag;
+#endif
+
 #endif
 
 

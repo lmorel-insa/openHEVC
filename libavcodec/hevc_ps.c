@@ -322,6 +322,37 @@ static void decode_hrd(HEVCContext *s, int common_inf_present,
     }
 }
 
+static int scalTypeToScalIdx( HEVCVPS *vps, enum ScalabilityType scalType )
+{
+    int scalIdx = 0;
+    for( int curScalType = 0; curScalType < scalType; curScalType++ )
+    {
+        scalIdx += ( vps->m_scalabilityMask[curScalType] ? 1 : 0 );
+        
+    }
+    
+    return scalIdx; 
+}
+
+
+static int getNumViews(HEVCVPS *vps)
+{
+    int numViews = 1, i;
+    for( i = 0; i <= vps->vps_max_layers - 1; i++ )
+    {
+        int lId = vps->m_layerIdInNuh[ i ];
+        if ( i > 0 && ( getViewIndex( lId ) != getScalabilityId( i - 1, VIEW_ORDER_INDEX ) ) )
+        {
+            numViews++;
+        }
+    }
+    
+    vps->m_scalabilityMask[VIEW_ORDER_INDEX] ? vps->m_dimensionId[i-1][scalTypeToScalIdx(vps, VIEW_ORDER_INDEX)] : 0 ;
+    
+    return numViews;
+}
+
+
 
 #ifdef VPS_EXTENSION
 static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
@@ -379,7 +410,26 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         }
     }
     
+#if VIEW_ID_RELATED_SIGNALING
+    // if ( pcVPS->getNumViews() > 1 )
+    //   However, this is a bug in the text since, view_id_len_minus1 is needed to parse view_id_val.
+    {
+      //  READ_CODE( 4, uiCode, "view_id_len_minus1" ); vps->setViewIdLenMinus1( uiCode );
+        vps->m_viewIdLenMinus1 = get_bits(gb, 4);
+    }
+    
+    for(  i = 0; i < getNumViews(vps); i++ )
+    {
+        READ_CODE( vps->getViewIdLenMinus1( ) + 1, uiCode, "view_id_val[i]" ); vps->setViewIdVal( i, uiCode );
+        m_viewIdVal[i] = get_bits(gb, vps->m_viewIdLenMinus1 + 1);
+    }
 #endif
+
+    
+    /**/
+    
+#endif
+    /*
 #if VPS_MOVE_DIR_DEPENDENCY_FLAG
 #if VPS_EXTN_DIRECT_REF_LAYERS
     vps->m_numDirectRefLayers[0] = 0;
@@ -388,8 +438,8 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         int numDirectRefLayers = 0;
         for( j = 0; j < i; j++)
         {
-            vps->direct_dependency_flag[i][j] = get_bits1(gb);
-            if(vps->direct_dependency_flag[i][j])
+            vps->m_numDirectRefLayers[i][j] = get_bits1(gb);
+            if(vps->m_numDirectRefLayers[i][j])
             {
                 vps->m_refLayerId[i][numDirectRefLayers] = j;
                 numDirectRefLayers++;
@@ -399,7 +449,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         vps->m_numDirectRefLayers[i] = numDirectRefLayers;
     }
 #endif
-#endif
+#endif*/
 #if VPS_EXTN_PROFILE_INFO
 #if VPS_PROFILE_OUTPUT_LAYERS
     
@@ -495,8 +545,118 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         vps->profile_level_tier_idx[i] = get_bits(gb, numBits);
     }
 #endif
+
+#if 0
+    
+    
+
 #if JCTVC_M0458_INTERLAYER_RPS_SIG
     vps->max_one_active_ref_layer_flag = get_bits1(gb);
+#endif
+#if O0062_POC_LSB_NOT_PRESENT_FLAG
+    for(i = 1; i< vps->vps_max_layers; i++)
+    {
+        if(vps->m_numDirectRefLayers[vps->layer_id_in_nuh[i]] == 0)
+        {
+            vps->m_pocLsbNotPresentFlag[i] =  get_bits1(gb);
+        }
+    }
+#endif
+#if O0215_PHASE_ALIGNMENT
+    vps->m_phaseAlignFlag = get_bits1(gb);
+#endif
+
+/*      DPB size    */
+#if VPS_DPB_SIZE_TABLE
+    vps->deriveNumberOfSubDpbs();
+    for(i = 1; i < vps->getNumOutputLayerSets(); i++)
+    {
+        READ_FLAG( uiCode, "sub_layer_flag_info_present_flag[i]");  vps->setSubLayerFlagInfoPresentFlag( i, uiCode ? true : false );
+        for(j = 0; j < vps->getMaxTLayers(); j++)
+        {
+            if( j > 0 && vps->getSubLayerFlagInfoPresentFlag(i) )
+            {
+                READ_FLAG( uiCode, "sub_layer_dpb_info_present_flag[i]");  vps->setSubLayerDpbInfoPresentFlag( i, j, uiCode ? true : false);
+            }
+            else
+            {
+                if( j == 0 )  // Always signal for the first sub-layer
+                {
+                    vps->setSubLayerDpbInfoPresentFlag( i, j, true );
+                }
+                else // if (j != 0) && !vps->getSubLayerFlagInfoPresentFlag(i)
+                {
+                    vps->setSubLayerDpbInfoPresentFlag( i, j, false );
+                }
+            }
+            if( vps->getSubLayerDpbInfoPresentFlag(i, j) )  // If sub-layer DPB information is present
+            {
+                for(Int k = 0; k < vps->getNumSubDpbs(i); k++)
+                {
+                    READ_UVLC( uiCode, "max_vps_dec_pic_buffering_minus1[i][k][j]" ); vps->setMaxVpsDecPicBufferingMinus1( i, k, j, uiCode );
+                }
+                READ_UVLC( uiCode, "max_vps_num_reorder_pics[i][j]" );              vps->setMaxVpsNumReorderPics( i, j, uiCode);
+                READ_UVLC( uiCode, "max_vps_latency_increase_plus1[i][j]" );        vps->setMaxVpsLatencyIncreasePlus1( i, j, uiCode);
+            }
+        }
+    }
+#endif
+    
+    
+#if VPS_EXTN_DIRECT_REF_LAYERS && M0457_PREDICTION_INDICATIONS
+    vps->m_directDepTypeLen = get_bits1(gb) + 2;    // because minis 2
+    //READ_UVLC( uiCode,           "direct_dep_type_len_minus2"); vps->setDirectDepTypeLen(uiCode+2);
+#if O0096_DEFAULT_DEPENDENCY_TYPE
+    //READ_FLAG(uiCode, "default_direct_dependency_type_flag");
+    //vps->setDefaultDirectDependecyTypeFlag(uiCode == 1? true : false);
+    vps->m_defaultDirectDependencyTypeFlag = get_bits1(gb);
+    if (vps->m_defaultDirectDependencyTypeFlag)
+    {
+        //READ_CODE( vps->getDirectDepTypeLen(), uiCode, "default_direct_dependency_type" );
+        //vps->setDefaultDirectDependecyType(uiCode);
+        vps->m_defaultDirectDependencyType = get_bits1(gb);;
+    }
+#endif
+    for(i = 1; i < vps->vps_max_layers; i++)
+    {
+        for(j = 0; j < i; j++)
+        {
+            if (vps->m_directDependencyFlag[i, j])
+            {
+#if O0096_DEFAULT_DEPENDENCY_TYPE
+                if (vps->m_defaultDirectDependencyTypeFlag)
+                {
+                    vps->m_directDependencyType[i, j] =  vps->m_defaultDirectDependencyType;
+                }
+                else
+                {
+                  //  READ_CODE( vps->getDirectDepTypeLen(), uiCode, "direct_dependency_type[i][j]" );
+                   // vps->setDirectDependencyType(i, j, uiCode);
+                    vps->m_directDependencyType[i, j] = get_bits1(gb);
+                }
+#else
+               // READ_CODE( vps->getDirectDepTypeLen(), uiCode, "direct_dependency_type[i][j]" );
+               // vps->setDirectDependencyType(i, j, uiCode);
+                vps->m_directDependencyType[i, j] = get_bits1(gb);
+#endif
+            }
+        }
+    }
+#endif
+
+#if VPS_VUI
+    while ( m_pcBitstream->getNumBitsRead() % 8 != 0 )
+    {
+        READ_FLAG( uiCode, "vps_vui_alignment_bit_equal_to_one"); assert(uiCode == 1);
+    }
+    parseVPSVUI(vps);
+#endif
+
+    
+    
+    
+#endif
+    
 #endif
 }
 #endif
@@ -532,11 +692,14 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
     vps->vps_max_layers               = get_bits(gb, 6) + 1;
     vps->vps_max_sub_layers           = get_bits(gb, 3) + 1;
     vps->vps_temporal_id_nesting_flag = get_bits1(gb);
-
+#if VPS_EXTN_OFFSET
+    vps->setExtensionOffset = get_bits(gb, 16);
+#else
     if (get_bits(gb, 16) != 0xffff) { // vps_reserved_ffff_16bits
         av_log(s->avctx, AV_LOG_ERROR, "vps_reserved_ffff_16bits is not 0xffff\n");
         goto err;
     }
+#endif
 
     if (vps->vps_max_sub_layers > MAX_SUB_LAYERS) {
         av_log(s->avctx, AV_LOG_ERROR, "vps_max_sub_layers out of range: %d\n",
@@ -591,14 +754,38 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
             decode_hrd(s, common_inf_present, vps->vps_max_sub_layers);
         }
     }
-    
     vps->vps_extension_flag = get_bits1(gb);
+#if 0
+#if VPS_EXTNS
+    if(vps->vps_extension_flag){ // vps_extension_flag
+        while ( m_pcBitstream->getNumBitsRead() % 8 != 0 )
+        {
+            READ_FLAG( uiCode, "vps_extension_alignment_bit_equal_to_one"); assert(uiCode == 1);
+        }
+        parse_vps_extension(s, vps);
+        //parseVPSExtension(pcVPS);
+        READ_FLAG( uiCode, "vps_entension2_flag" );
+        if(uiCode)
+        {
+            while ( xMoreRbspData() )
+            {
+                READ_FLAG( uiCode, "vps_extension_data_flag");
+            }
+        }
+#else
+    while ( xMoreRbspData() )
+    {
+        READ_FLAG( uiCode, "vps_extension_data_flag");
+    }
+#endif
+#else
+    
 #ifdef VPS_EXTENSION
     if(vps->vps_extension_flag){ // vps_extension_flag
         parse_vps_extension(s, vps);
     }
 #endif
-
+#endif
     av_buffer_unref(&s->vps_list[vps_id]);
     s->vps_list[vps_id] = vps_buf;
 
