@@ -497,14 +497,27 @@ static HEVCFrame *generate_missing_ref(HEVCContext *s, int poc)
             memset(frame->frame->buf[i]->data, 1 << (s->sps->bit_depth - 1),
                    frame->frame->buf[i]->size);
     } else {
+#if FRAME_CONCEALMENT
+        int concel_poc = poc ? poc-1:poc+1; // TODO: Compute the value concel_poc
+        HEVCFrame *ref = find_ref_idx(s, concel_poc);
+        if( ref ) {
+            if(frame->frame->data[0])
+                memcpy(frame->frame->data[0], ref->frame->data[0], ref->frame->height * ref->frame->linesize[0]);
+            for (i = 1; frame->frame->data[i]; i++)
+                memcpy(frame->frame->data[i], ref->frame->data[i], (ref->frame->height>>1) * ref->frame->linesize[i]);
+        }
+#else
         for (i = 0; frame->frame->data[i]; i++)
             for (y = 0; y < (s->sps->height >> s->sps->vshift[i]); y++)
                 for (x = 0; x < (s->sps->width >> s->sps->hshift[i]); x++) {
                     AV_WN16(frame->frame->data[i] + y * frame->frame->linesize[i] + 2 * x,
                             1 << (s->sps->bit_depth - 1));
                 }
+#endif
     }
-
+    // Find the right frame
+    
+    
     frame->poc      = poc;
     frame->sequence = s->seq_decode;
     frame->flags    = 0;
