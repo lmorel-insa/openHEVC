@@ -3038,7 +3038,7 @@ fail:
     ff_hevc_unref_frame(s, dst, ~0);
     return AVERROR(ENOMEM);
 }
-
+static int first;
 static av_cold int hevc_decode_free(AVCodecContext *avctx)
 {
     HEVCContext       *s = avctx->priv_data;
