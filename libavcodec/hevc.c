@@ -578,8 +578,47 @@ static int hls_slice_header(HEVCContext *s)
     if (!sh->dependent_slice_segment_flag) {
         s->slice_initialized = 0;
 
+        
+        
+        
+#if SVC_EXTENSION
+#if POC_RESET_FLAG
+        int iBits = 0;
+        if(s->pps->num_extra_slice_header_bits > iBits) {
+            sh->m_bPocResetFlag = get_bits1(gb);
+            iBits++;
+        }
+        if(s->pps->num_extra_slice_header_bits > iBits) {
+            skip_bits1(gb);
+            iBits++;
+        }
+#if O0149_CROSS_LAYER_BLA_FLAG
+        if(s->pps->num_extra_slice_header_bits > iBits) {
+            sh->m_bCrossLayerBLAFlag = get_bits1(gb);
+            iBits++;
+        }
+#endif
+        for (; iBits < s->pps->num_extra_slice_header_bits; iBits++)
+        {
+            skip_bits1(gb);
+        }
+#else
+        if(s->pps->num_extra_slice_header_bits>0)
+        {
+            skip_bits1(gb);
+        }
+        for ( i = 1; i < s->pps->num_extra_slice_header_bits; i++)
+        {
+            skip_bits1(gb);
+        }
+#endif
+#else //SVC_EXTENSION
         for (i = 0; i < s->pps->num_extra_slice_header_bits; i++)
             skip_bits(gb, 1);  // slice_reserved_undetermined_flag[]
+#endif //SVC_EXTENSION
+        
+        
+        
 
         sh->slice_type = get_ue_golomb_long(gb);
         if (!(sh->slice_type == I_SLICE ||
@@ -600,7 +639,9 @@ static int hls_slice_header(HEVCContext *s)
         if (s->sps->separate_colour_plane_flag)
             sh->colour_plane_id = get_bits(gb, 2);
 
-        if (!IS_IDR(s)) {
+        
+        if (( s->nuh_layer_id > 0 && !s->vps->m_pocLsbNotPresentFlag[s->vps->m_layerIdInVps[s->nuh_layer_id]] )
+            || (!IS_IDR(s))) {
             int short_term_ref_pic_set_sps_flag, poc;
 
             sh->pic_order_cnt_lsb = get_bits(gb, s->sps->log2_max_poc_lsb);
@@ -613,8 +654,9 @@ static int hls_slice_header(HEVCContext *s)
                 poc = s->poc;
             }
             s->poc = poc;
-
-            short_term_ref_pic_set_sps_flag = get_bits1(gb);
+            short_term_ref_pic_set_sps_flag = 0; 
+            if (!IS_IDR(s))
+                short_term_ref_pic_set_sps_flag = get_bits1(gb);
             if (!short_term_ref_pic_set_sps_flag) {
                 ret = ff_hevc_decode_short_term_rps(s, &sh->slice_rps, s->sps, 1);
                 if (ret < 0)

@@ -636,11 +636,14 @@ typedef struct HEVCSPS {
     int bit_depth;
     int pixel_shift;
     enum AVPixelFormat pix_fmt;
-
+    int m_updateRepFormatFlag;
+    int m_updateRepFormatIndex; 
+    
     unsigned int log2_max_poc_lsb;
     int pcm_enabled_flag;
 
     int max_sub_layers;
+    int m_bTemporalIdNestingFlag; 
     struct {
         int max_dec_pic_buffering;
         int num_reorder_pics;
@@ -651,6 +654,8 @@ typedef struct HEVCSPS {
     PTL ptl;
 
     uint8_t scaling_list_enable_flag;
+    uint8_t m_inferScalingListFlag;
+    int m_scalingListRefLayerId; 
     ScalingList scaling_list;
 
     unsigned int nb_st_rps;
@@ -701,12 +706,12 @@ typedef struct HEVCSPS {
     int vshift[3];
 
     int qp_bd_offset;
-#if SCALED_REF_LAYER_OFFSETS
+/*#if SCALED_REF_LAYER_OFFSETS
     HEVCWindow      scaled_ref_layer_window;
 #endif
 #if REF_IDX_MFM
     int set_mfm_enabled_flag;
-#endif
+#endif*/
 } HEVCSPS;
 
 typedef struct HEVCPPS {
@@ -747,6 +752,8 @@ typedef struct HEVCPPS {
 
     uint8_t deblocking_filter_control_present_flag;
     uint8_t deblocking_filter_override_enabled_flag;
+    uint8_t m_inferScalingListFlag;
+    int m_scalingListRefLayerId; 
     uint8_t disable_dbf;
     int beta_offset;    ///< beta_offset_div2 * 2
     int tc_offset;      ///< tc_offset_div2 * 2
@@ -775,6 +782,7 @@ typedef struct HEVCPPS {
     int *tile_pos_rs;       ///< TilePosRS
     int *min_cb_addr_zs;    ///< MinCbAddrZS
     int *min_tb_addr_zs;    ///< MinTbAddrZS
+     
 } HEVCPPS;
 
 typedef struct SliceHeader {
@@ -859,6 +867,8 @@ typedef struct SliceHeader {
 #ifdef SVC_EXTENSION
     int ScalingFactor[MAX_LAYERS][2];
     int ScalingPosition[MAX_LAYERS][2];
+    uint8_t m_bPocResetFlag;
+    uint8_t m_bCrossLayerBLAFlag; 
 #endif
     int slice_ctb_addr_rs;
 } SliceHeader;
