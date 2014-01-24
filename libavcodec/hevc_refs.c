@@ -584,7 +584,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
     if (s->nuh_layer_id)
 #endif
     {
-        if(!(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) && s->sps->set_mfm_enabled_flag)  {
+        if(!(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) /*&& s->sps->set_mfm_enabled_flag*/)  {
 #if !ACTIVE_PU_UPSAMPLING
             int *arg, *ret, cmpt = (s->sps->height / ctb_size) + (s->sps->height%ctb_size ? 1:0);
             arg = av_malloc(cmpt*sizeof(int));
@@ -619,7 +619,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
     for (i = 0; i < NB_RPS_TYPE; i++)
         rps[i].nb_refs = 0;
 #ifdef SVC_EXTENSION
-    if(!s->nuh_layer_id || !(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) && s->sps->set_mfm_enabled_flag)  {
+    if(!s->nuh_layer_id || !(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) /*&& s->sps->set_mfm_enabled_flag*/)  {
 #endif
         /* add the short refs */
         for (i = 0; short_rps && i < short_rps->num_delta_pocs; i++) {

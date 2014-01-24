@@ -655,6 +655,7 @@ typedef struct HEVCSPS {
 
     uint8_t scaling_list_enable_flag;
     uint8_t m_inferScalingListFlag;
+    uint8_t m_scalingListPresentFlag; 
     int m_scalingListRefLayerId; 
     ScalingList scaling_list;
 
@@ -706,10 +707,10 @@ typedef struct HEVCSPS {
     int vshift[3];
 
     int qp_bd_offset;
-/*#if SCALED_REF_LAYER_OFFSETS
+#if SCALED_REF_LAYER_OFFSETS
     HEVCWindow      scaled_ref_layer_window;
 #endif
-#if REF_IDX_MFM
+/*#if REF_IDX_MFM
     int set_mfm_enabled_flag;
 #endif*/
 } HEVCSPS;
