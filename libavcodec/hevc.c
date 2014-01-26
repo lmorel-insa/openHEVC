@@ -246,7 +246,7 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
             goto fail;
         }
         heightEL = sps->height - sps->scaled_ref_layer_window.bottom_offset - sps->scaled_ref_layer_window.top_offset;
-        widthEL = sps->width   - sps->scaled_ref_layer_window.left_offset   - sps->scaled_ref_layer_window.right_offset;
+        widthEL  = sps->width   - sps->scaled_ref_layer_window.left_offset   - sps->scaled_ref_layer_window.right_offset;
         
         s->sh.ScalingFactor[s->nuh_layer_id][0]   = av_clip_c(((widthEL  << 8) + (widthBL  >> 1)) / widthBL,  -4096, 4095);
         s->sh.ScalingFactor[s->nuh_layer_id][1]   = av_clip_c(((heightEL << 8) + (heightBL >> 1)) / heightBL, -4096, 4095);
