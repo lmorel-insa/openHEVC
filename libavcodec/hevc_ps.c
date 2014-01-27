@@ -1759,14 +1759,18 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
         RepFormat Rep;
         if(sps->m_updateRepFormatFlag)
             Rep = vps->m_vpsRepFormat[sps->m_updateRepFormatIndex];
-        else
-            Rep = vps->m_vpsRepFormat[s->nuh_layer_id];
+        else {
+            if(vps->m_vpsNumRepFormats > 1 )   {
+            Rep = vps->m_vpsRepFormat[vps->m_vpsRepFormatIdx[s->nuh_layer_id]];
+        } else
+            Rep = vps->m_vpsRepFormat[0];
+        }
         sps->width  = Rep.m_picWidthVpsInLumaSamples;
         sps->height = Rep.m_picHeightVpsInLumaSamples;
         sps->bit_depth   = Rep.m_bitDepthVpsLuma;
         //sps->bit_depth_chroma = Rep.m_bitDepthVpsChroma;
 
-        
+
         if(Rep.m_chromaFormatVpsIdc) {
             switch (Rep.m_bitDepthVpsChroma) {
                 case 8:  sps->pix_fmt = AV_PIX_FMT_YUV420P;   break;
