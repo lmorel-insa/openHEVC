@@ -75,7 +75,7 @@
 #define EPEL_EXTRA_BEFORE    1
 #define EPEL_EXTRA_AFTER     2
 #define EPEL_EXTRA           3
-#define ACTIVE_PU_UPSAMPLING 1
+#define ACTIVE_PU_UPSAMPLING 0
 /**
  * Value of the luma sample at position (x, y) in the 2D array tab.
  */
@@ -130,6 +130,15 @@ enum NALUnitType {
     NAL_SEI_PREFIX = 39,
     NAL_SEI_SUFFIX = 40,
 };
+#if 0
+#define print_cabac(string, val) \
+    printf(" %s : %d \n", string, val);
+#else
+#define print_cabac(string, val)
+#endif
+
+
+
 
 enum RPSType {
     ST_CURR_BEF = 0,
@@ -708,11 +717,16 @@ typedef struct HEVCSPS {
 
     int qp_bd_offset;
 #if SCALED_REF_LAYER_OFFSETS
-    HEVCWindow      scaled_ref_layer_window;
+    HEVCWindow      scaled_ref_layer_window[MAX_LAYERS];
+    int             m_numScaledRefLayerOffsets;
+    
 #endif
-/*#if REF_IDX_MFM
+#if O0098_SCALED_REF_LAYER_ID
+    int        m_scaledRefLayerId[MAX_LAYERS];
+#endif
+#if REF_IDX_MFM
     int set_mfm_enabled_flag;
-#endif*/
+#endif
 } HEVCSPS;
 
 typedef struct HEVCPPS {

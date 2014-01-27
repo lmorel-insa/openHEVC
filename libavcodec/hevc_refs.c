@@ -332,25 +332,27 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
     HEVCContext *s = avctxt->priv_data;
     int xEL, yEL, xBL, yBL, list, i, j;
     HEVCFrame  *refBL, *refEL;
-    int pic_width_in_min_pu = s->sps->width>>s->sps->log2_min_pu_size;
-    int pic_height_in_min_pu = s->sps->height>>s->sps->log2_min_pu_size;
+    int pic_width_in_min_pu   = s->sps->width>>s->sps->log2_min_pu_size;
+    int pic_height_in_min_pu  = s->sps->height>>s->sps->log2_min_pu_size;
     int pic_width_in_min_puBL = s->BL_frame->frame->coded_width >> s->sps->log2_min_pu_size;
-    int *index = input_ctb_row;
+    
+    int *index   = input_ctb_row;
     int ctb_size = 1 << s->sps->log2_ctb_size;
+    
     refBL = s->BL_frame;
-    init_il_slice_rpl(s);
+    
     refEL = s->inter_layer_ref;
     if( *index ==0 ) {
+        init_il_slice_rpl(s);
         for( list=0; list < 2; list++) {
             refEL->refPicList[list].nb_refs = refBL->refPicList[list].nb_refs;
             for(i=0; i< refBL->refPicList->nb_refs; i++){
-                refEL->refPicList[list].list[i] = refBL->refPicList[list].list[i];
-                refEL->refPicList[list].ref[i] = find_ref_idx(s, refBL->refPicList[list].list[i]);
+                refEL->refPicList[list].list[i]       = refBL->refPicList[list].list[i];
+                refEL->refPicList[list].ref[i]        = find_ref_idx(s, refBL->refPicList[list].list[i]);
                 refEL->refPicList[list].isLongTerm[i] = refBL->refPicList[list].isLongTerm[i];
             }
         }
     }
-
     int start = (*index) * ctb_size;
     int end = ((*index)+1) * ctb_size;
     
@@ -584,7 +586,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
     if (s->nuh_layer_id)
 #endif
     {
-        if(!(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) /*&& s->sps->set_mfm_enabled_flag*/)  {
+        if(!(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) && s->sps->set_mfm_enabled_flag)  {
 #if !ACTIVE_PU_UPSAMPLING
             int *arg, *ret, cmpt = (s->sps->height / ctb_size) + (s->sps->height%ctb_size ? 1:0);
             arg = av_malloc(cmpt*sizeof(int));
@@ -619,7 +621,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
     for (i = 0; i < NB_RPS_TYPE; i++)
         rps[i].nb_refs = 0;
 #ifdef SVC_EXTENSION
-    if(!s->nuh_layer_id || !(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) /*&& s->sps->set_mfm_enabled_flag*/)  {
+    if(!s->nuh_layer_id || !(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT && s->sps->set_mfm_enabled_flag))  {
 #endif
         /* add the short refs */
         for (i = 0; short_rps && i < short_rps->num_delta_pocs; i++) {

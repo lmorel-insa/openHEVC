@@ -1612,7 +1612,7 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
     int phase    = 0;
     int refPos   = 0;
     const int8_t* coeff;
-
+    printf("------  Frame upsampling ----------- \n"); 
     widthEL   = FrameEL->width;  //pcUsPic->getWidth ();
     heightEL  = FrameEL->height; //pcUsPic->getHeight();
     
@@ -1660,7 +1660,8 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
                     }
         
     }
-    const int nShift = US_FILTER_PREC*2;
+    
+    const int nShift = 20-8;
     int iOffset = 1 << (nShift - 1);
     short buffer1[8];
     for( j = 0; j < heightEL; j++ )	{
@@ -1706,6 +1707,21 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
                         dstY++;
                     }
     }
+    
+    
+   /* printf("heightEL %d \n", heightEL);
+    for(i=0; i < heightEL; i++) {
+        for(j=0; j < widthEL; j++) {
+            if(i==(heightEL-1))
+                printf("%d ", dstBufY[i*strideEL+j]);
+        }
+       // printf("\n \n");
+        
+    }
+    exit(-1);
+    */
+    
+    
     widthBL   = FrameBL->width;
     heightBL  = FrameBL->height;
     
