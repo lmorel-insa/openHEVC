@@ -123,16 +123,18 @@ static int isDiffMER(HEVCContext *s, int xN, int yN, int xP, int yP)
 // check if the mv's and refidx are the same between A and B
 static int compareMVrefidx(struct MvField A, struct MvField B)
 {
-    if (A.pred_flag[0] && A.pred_flag[1] && B.pred_flag[0] && B.pred_flag[1])
-        return MATCH(ref_idx[0]) && MATCH(mv[0].x) && MATCH(mv[0].y) &&
-               MATCH(ref_idx[1]) && MATCH(mv[1].x) && MATCH(mv[1].y);
-
-    if (A.pred_flag[0] && !A.pred_flag[1] && B.pred_flag[0] && !B.pred_flag[1])
-        return MATCH(ref_idx[0]) && MATCH(mv[0].x) && MATCH(mv[0].y);
-
-    if (!A.pred_flag[0] && A.pred_flag[1] && !B.pred_flag[0] && B.pred_flag[1])
-        return MATCH(ref_idx[1]) && MATCH(mv[1].x) && MATCH(mv[1].y);
-
+    int a_pf = A.pred_flag[0] + A.pred_flag[1];
+    int b_pf = B.pred_flag[0] + B.pred_flag[1];
+    if (a_pf == b_pf) {
+        if (a_pf == 2) {
+            return MATCH(ref_idx[0]) && MATCH(mv[0].x) && MATCH(mv[0].y) &&
+                   MATCH(ref_idx[1]) && MATCH(mv[1].x) && MATCH(mv[1].y);
+        } else if (A.pred_flag[0] && B.pred_flag[0]) {
+            return MATCH(ref_idx[0]) && MATCH(mv[0].x) && MATCH(mv[0].y);
+        } else if (A.pred_flag[1] && B.pred_flag[1]) {
+            return MATCH(ref_idx[1]) && MATCH(mv[1].x) && MATCH(mv[1].y);
+        }
+    }
     return 0;
 }
 
@@ -140,13 +142,13 @@ static av_always_inline void mv_scale(Mv *dst, Mv *src, int td, int tb)
 {
     int tx, scale_factor;
 
-    td = av_clip_int8_c(td);
-    tb = av_clip_int8_c(tb);
+    td = av_clip_int8(td);
+    tb = av_clip_int8(tb);
     tx = (0x4000 + abs(td / 2)) / td;
-    scale_factor = av_clip_c((tb * tx + 32) >> 6, -4096, 4095);
-    dst->x = av_clip_int16_c((scale_factor * src->x + 127 +
+    scale_factor = av_clip((tb * tx + 32) >> 6, -4096, 4095);
+    dst->x = av_clip_int16((scale_factor * src->x + 127 +
                              (scale_factor * src->x < 0)) >> 8);
-    dst->y = av_clip_int16_c((scale_factor * src->y + 127 +
+    dst->y = av_clip_int16((scale_factor * src->y + 127 +
                              (scale_factor * src->y < 0)) >> 8);
 }
 
@@ -168,10 +170,7 @@ static int check_mvset(Mv *mvLXCol, Mv *mvCol,
     col_poc_diff = colPic - refPicList_col[listCol].list[refidxCol];
     cur_poc_diff = poc    - refPicList[X].list[refIdxLx];
 
-    if (!col_poc_diff)
-        col_poc_diff = 1;  // error resilience
-
-    if (cur_lt || col_poc_diff == cur_poc_diff) {
+    if (cur_lt || col_poc_diff == cur_poc_diff || !col_poc_diff) {
         mvLXCol->x = mvCol->x;
         mvLXCol->y = mvCol->y;
     } else {
@@ -193,17 +192,14 @@ static int derive_temporal_colocated_mvs(HEVCContext *s, MvField temp_col,
 {
     RefPicList *refPicList = s->ref->refPicList;
 
-    if (temp_col.is_intra) {
-        mvLXCol->x = 0;
-        mvLXCol->y = 0;
+    if (!temp_col.pred_flag[0] && !temp_col.pred_flag[1])
         return 0;
-    }
 
-    if (temp_col.pred_flag[0] == 0)
+    if (!temp_col.pred_flag[0])
         return CHECK_MVSET(1);
-    else if (temp_col.pred_flag[0] == 1 && temp_col.pred_flag[1] == 0)
+    else if (temp_col.pred_flag[0] && !temp_col.pred_flag[1])
         return CHECK_MVSET(0);
-    else if (temp_col.pred_flag[0] == 1 && temp_col.pred_flag[1] == 1) {
+    else if (temp_col.pred_flag[0] && temp_col.pred_flag[1]) {
         int check_diffpicount = 0;
         int i = 0;
         for (i = 0; i < refPicList[0].nb_refs; i++) {
@@ -562,7 +558,6 @@ void ff_hevc_luma_mv_merge_mode(HEVCContext *s, int x0, int y0, int nPbW,
     if (mergecand_list[merge_idx].pred_flag[0] == 1 &&
         mergecand_list[merge_idx].pred_flag[1] == 1 &&
         (nPbW2 + nPbH2) == 12) {
-        mergecand_list[merge_idx].ref_idx[1]   = -1;
         mergecand_list[merge_idx].pred_flag[1] = 0;
     }
 
@@ -590,7 +585,7 @@ static int mv_mp_mode_mx(HEVCContext *s, int x, int y, int pred_flag_index,
 
     RefPicList *refPicList = s->ref->refPicList;
 
-    if (TAB_MVF(x, y).pred_flag[pred_flag_index] == 1 &&
+    if (TAB_MVF(x, y).pred_flag[pred_flag_index] &&
         refPicList[pred_flag_index].list[TAB_MVF(x, y).ref_idx[pred_flag_index]] == refPicList[ref_idx_curr].list[ref_idx]) {
         *mv = TAB_MVF(x, y).mv[pred_flag_index];
         return 1;
@@ -605,18 +600,20 @@ static int mv_mp_mode_mx_lt(HEVCContext *s, int x, int y, int pred_flag_index,
     int min_pu_width = s->sps->min_pu_width;
 
     RefPicList *refPicList = s->ref->refPicList;
-    int currIsLongTerm     = refPicList[ref_idx_curr].isLongTerm[ref_idx];
 
-    int colIsLongTerm =
-        refPicList[pred_flag_index].isLongTerm[(TAB_MVF(x, y).ref_idx[pred_flag_index])];
+    if (TAB_MVF(x, y).pred_flag[pred_flag_index]) {
+        int currIsLongTerm     = refPicList[ref_idx_curr].isLongTerm[ref_idx];
 
-    if (TAB_MVF(x, y).pred_flag[pred_flag_index] &&
-        colIsLongTerm == currIsLongTerm) {
-        *mv = TAB_MVF(x, y).mv[pred_flag_index];
-        if (!currIsLongTerm)
-            dist_scale(s, mv, min_pu_width, x, y,
-                       pred_flag_index, ref_idx_curr, ref_idx);
-        return 1;
+        int colIsLongTerm =
+            refPicList[pred_flag_index].isLongTerm[(TAB_MVF(x, y).ref_idx[pred_flag_index])];
+
+        if (colIsLongTerm == currIsLongTerm) {
+            *mv = TAB_MVF(x, y).mv[pred_flag_index];
+            if (!currIsLongTerm)
+                dist_scale(s, mv, min_pu_width, x, y,
+                           pred_flag_index, ref_idx_curr, ref_idx);
+            return 1;
+        }
     }
     return 0;
 }
@@ -662,8 +659,8 @@ void ff_hevc_luma_mv_mvp_mode(HEVCContext *s, int x0, int y0, int nPbW,
     int xB2_pu = 0, yB2_pu = 0;
     int is_available_b2 = 0;
     Mv mvpcand_list[2] = { { 0 } };
-    Mv mxA = { 0 };
-    Mv mxB = { 0 };
+    Mv mxA;
+    Mv mxB;
     int ref_idx_curr = 0;
     int ref_idx = 0;
     int pred_flag_index_l0;
@@ -817,10 +814,5 @@ void ff_hevc_luma_mv_mvp_mode(HEVCContext *s, int x0, int y0, int nPbW,
             mvpcand_list[numMVPCandLX++] = mv_col;
     }
 
-    // insert zero motion vectors when the number of available candidates are less than 2
-    while (numMVPCandLX < 2)
-        mvpcand_list[numMVPCandLX++] = (Mv){ 0, 0 };
-
-    mv->mv[LX].x = mvpcand_list[mvp_lx_flag].x;
-    mv->mv[LX].y = mvpcand_list[mvp_lx_flag].y;
+    mv->mv[LX] = mvpcand_list[mvp_lx_flag];
 }
