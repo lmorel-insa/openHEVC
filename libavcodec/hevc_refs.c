@@ -394,13 +394,11 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
             int yELtmp = av_clip_c(yEL+8, 0, s->sps->height -1);
             xBL = (((xELtmp) - pic_conf_win.left_offset)*s->sh.ScalingPosition[s->nuh_layer_id][0] + (1<<15)) >> 16;
             yBL = (((yELtmp) - pic_conf_win.top_offset )*s->sh.ScalingPosition[s->nuh_layer_id][1] + (1<<15)) >> 16;
-
-            
             xBL += 4;
             yBL += 4; 
             xBL = (xBL >>=4)<<2; //xBL & 0xFFFFFFF0
             yBL = (yBL >>=4)<<2;  //yBL & 0xFFFFFFF0
-            printf("xEL: %d yEL: %d xBL:  %d yBL: %d is intra: %d \n", xEL, yEL, xBL, yBL, refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].is_intra);
+           
             if(!refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].is_intra) {
                 refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].is_intra = 0;
                 
@@ -411,7 +409,6 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y = av_clip( (s->sh.ScalingFactor[s->nuh_layer_id][1] * y + 127 + (s->sh.ScalingFactor[s->nuh_layer_id][1] * y < 0)) >> 8, -32768, 32767);
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].ref_idx[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].ref_idx[list];
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].pred_flag[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].pred_flag[list];
-                    printf("MvBL %d %d MvEL %d %d \n", x, y, refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].x, refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y );
                 }
             } else {
                 refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].is_intra = 1;
@@ -447,7 +444,6 @@ int ff_hevc_slice_rpl(HEVCContext *s)
     uint8_t nb_list = sh->slice_type == B_SLICE ? 2 : 1;
     uint8_t list_idx;
     int i, j, ret;
-    printf("*** ff_hevc_slice_rpl *** \n");
     ret = init_slice_rpl(s);
     if (ret < 0)
         return ret;
@@ -478,7 +474,6 @@ int ff_hevc_slice_rpl(HEVCContext *s)
                 for (j = 0; j < rps->nb_refs && rpl_tmp.nb_refs < MAX_REFS; j++) {
                     rpl_tmp.list[rpl_tmp.nb_refs]       = rps->list[j];
                     rpl_tmp.ref[rpl_tmp.nb_refs]        = rps->ref[j];
-                  //  printf("list: %d poc: %d i: %d  %d \n", list_idx,  rpl_tmp.list[rpl_tmp.nb_refs], i, cand_lists[i]);
                     rpl_tmp.isLongTerm[rpl_tmp.nb_refs] = i == 1  || i == 3 || i == 4;
                     rpl_tmp.nb_refs++;
                 }
@@ -486,7 +481,6 @@ int ff_hevc_slice_rpl(HEVCContext *s)
         }
 
         /* reorder the references if necessary */
-        //printf("sh->rpl_modification_flag[list_idx] %d ", sh->rpl_modification_flag[list_idx]);
         if (sh->rpl_modification_flag[list_idx]) {
             for (i = 0; i < sh->nb_refs[list_idx]; i++) {
                 int idx = sh->list_entry_lx[list_idx][i];
@@ -679,7 +673,6 @@ int ff_hevc_frame_rps(HEVCContext *s)
     RefPicList               *rps = s->rps;
     HEVCVPS *vps                  = s->vps;
     int i, ret;
-    printf("*** ff_hevc_frame_rps *** \n");
     if (!short_rps) {
         rps[0].nb_refs = rps[1].nb_refs = 0;
         if (!long_rps)
@@ -702,7 +695,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
             ret = av_malloc(cmpt*sizeof(int));
             for(i=0; i < cmpt; i++)
                 arg[i] = i;
-            printf("#### scale_upsampled_mv_field #### \n");
+
             s->avctx->execute(s->avctx, (void *) scale_upsampled_mv_field, arg, ret, cmpt, sizeof(int));
             av_free(arg);
             av_free(ret);
@@ -710,7 +703,6 @@ int ff_hevc_frame_rps(HEVCContext *s)
             set_refindex_data(s);
 #endif
             }   else    {
-                printf("#### init_upsampled_mv_fields #### \n");
                 init_upsampled_mv_fields(s);
             }
         if(s->threads_type&FF_THREAD_FRAME)
@@ -745,7 +737,6 @@ int ff_hevc_frame_rps(HEVCContext *s)
                 list = ST_CURR_BEF;
             else
                 list = ST_CURR_AFT;
-           // printf("Add condidate list : %d \n", list);
             ret = add_candidate_ref(s, &rps[list], poc, HEVC_FRAME_FLAG_SHORT_REF);
             if (ret < 0)
                 return ret;
@@ -786,11 +777,9 @@ int ff_hevc_frame_rps(HEVCContext *s)
                 if((vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[0]) && (vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[vps->m_refLayerId[s->nuh_layer_id][s->sh.inter_layer_pred_layer_idc[i]]])){
                 //IL_REF0 , IL_REF1
                     ret = add_candidate_ref(s, &rps[IL_REF0], s->poc, HEVC_FRAME_FLAG_LONG_REF);
-                    printf("ADD frame to IL_REF0 %p %p \n", rps[IL_REF0].ref[rps[IL_REF0].nb_refs-1], s->inter_layer_ref);
                 }
                 else{
                     ret = add_candidate_ref(s, &rps[IL_REF1], s->poc, HEVC_FRAME_FLAG_LONG_REF);
-                    printf("ADD frame to IL_REF1 \n"); 
                 }
             }
         }
