@@ -72,6 +72,7 @@
 #define L0 0
 #define L1 1
 
+
 #define EPEL_EXTRA_BEFORE    1
 #define EPEL_EXTRA_AFTER     2
 #define EPEL_EXTRA           3
@@ -130,7 +131,7 @@ enum NALUnitType {
     NAL_SEI_PREFIX = 39,
     NAL_SEI_SUFFIX = 40,
 };
-#if 1
+#if 0
 #define print_cabac(string, val) \
     printf(" %s : %d \n", string, val);
 #else
@@ -146,6 +147,8 @@ enum RPSType {
     ST_FOLL,
     LT_CURR,
     LT_FOLL,
+    IL_REF0,
+    IL_REF1,
     NB_RPS_TYPE,
 };
 
@@ -1004,6 +1007,9 @@ typedef struct HEVCFrame {
      * A combination of HEVC_FRAME_FLAG_*
      */
     uint8_t flags;
+#if FRAME_CONCEALMENT
+    uint8_t is_concealment_frame;
+#endif
 } HEVCFrame;
 
 typedef struct HEVCNAL {
@@ -1085,7 +1091,7 @@ typedef struct HEVCContext {
     AVBufferPool *rpl_tab_pool;
 
     ///< candidate references for the current frame
-    RefPicList rps[5];
+    RefPicList rps[5+2]; // 2 for inter layer reference pictures 
 
     SliceHeader sh;
     SAOParams *sao;
@@ -1182,7 +1188,14 @@ typedef struct HEVCContext {
     int nal_length_size;    ///< Number of bytes used for nal length (1, 2 or 4)
 
     int picture_struct;
-    long unsigned int dynamic_alloc; 
+    long unsigned int dynamic_alloc;
+    
+#if FRAME_CONCEALMENT
+    int prev_display_poc;
+    int no_display_pic;
+    
+#endif
+    
 } HEVCContext;
 
 int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,

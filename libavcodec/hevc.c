@@ -255,8 +255,9 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         
         s->sh.ScalingFactor[s->nuh_layer_id][0]   = av_clip_c(((widthEL  << 8) + (widthBL  >> 1)) / widthBL,  -4096, 4095);
         s->sh.ScalingFactor[s->nuh_layer_id][1]   = av_clip_c(((heightEL << 8) + (heightBL >> 1)) / heightBL, -4096, 4095);
-      //  s->sh.ScalingPosition[s->nuh_layer_id][0] = ((widthBL  << 16) + (widthEL  >> 1)) / widthEL;
-      //  s->sh.ScalingPosition[s->nuh_layer_id][1] = ((heightBL << 16) + (heightEL >> 1)) / heightEL;
+      
+        s->sh.ScalingPosition[s->nuh_layer_id][0] = ((widthBL  << 16) + (widthEL  >> 1)) / widthEL;
+        s->sh.ScalingPosition[s->nuh_layer_id][1] = ((heightBL << 16) + (heightEL >> 1)) / heightEL;
         
        
         
@@ -722,6 +723,19 @@ static int hls_slice_header(HEVCContext *s)
             }
             s->poc = poc;
         }
+
+        
+#if SIM_ERROR_CONCEALMENT
+        av_log(s->avctx, AV_LOG_ERROR, "Poc to decode: %d \n", s->poc);
+        if((s->poc % 8) == 6 /*|| (s->poc % 8) == 3 || (s->poc % 8)  == 5 || (s->poc % 8) == 7*/){
+#if FRAME_CONCEALMENT
+            ret = ff_hevc_output_frame(s, s->output_frame, 0);
+#endif
+            return -10;
+
+            
+        }
+#endif
         if(!IS_IDR(s)) {
             int short_term_ref_pic_set_sps_flag = 0;
             if (!IS_IDR(s)){
@@ -2596,8 +2610,9 @@ static int hevc_frame_start(HEVCContext *s)
         av_log(s->avctx, AV_LOG_ERROR, "Error constructing the frame RPS.\n");
         goto fail;
     }
-
+    
     av_frame_unref(s->output_frame);
+    
     ret = ff_hevc_output_frame(s, s->output_frame, 0);
     if (ret < 0)
         goto fail;
@@ -2713,7 +2728,13 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
     case NAL_RADL_R:
     case NAL_RASL_N:
     case NAL_RASL_R:
+            
         ret = hls_slice_header(s);
+
+        if (ret == -10)
+            return 0;
+
+            
         if (ret < 0)
             return ret;
 
@@ -3101,7 +3122,7 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
 {
     int ret;
     HEVCContext *s = avctx->priv_data;
-
+    
     if (!avpkt->size) {
         ret = ff_hevc_output_frame(s, data, 1);
         if (ret < 0)
@@ -3297,6 +3318,10 @@ static av_cold int hevc_init_context(AVCodecContext *avctx)
         goto fail;
 
     ff_dsputil_init(&s->dsp, avctx);
+#if FRAME_CONCEALMENT
+    s->prev_display_poc = -1;
+    s->no_display_pic   =  0;
+#endif
     s->temporal_layer_id   = 8;
     s->quality_layer_id    = 8;
     s->context_initialized = 1;

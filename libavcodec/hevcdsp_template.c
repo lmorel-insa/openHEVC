@@ -1612,7 +1612,7 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
     int phase    = 0;
     int refPos   = 0;
     const int8_t* coeff;
-    printf("------  Frame upsampling ----------- \n"); 
+    
     widthEL   = FrameEL->width;  //pcUsPic->getWidth ();
     heightEL  = FrameEL->height; //pcUsPic->getHeight();
     

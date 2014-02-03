@@ -59,7 +59,12 @@
 #define O0149_CROSS_LAYER_BLA_FLAG       1      ///< JCTVC-O0149: signal cross_layer_bla_flag in slice header
 
 #define COEF_REMAIN_BIN_REDUCTION        3 ///< indicates the level at which the VLC
+#define FRAME_CONCEALMENT                0
+#define SIM_ERROR_CONCEALMENT            0
 
+#if FRAME_CONCEALMENT
+#define COPY_MV                              1
+#endif
 
 #ifdef VPS_EXTENSION
     #define MAX_TLAYER                  8           ///< max number of temporal layer
