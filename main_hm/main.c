@@ -176,7 +176,6 @@ static void video_decode_example(const char *filename)
                     }
 
                     if (display_flags == ENABLE) {
-                        printf("Init SDL %d %d  \n", (openHevcFrame.frameInfo.nYPitch - openHevcFrame.frameInfo.nWidth)/2, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight); 
                         Init_SDL((openHevcFrame.frameInfo.nYPitch - openHevcFrame.frameInfo.nWidth)/2, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
                     }
                     if (fout) {

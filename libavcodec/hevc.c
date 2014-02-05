@@ -308,7 +308,7 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         s->up_filter_inf.scaleXCr     = s->up_filter_inf.scaleXLum;
         s->up_filter_inf.scaleYCr     = s->up_filter_inf.scaleYLum;
 #endif
-         printf("ScalingFactor %d %d ScalingPosition %d %d addXLum %d addYLum %d addXCr %d addYCr %d scaleXLum %d scaleYLum %d \n", s->sh.ScalingFactor[s->nuh_layer_id][0], s->sh.ScalingFactor[s->nuh_layer_id][1], s->sh.ScalingPosition[s->nuh_layer_id][0], s->sh.ScalingPosition[s->nuh_layer_id][1], s->up_filter_inf.addXLum, s->up_filter_inf.addYLum, s->up_filter_inf.addXCr, s->up_filter_inf.addYCr, s->up_filter_inf.scaleXLum, s->up_filter_inf.scaleYLum);
+
 #if !ACTIVE_PU_UPSAMPLING
         s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
         s->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));
@@ -2819,7 +2819,7 @@ static int hevc_frame_start(HEVCContext *s)
             return ret;
 #if !ACTIVE_PU_UPSAMPLING
       //    up-sampling all the frame without parallel processing and SSE optimizations */
-        printf(" \n %d  \n", s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]].bottom_offset);
+       
         s->hevcdsp.upsample_base_layer_frame(s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf, 1);
         
       

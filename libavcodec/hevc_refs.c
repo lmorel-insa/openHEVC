@@ -338,16 +338,19 @@ static HEVCFrame *find_ref_idx(HEVCContext *s, int poc)
 #ifdef SVC_EXTENSION
 static void set_refindex_data(HEVCContext *s){
     int list, i;
-    HEVCFrame  *refBL, *refEL;
+    HEVCFrame  *refBL, *refEL, *ref;
     refBL = s->BL_frame;
     init_il_slice_rpl(s);
     refEL = s->inter_layer_ref;
     for( list=0; list < 2; list++) {
-        refEL->refPicList[list].nb_refs = refBL->refPicList[list].nb_refs;
-        for(i=0; i< refBL->refPicList->nb_refs; i++){
-            refEL->refPicList[list].list[i] = refBL->refPicList[list].list[i];
-            refEL->refPicList[list].ref[i] = find_ref_idx(s, refBL->refPicList[list].list[i]);
-            refEL->refPicList[list].isLongTerm[i] = refBL->refPicList[list].isLongTerm[i];
+        refEL->refPicList[list].nb_refs = 0;
+        for(i=0; refBL->refPicList && i< refBL->refPicList[list].nb_refs; i++) {
+            ref = find_ref_idx(s, refBL->refPicList[list].list[i]);
+            if(ref) {
+                refEL->refPicList[list].list[refEL->refPicList[list].nb_refs]           = refBL->refPicList[list].list[i];
+                refEL->refPicList[list].ref[refEL->refPicList[list].nb_refs]            = ref;
+                refEL->refPicList[list].isLongTerm[refEL->refPicList[list].nb_refs++]   = refBL->refPicList[list].isLongTerm[i];
+            }
         }
     }
 }
@@ -370,7 +373,7 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
         init_il_slice_rpl(s);
         for( list=0; list < 2; list++) {
             refEL->refPicList[list].nb_refs = 0; //refBL->refPicList[list].nb_refs;
-            for(i=0; i< refBL->refPicList->nb_refs; i++) {
+            for(i=0; refBL->refPicList && i< refBL->refPicList[list].nb_refs; i++) {
                 ref = find_ref_idx(s, refBL->refPicList[list].list[i]);
                 if(ref) {
                     refEL->refPicList[list].list[refEL->refPicList[list].nb_refs]           = refBL->refPicList[list].list[i];
