@@ -349,7 +349,8 @@ static void set_refindex_data(HEVCContext *s){
             if(ref) {
                 refEL->refPicList[list].list[refEL->refPicList[list].nb_refs]           = refBL->refPicList[list].list[i];
                 refEL->refPicList[list].ref[refEL->refPicList[list].nb_refs]            = ref;
-                refEL->refPicList[list].isLongTerm[refEL->refPicList[list].nb_refs++]   = refBL->refPicList[list].isLongTerm[i];
+                refEL->refPicList[list].isLongTerm[refEL->refPicList[list].nb_refs]   = refBL->refPicList[list].isLongTerm[i];
+                refEL->refPicList[list].nb_refs ++; 
             }
         }
     }
@@ -398,10 +399,14 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
             xBL = (((xELtmp) - pic_conf_win.left_offset)*s->sh.ScalingPosition[s->nuh_layer_id][0] + (1<<15)) >> 16;
             yBL = (((yELtmp) - pic_conf_win.top_offset )*s->sh.ScalingPosition[s->nuh_layer_id][1] + (1<<15)) >> 16;
             xBL += 4;
-            yBL += 4; 
+            yBL += 4;
+
             xBL = (xBL >>=4)<<2; //xBL & 0xFFFFFFF0
             yBL = (yBL >>=4)<<2;  //yBL & 0xFFFFFFF0
-           
+            
+            
+
+
             if(!refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].is_intra) {
                 refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].is_intra = 0;
                 
