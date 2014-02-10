@@ -2568,7 +2568,9 @@ static int hevc_frame_start(HEVCContext *s)
         memset (s->is_upsampled, 0, s->sps->ctb_width * s->sps->ctb_height);
 #endif
         if (s->threads_type&FF_THREAD_FRAME){
+            printf("Wait .... \n");
             ff_thread_await_il_progress(s->avctx, s->poc, &s->avctx->BL_frame);
+            printf("Wait Ok.  \n");
         }
 
         if(s->avctx->BL_frame)

@@ -793,13 +793,13 @@ int ff_hevc_frame_rps(HEVCContext *s)
         }
 #endif
 /*  Display all reference frames  */
-    for(i=0; i <= IL_REF1; i++) {
+    /*for(i=0; i <= IL_REF1; i++) {
        // printf("list: %d nb refrences: %d  ", i, rps[i].nb_refs);
-        for(int j=0; j < rps[i].nb_refs; j++){
+        for( j=0; j < rps[i].nb_refs; j++){
          //   printf(" poc: %d ", rps[i].list[j] );
         }
        // printf(" \n");
-    }
+    }*/
     /* release any frames that are now unused */
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++)
         ff_hevc_unref_frame(s, &s->DPB[i], 0);

@@ -346,8 +346,8 @@ static void decode_hrd(HEVCContext *s, int common_inf_present,
 
 static int scalTypeToScalIdx( HEVCVPS *vps, enum ScalabilityType scalType )
 {
-    int scalIdx = 0;
-    for( int curScalType = 0; curScalType < scalType; curScalType++ )
+    int scalIdx = 0,  curScalType;
+    for(  curScalType = 0; curScalType < scalType; curScalType++ )
     {
         scalIdx += ( vps->m_scalabilityMask[curScalType] ? 1 : 0 );
         
@@ -385,12 +385,12 @@ static int getNumViews(HEVCVPS *vps)
 #if O0092_0094_DEPENDENCY_CONSTRAINT
 static void setRefLayersFlags(HEVCVPS *vps, int currLayerId)
 {
-    int i; 
+    int i, k;
     for ( i = 0; i < vps->m_numDirectRefLayers[currLayerId]; i++)
     {
         int refLayerId = vps->m_refLayerId[currLayerId][i]; 
         vps->m_recursiveRefLayerFlag[currLayerId][refLayerId] = 1;
-        for (int k = 0; k < MAX_NUM_LAYER_IDS; k++)
+        for ( k = 0; k < MAX_NUM_LAYER_IDS; k++)
         {
            // setRecursiveRefLayerFlag(currLayerId, k, (getRecursiveRefLayerFlag(currLayerId, k) | getRecursiveRefLayerFlag(refLayerId, k)));
             vps->m_recursiveRefLayerFlag[currLayerId][k] = (vps->m_recursiveRefLayerFlag[currLayerId][k] | vps->m_recursiveRefLayerFlag[refLayerId][k]);
@@ -401,7 +401,8 @@ static void setRefLayersFlags(HEVCVPS *vps, int currLayerId)
 static void setNumRefLayers(HEVCVPS *vps, int currLayerId)
 {
     int i, j;
-    for ( i = 0; i <= vps->vps_max_layers; i++)
+ //   printf("setNumRefLayers \n");
+    for ( i = 0; i < vps->vps_max_layers; i++)
     {
         int iNuhLId = vps->m_layerIdInNuh[i];
         setRefLayersFlags(vps, iNuhLId);
@@ -521,7 +522,7 @@ static void deriveNumberOfSubDpbs(HEVCVPS *vps) {
 #if VPS_VUI_TILES_NOT_IN_USE__FLAG
 static void setTilesNotInUseFlag(HEVCVPS *vps, unsigned int x)
 {
-    int i;
+    int i, j;
     vps->m_tilesNotInUseFlag = x;
     if (vps->m_tilesNotInUseFlag)
     {
@@ -535,7 +536,7 @@ static void setTilesNotInUseFlag(HEVCVPS *vps, unsigned int x)
     {
         for (i = 1; i < vps->vps_max_layers; i++)
         {
-            for(int j = 0; j < vps->m_numDirectRefLayers[vps->m_layerIdInNuh[i]] ; j++)
+            for( j = 0; j < vps->m_numDirectRefLayers[vps->m_layerIdInNuh[i]] ; j++)
             {
                 vps->m_tileBoundariesAlignedFlag[i][j]  = vps->m_tilesNotInUseFlag;
             }
@@ -770,7 +771,7 @@ static void parseVPSVUI(GetBitContext *gb, HEVCVPS *vps)
 
 
 static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
-    int i, j;
+    int i, j, k;
     GetBitContext *gb = &s->HEVClc->gb;
     
     print_cabac(" \n --- parse vps extention  --- \n ", s->nuh_layer_id);
@@ -1080,7 +1081,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
                 }
             }
             if( vps->m_subLayerDpbInfoPresentFlag[i][j] ) { // If sub-layer DPB information is present
-                for(int k = 0; k < vps->m_numSubDpbs[i]; k++)   {
+                for(k = 0; k < vps->m_numSubDpbs[i]; k++)   {
                     vps->m_maxVpsDecPicBufferingMinus1[i][k][j] = get_ue_golomb_long(gb);
                     print_cabac("max_vps_dec_pic_buffering_minus1", vps->m_maxVpsDecPicBufferingMinus1[i][k][j]);
                 }

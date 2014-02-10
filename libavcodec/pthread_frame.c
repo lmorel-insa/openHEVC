@@ -331,8 +331,11 @@ static int submit_packet(PerThreadContext *p, AVPacket *avpkt)
         int err;
         if (prev_thread->state == STATE_SETTING_UP) {
             pthread_mutex_lock(&prev_thread->progress_mutex);
-            while (prev_thread->state == STATE_SETTING_UP)
+            while (prev_thread->state == STATE_SETTING_UP){
+                printf("Wait state %d != STATE_SETTING_UP \n", p->state);
                 pthread_cond_wait(&prev_thread->progress_cond, &prev_thread->progress_mutex);
+            }
+            printf("Wait state %d Ok... \n", p->state);
             pthread_mutex_unlock(&prev_thread->progress_mutex);
         }
 
@@ -375,8 +378,10 @@ FF_ENABLE_DEPRECATION_WARNINGS
         while (p->state != STATE_SETUP_FINISHED && p->state != STATE_INPUT_READY) {
             int call_done = 1;
             pthread_mutex_lock(&p->progress_mutex);
-            while (p->state == STATE_SETTING_UP)
+            while (p->state == STATE_SETTING_UP){
+                printf("Wait state %d == STATE_SETTING_UP \n", p->state);
                 pthread_cond_wait(&p->progress_cond, &p->progress_mutex);
+            }
 
             switch (p->state) {
             case STATE_GET_BUFFER:
@@ -447,8 +452,11 @@ int ff_thread_decode_frame(AVCodecContext *avctx,
 
         if (p->state != STATE_INPUT_READY) {
             pthread_mutex_lock(&p->progress_mutex);
-            while (p->state != STATE_INPUT_READY)
+            while (p->state != STATE_INPUT_READY){
+                printf("Wait state %d != STATE_INPUT_READY \n", p->state);
                 pthread_cond_wait(&p->output_cond, &p->progress_mutex);
+            }
+            printf("Wait state != STATE_INPUT_READY Ok... \n");
             pthread_mutex_unlock(&p->progress_mutex);
         }
 
@@ -501,7 +509,7 @@ void ff_thread_await_progress(ThreadFrame *f, int n, int field)
     volatile int *progress = f->progress ? (int*)f->progress->data : NULL;
 
     if (!progress || progress[field] >= n) return;
-
+    // printf("ff_thread_await_progress %d %d \n", n, field);
     p = f->owner->internal->thread_ctx_frame;
 
     if (f->owner->debug&FF_DEBUG_THREADS)
@@ -511,6 +519,7 @@ void ff_thread_await_progress(ThreadFrame *f, int n, int field)
     while (progress[field] < n)
         pthread_cond_wait(&p->progress_cond, &p->progress_mutex);
     pthread_mutex_unlock(&p->progress_mutex);
+   // printf("ff_thread_await_progress ok... \n");
 }
 
 #ifdef SVC_EXTENSION
@@ -549,6 +558,7 @@ int ff_thread_get_il_up_status(AVCodecContext *avxt, int poc)
 void ff_thread_await_il_progress(AVCodecContext *avxt, int poc, void ** out)
 {
     FrameThreadContext *fctx = avxt->copy_opaque;
+    printf("ff_thread_await_il_progress %d \n", poc);
     poc = poc & (MAX_POC-1);
     if (avxt->debug&FF_DEBUG_THREADS)
         av_log(avxt, AV_LOG_DEBUG, "thread awaiting for the BL to be decoded \n");
@@ -560,6 +570,7 @@ void ff_thread_await_il_progress(AVCodecContext *avxt, int poc, void ** out)
     *out = fctx->frames[poc];
 //    fctx->frames[poc] = NULL;
     pthread_mutex_unlock(&fctx->il_progress_mutex);
+    printf("ff_thread_await_il_progress Ok... \n");
 }
 
 void ff_thread_report_il_status(AVCodecContext *avxt, int poc, int status)
