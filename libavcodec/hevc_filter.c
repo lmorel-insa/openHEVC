@@ -902,7 +902,7 @@ static void upsample_block_mc(HEVCContext *s, HEVCFrame *ref0, int x0, int y0) {
         }
 
     } else {
-   
+       
         for(cr=1; cr <= 2; cr++ ) {
             bl_stride = s->BL_frame->frame->linesize[cr];
             src = s->BL_frame->frame->data[cr]+ (bl_y-bl_edge_top)*bl_stride+(bl_x-bl_edge_left);

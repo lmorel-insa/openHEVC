@@ -123,8 +123,7 @@ static void video_decode_example(const char *filename)
 
     openHevcHandle = libOpenHevcInit(nb_pthreads, thread_type/*, pFormatCtx*/);
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
-    libOpenHevcSetTemporalLayer_id(openHevcHandle, temporal_layer_id);
-    libOpenHevcSetActiveDecoders(openHevcHandle, quality_layer_id);
+
     if (!openHevcHandle) {
         fprintf(stderr, "could not open OpenHevc\n");
         exit(1);
@@ -158,6 +157,14 @@ static void video_decode_example(const char *filename)
     openHevcFrameCpy.pvV = NULL;
     Init_Time();
     time_us = GetTimeMs64();
+
+   
+    libOpenHevcSetTemporalLayer_id(openHevcHandle, temporal_layer_id);
+    libOpenHevcSetActiveDecoders(openHevcHandle, quality_layer_id);
+
+
+
+
     while(!stop) {
         if (stop_dec == 0 && av_read_frame(pFormatCtx, &packet)<0) stop_dec = 1;
         if (packet.stream_index == video_stream_idx || stop_dec == 1) {

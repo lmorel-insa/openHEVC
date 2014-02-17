@@ -29,7 +29,7 @@
 
 void ff_hevc_unref_frame(HEVCContext *s, HEVCFrame *frame, int flags)
 {
-    int is_up_sampled = 2;
+    int is_up_sampled = 0;
     /* frame->frame can be NULL if context init failed */
     if (!frame->frame || !frame->frame->buf[0])
         return;
@@ -37,9 +37,11 @@ void ff_hevc_unref_frame(HEVCContext *s, HEVCFrame *frame, int flags)
     frame->flags &= ~flags;
     if(s->active_el_frame)
         is_up_sampled = ff_thread_get_il_up_status(s->avctx, frame->poc);
-    if (!frame->flags) {
-        if(s->active_el_frame)
-            ff_thread_report_il_status2(s->avctx, frame->poc, 0);
+    
+
+    if (!frame->flags && (is_up_sampled != 1)) {
+     //   if(s->active_el_frame)
+       //     ff_thread_report_il_status2(s->avctx, frame->poc, 0);
 
         ff_thread_release_buffer(s->avctx, &frame->tf);
 
@@ -712,9 +714,11 @@ int ff_hevc_frame_rps(HEVCContext *s)
 #endif
             }   else    {
                 init_upsampled_mv_fields(s);
+                if(s->threads_type&FF_THREAD_FRAME)
+                    ff_thread_report_il_status(s->avctx, s->poc, 2);
+
             }
-        if(s->threads_type&FF_THREAD_FRAME)
-            ff_thread_report_il_status(s->avctx, s->poc, 2);
+
 #endif
         }
 #endif

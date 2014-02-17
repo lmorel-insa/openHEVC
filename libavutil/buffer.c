@@ -324,7 +324,7 @@ AVBufferRef *av_buffer_pool_get(AVBufferPool *pool)
     /* keep the first entry, return the rest of the list to the pool */
     add_to_pool(buf->next);
     buf->next = NULL;
-
+    printf("----- %d  \n", pool->size);
     ret = av_buffer_create(buf->data, pool->size, pool_release_buffer,
                            buf, 0);
     if (!ret) {

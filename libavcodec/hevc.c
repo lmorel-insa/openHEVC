@@ -322,7 +322,7 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
     }
 #endif
 
-#if 0
+#if 1
     printf("dynamic #*# %ld #*#  %d #*# \n", s->dynamic_alloc, s->decoder_id );
 #endif
     return 0;
@@ -2567,11 +2567,8 @@ static int hevc_frame_start(HEVCContext *s)
         
         memset (s->is_upsampled, 0, s->sps->ctb_width * s->sps->ctb_height);
 #endif
-        if (s->threads_type&FF_THREAD_FRAME){
-            printf("Wait .... \n");
+        if (s->threads_type&FF_THREAD_FRAME)
             ff_thread_await_il_progress(s->avctx, s->poc, &s->avctx->BL_frame);
-            printf("Wait Ok.  \n");
-        }
 
         if(s->avctx->BL_frame)
              s->BL_frame = (HEVCFrame*)s->avctx->BL_frame;
@@ -2793,6 +2790,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 #if ACTIVE_PU_UPSAMPLING
             if (s->active_el_frame)
                 ff_thread_report_il_progress(s->avctx, s->poc, s->ref);
+
 #endif
         ctb_addr_ts = hls_slice_data(s, nal, length);
 
@@ -2811,8 +2809,11 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
                 s->sps->sao_enabled)
                 restore_tqb_pixels(s);
 #ifdef SVC_EXTENSION
-            if(s->decoder_id > 0)
+            if(s->decoder_id > 0) {
+                if(s->threads_type&FF_THREAD_FRAME)
+                    ff_thread_report_il_status(s->avctx, s->poc, 2);
                 ff_hevc_unref_frame(s, s->inter_layer_ref, ~0);
+            }
 #endif
         }
 
@@ -3029,6 +3030,7 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
         if (ret < 0)
             goto fail;
         ret = hls_nal_unit(s);
+
         if(ret == s->decoder_id+1 && s->quality_layer_id >= ret && s->threads_type&FF_THREAD_FRAME) {// FIXME also check the type of the nalu, it should be data nalu type
             s->active_el_frame = 1;
         }
@@ -3299,7 +3301,7 @@ static av_cold int hevc_init_context(AVCodecContext *avctx)
     if (!s->HEVClc)
         goto fail;
 
-#if 0
+#if 1
     printf("static ## %ld ## \n", sizeof(HEVCLocalContext) );
 #endif
     
@@ -3339,8 +3341,11 @@ static av_cold int hevc_init_context(AVCodecContext *avctx)
     s->prev_display_poc = -1;
     s->no_display_pic   =  0;
 #endif
+
     s->temporal_layer_id   = 8;
     s->quality_layer_id    = 8;
+
+    
     s->context_initialized = 1;
     s->threads_type        = avctx->active_thread_type;
     if(avctx->active_thread_type & FF_THREAD_SLICE)
@@ -3430,6 +3435,11 @@ static int hevc_update_thread_context(AVCodecContext *dst,
     s->decode_checksum_sei = s0->decode_checksum_sei;
     s->nuh_layer_id        = s0->nuh_layer_id;
     s->decoder_id          = s0->decoder_id;
+
+    s->temporal_layer_id   = s0->temporal_layer_id;
+    s->quality_layer_id    = s0->quality_layer_id;
+
+
     if (s->sps != s0->sps)
         ret = set_sps(s, s0->sps);
     if (s0->eos) {
