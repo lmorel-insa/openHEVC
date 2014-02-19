@@ -101,15 +101,18 @@ static int FUNC(ff_emulated_edge_up_h)(uint8_t *src, ptrdiff_t linesize,
     uint8_t   *src_tmp = src;
     
     if(bl_edge_left < shift) {
+      //  printf("------------ bl_edge_left %d \n", bl_edge_left);
         for(i=0; i < block_h; i++) {
-            memset(src_tmp-(shift-bl_edge_left), src_tmp[0], shift-bl_edge_left);
+            memset(src_tmp-(shift), src_tmp[0], shift);
             src_tmp += linesize;
         }
         return 0;
     }
+    
     if(bl_edge_right<(shift+1)) {
+        //printf("------------  bl_edge_right %d \n", bl_edge_right);
         for( i = 0; i < block_h ; i++ ) {
-            memset(src_tmp+block_w, src_tmp[block_w-1], shift-bl_edge_right+1);
+            memset(src_tmp+block_w,               src_tmp[block_w-1], shift+1);
             src_tmp += linesize;
         }
     }
@@ -125,25 +128,32 @@ static int FUNC(ff_emulated_edge_up_v)(int16_t *src, ptrdiff_t linesize,
     int leftStartL = (Enhscal->left_offset>> (shift==(MAX_EDGE_CR-1)));
     int  i, j;
     
-    int16_t *src_tmp    = src;
+    int16_t *src_tmp = src;
+    int16_t *dst     = src;
     
     if(bl_edge_up < shift)  {
+      //  printf("------------ bl_edge_up %d \n", bl_edge_up);
         for( i = 0; i < block_w; i++ )	{
-            for(j= 0; j<(shift-bl_edge_up) ; j++)
-                src_tmp[(-j-1)*linesize] = src_tmp[0];
+            for(j= bl_edge_up; j<(shift) ; j++)
+                dst[(-j-1)*linesize] = src_tmp[-bl_edge_up*linesize];
             if( ((src_x+i) >= leftStartL) && ((src_x+i) <= rightEndL-2) )
                 src_tmp++;
+            dst++; 
         }
         return 0;
     }
     
     if(bl_edge_bottom < (shift+1) )    {
+       // printf("------------ bl_edge_bottom %d \n", bl_edge_bottom);
         for( i = 0; i < block_w; i++ )	{
-            for(j= 0; j< shift-bl_edge_bottom+1 ; j++)
-                src_tmp[(block_h+j)*linesize] = src_tmp[(block_h-1)*linesize];
+            for(j= 0; j< shift+1 ; j++){
+                dst[(block_h+j)*linesize] = src_tmp[(block_h-1)*linesize];
+            }
             if( ((src_x+i) >= leftStartL) && ((src_x+i) <= rightEndL-2) )
                 src_tmp++;
+            dst++;
         }
     }
+
     return 1;
 }

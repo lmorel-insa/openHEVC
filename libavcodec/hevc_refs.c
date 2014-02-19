@@ -368,13 +368,13 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
     
     int *index   = input_ctb_row;
     int ctb_size = 1 << s->sps->log2_ctb_size;
-    
+    int nb_list = s->sh.slice_type==B_SLICE ? 2:1, xBL0, yBL0;
     refBL = s->BL_frame;
     
     refEL = s->inter_layer_ref;
     if( *index ==0 ) {
         init_il_slice_rpl(s);
-        for( list=0; list < 2; list++) {
+        for( list=0; list < nb_list; list++) {
             refEL->refPicList[list].nb_refs = 0; //refBL->refPicList[list].nb_refs;
             for(i=0; refBL->refPicList && i< refBL->refPicList[list].nb_refs; i++) {
                 ref = find_ref_idx(s, refBL->refPicList[list].list[i]);
@@ -393,28 +393,28 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
     end = end > s->sps->height? s->sps->height:end ;
     for(yEL=start; yEL < end; yEL+=16){
         for(xEL=0; xEL < s->sps->width ; xEL+=16) {
-            int xELIndex = xEL>>2;
-            int yELIndex = yEL>>2;
+            int xELIndex = xEL >>s->sps->log2_min_pu_size;
+            int yELIndex = yEL >>s->sps->log2_min_pu_size;
             
             int xELtmp = av_clip_c(xEL+8, 0, s->sps->width -1);
             int yELtmp = av_clip_c(yEL+8, 0, s->sps->height -1);
             xBL = (((xELtmp) - pic_conf_win.left_offset)*s->sh.ScalingPosition[s->nuh_layer_id][0] + (1<<15)) >> 16;
             yBL = (((yELtmp) - pic_conf_win.top_offset )*s->sh.ScalingPosition[s->nuh_layer_id][1] + (1<<15)) >> 16;
-            xBL += 4;
-            yBL += 4;
-
-            xBL = (xBL >>=4)<<2; //xBL & 0xFFFFFFF0
-            yBL = (yBL >>=4)<<2;  //yBL & 0xFFFFFFF0
+            xBL +=4;
+            yBL +=4;
             
+            xBL0 = xBL;
+            yBL0 = yBL;
             
+            xBL = (xBL >>4) << (4-s->sps->log2_min_pu_size);
+            yBL = (yBL >>4) << (4-s->sps->log2_min_pu_size);
 
-
-            if(!refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].is_intra) {
+            if(!refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].is_intra && xBL0 < s->BL_frame->frame->coded_width && yBL0 < s->BL_frame->frame->coded_height  ) {
                 refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].is_intra = 0;
-                
-                for( list=0; list < 2; list++) {
+                for( list=0; list < nb_list; list++) {
                     int x = refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].mv[list].x;
                     int y = refBL->tab_mvf[(yBL*pic_width_in_min_puBL)+xBL].mv[list].y;
+                    
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].x  = av_clip( (s->sh.ScalingFactor[s->nuh_layer_id][0] * x + 127 + (s->sh.ScalingFactor[s->nuh_layer_id][0] * x < 0)) >> 8 , -32768, 32767);
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y = av_clip( (s->sh.ScalingFactor[s->nuh_layer_id][1] * y + 127 + (s->sh.ScalingFactor[s->nuh_layer_id][1] * y < 0)) >> 8, -32768, 32767);
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].ref_idx[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].ref_idx[list];
@@ -422,18 +422,20 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
                 }
             } else {
                 refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].is_intra = 1;
-                for( list=0; list < 2; list++) {
+                for( list=0; list < nb_list; list++) {
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].x  = 0;
-                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y = 0;
-                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].ref_idx[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].ref_idx[list];
-                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].pred_flag[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].pred_flag[list];
+                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y  = 0;
+                    if( xBL0 < s->BL_frame->frame->coded_width && yBL0 < s->BL_frame->frame->coded_height){
+                        refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].ref_idx[list]   = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].ref_idx[list];
+                        refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].pred_flag[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].pred_flag[list];
+                    }
                 }
             }
             for(i =0; i < 4; i++)
                 for(j =0; j < 4; j++)   {
                     if((i || j) && (yELIndex+i)<pic_height_in_min_pu && (xELIndex+j)<pic_width_in_min_pu) {
                         refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].is_intra = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].is_intra;
-                        for(list=0; list < 2; list++) {
+                        for(list=0; list < nb_list; list++) {
                             refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].mv[list].x  = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].mv[list].x;
                             refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].mv[list].y = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].mv[list].y;
                             refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].ref_idx[list] = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].ref_idx[list];
@@ -443,8 +445,8 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
                 }
         }
     }
+    
 }
-
 #endif
 
 int ff_hevc_slice_rpl(HEVCContext *s)

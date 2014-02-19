@@ -1,4 +1,4 @@
-/*
+		/*
  * HEVC video Decoder
  *
  * Copyright (C) 2012 - 2013 Guillaume Martres
@@ -150,6 +150,12 @@ static void pic_arrays_free(HEVCContext *s)
     av_buffer_pool_uninit(&s->rpl_tab_pool);
     
 #ifdef SVC_EXTENSION
+#if ACTIVE_BOTH
+    av_freep(&s->buffer_frame[0]);
+    av_freep(&s->buffer_frame[1]);
+    av_freep(&s->buffer_frame[2]);
+    av_freep(&s->is_upsampled);
+#else
 #if !ACTIVE_PU_UPSAMPLING
     av_freep(&s->buffer_frame[0]);
     av_freep(&s->buffer_frame[1]);
@@ -157,6 +163,7 @@ static void pic_arrays_free(HEVCContext *s)
 #else
     av_freep(&s->is_upsampled);
 #endif
+#endif    
 #endif
 }
 
@@ -309,7 +316,14 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         s->up_filter_inf.scaleXCr     = s->up_filter_inf.scaleXLum;
         s->up_filter_inf.scaleYCr     = s->up_filter_inf.scaleYLum;
 #endif
-
+        
+#if ACTIVE_BOTH
+        s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
+        s->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));
+        s->buffer_frame[2] = av_malloc((pic_size>>2)*sizeof(short));
+        s->is_upsampled = av_malloc(sps->ctb_width * sps->ctb_height);
+        s->dynamic_alloc += (sps->ctb_width * sps->ctb_height);
+#else
 #if !ACTIVE_PU_UPSAMPLING
         s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
         s->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));
@@ -318,11 +332,13 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         s->is_upsampled = av_malloc(sps->ctb_width * sps->ctb_height);
         s->dynamic_alloc += (sps->ctb_width * sps->ctb_height);
 #endif
+#endif
         
     }
 #endif
 
-#if 1
+    
+#if 0
     printf("dynamic #*# %ld #*#  %d #*# \n", s->dynamic_alloc, s->decoder_id );
 #endif
     return 0;
@@ -2579,7 +2595,7 @@ static int hevc_frame_start(HEVCContext *s)
         
         if ((ret = ff_hevc_set_new_iter_layer_ref(s, &s->EL_frame, s->poc)< 0))
             return ret;
-#if !ACTIVE_PU_UPSAMPLING
+#if !ACTIVE_PU_UPSAMPLING || ACTIVE_BOTH
       //    up-sampling all the frame without parallel processing and SSE optimizations */
        
         s->hevcdsp.upsample_base_layer_frame(s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf, 1);
@@ -2796,6 +2812,7 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
         if (ctb_addr_ts >= (s->sps->ctb_width * s->sps->ctb_height)) {
             s->is_decoded = 1;
+                    
 #ifdef SVC_EXTENSION
 #if !ACTIVE_PU_UPSAMPLING
             if (s->active_el_frame)
@@ -3238,7 +3255,7 @@ static av_cold int hevc_decode_free(AVCodecContext *avctx)
     pic_arrays_free(s);
     av_freep(&s->md5_ctx);
 
-#if 1
+#if 0
     if(!first){
         printf("Times %ld  %ld  %ld  ", layers_time[0], layers_time[1], layers_time[2]);
         first = 1;
@@ -3301,7 +3318,7 @@ static av_cold int hevc_init_context(AVCodecContext *avctx)
     if (!s->HEVClc)
         goto fail;
 
-#if 1
+#if 0
     printf("static ## %ld ## \n", sizeof(HEVCLocalContext) );
 #endif
     

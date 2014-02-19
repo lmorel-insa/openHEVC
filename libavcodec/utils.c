@@ -470,7 +470,6 @@ static int video_get_buffer(AVCodecContext *s, AVFrame *pic)
     pic->extended_data = pic->data;
 
     av_pix_fmt_get_chroma_sub_sample(s->pix_fmt, &h_chroma_shift, &v_chroma_shift);
-    printf("----- \n");
     for (i = 0; i < 4 && pool->pools[i]; i++) {
         const int h_shift = i == 0 ? 0 : h_chroma_shift;
         const int v_shift = i == 0 ? 0 : v_chroma_shift;
@@ -492,7 +491,6 @@ static int video_get_buffer(AVCodecContext *s, AVFrame *pic)
                         (pixel_size * EDGE_WIDTH >> h_shift), pool->stride_align[i]);
         }
     }
-    printf("----- \n");
     for (; i < AV_NUM_DATA_POINTERS; i++) {
         pic->data[i] = NULL;
         pic->linesize[i] = 0;
