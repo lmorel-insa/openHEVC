@@ -94,7 +94,7 @@ static void FUNC(ff_emulated_edge_mc)(uint8_t *buf, const uint8_t *src,
 }
 
 static int FUNC(ff_emulated_edge_up_h)(uint8_t *src, ptrdiff_t linesize,
-                                    struct HEVCWindow *Enhscal,
+                                    const struct HEVCWindow *Enhscal,
                                     int block_w, int block_h, int bl_edge_left, int bl_edge_right, int shift)
 {
     int i;
@@ -121,7 +121,7 @@ static int FUNC(ff_emulated_edge_up_h)(uint8_t *src, ptrdiff_t linesize,
 
 
 static int FUNC(ff_emulated_edge_up_v)(int16_t *src, ptrdiff_t linesize,
-                                    struct HEVCWindow *Enhscal,
+                                    const struct HEVCWindow *Enhscal,
                                     int block_w, int block_h, int src_x, int bl_edge_up, int bl_edge_bottom, int wEL, int shift)
 {
     int rightEndL  = wEL - (Enhscal->right_offset >> (shift==(MAX_EDGE_CR-1)?1:0));

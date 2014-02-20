@@ -1426,7 +1426,7 @@ m14       = _mm_or_si128(m14,m13);                                              
 m11       = _mm_slli_si128(m11,8);                                                          \
 m12       = _mm_or_si128(m12,m11)
 
-ff_upsample_filter_block_luma_h_8_8_sse( int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
+void ff_upsample_filter_block_luma_h_8_8_sse( int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                     int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                     const int8_t enabled_up_sample_filter_luma[16][8], struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
 

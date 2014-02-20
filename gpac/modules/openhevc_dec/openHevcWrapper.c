@@ -79,7 +79,7 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int thread_type)
             av_opt_set(openHevcContext->c, "thread_type", "slice", 0);
         else
             av_opt_set(openHevcContext->c, "thread_type", "frameslice", 0);
-
+       
         av_opt_set_int(openHevcContext->c, "threads", nb_pthreads, 0);
 
         /*  Set the decoder id    */

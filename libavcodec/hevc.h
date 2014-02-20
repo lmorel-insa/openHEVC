@@ -73,11 +73,11 @@
 #define L1 1
 
 
-#define EPEL_EXTRA_BEFORE    1
-#define EPEL_EXTRA_AFTER     2
-#define EPEL_EXTRA           3
-#define ACTIVE_PU_UPSAMPLING 1
-#define ACTIVE_BOTH          0
+#define EPEL_EXTRA_BEFORE           1
+#define EPEL_EXTRA_AFTER            2
+#define EPEL_EXTRA                  3
+#define ACTIVE_PU_UPSAMPLING        1
+#define ACTIVE_BOTH_FRAME_AND_PU    0
 
 
 /**

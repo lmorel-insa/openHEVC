@@ -1465,10 +1465,10 @@ void FUNC(upsample_filter_block_cr_v)(uint8_t *dst, ptrdiff_t dststride, int16_t
         for( i = 0; i < block_w; i++ )	{
             *dst_tmp = av_clip_pixel( (CroVer_FILTER_Block(src_tmp, coeff, _srcstride) + I_OFFSET) >> (N_SHIFT));
             
-             /*uint8_t dst_tmp0;
+            /* uint8_t dst_tmp0;
              dst_tmp0 = av_clip_pixel( (CroVer_FILTER_Block(src_tmp, coeff, _srcstride) + I_OFFSET) >> (N_SHIFT));
              if(dst_tmp0 != *dst_tmp)
-                printf("------------------- %d %d %d %d     %d %d %d %d %d     %d %d %d %d     %d %d %d %d  phase %d %d \n", dst_tmp0, *dst_tmp, x_EL+i, y_EL+j, src_tmp[-_srcstride], src_tmp[0], src_tmp[_srcstride], src_tmp[2*_srcstride],  src_tmp[3*_srcstride],  srcY1[-widthEL], srcY1[0], srcY1[widthEL], srcY1[2*widthEL], coeff[0], coeff[1], coeff[2], coeff[3], phase, av_clip_pixel( (CroVer_FILTER_Block(src_tmp0, enabled_up_sample_filter_chroma[phase], _srcstride) + I_OFFSET) >> (N_SHIFT)));*/
+                printf("------------------- %d %d %d %d     %d %d %d %d %d   %d %d %d %d  phase %d %d \n", dst_tmp0, *dst_tmp, x_EL+i, y_EL+j, src_tmp[-_srcstride], src_tmp[0], src_tmp[_srcstride], src_tmp[2*_srcstride],  src_tmp[3*_srcstride],  coeff[0], coeff[1], coeff[2], coeff[3], phase, av_clip_pixel( (CroVer_FILTER_Block(src_tmp0, enabled_up_sample_filter_chroma[phase], _srcstride) + I_OFFSET) >> (N_SHIFT)));*/
             
             if( ((x_EL+i) >= leftStartC) && ((x_EL+i) <= rightEndC-2) ){
                 src_tmp++;
@@ -1503,6 +1503,7 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
     int strideBL = FrameBL->linesize[0];
     int widthEL =  FrameEL->coded_width - Enhscal->left_offset - Enhscal->right_offset;
     int heightEL = FrameEL->coded_height - Enhscal->top_offset - Enhscal->bottom_offset;
+    
     int strideEL = FrameEL->linesize[0];
     
     pixel *srcBufY = (pixel*)FrameBL->data[0];
@@ -1542,7 +1543,6 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
     int rightEndL  = FrameEL->coded_width - Enhscal->right_offset;
     int topStartL  = Enhscal->top_offset;
     int bottomEndL = FrameEL->coded_height - Enhscal->bottom_offset;
-    
     pixel buffer[8];
     for( i = 0; i < widthEL; i++ )	{
     	int x = av_clip_c(i, leftStartL, rightEndL);

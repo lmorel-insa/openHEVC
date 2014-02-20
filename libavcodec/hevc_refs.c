@@ -29,7 +29,7 @@
 
 void ff_hevc_unref_frame(HEVCContext *s, HEVCFrame *frame, int flags)
 {
-    int is_up_sampled = 0;
+    int is_up_sampled = 2;
     /* frame->frame can be NULL if context init failed */
     if (!frame->frame || !frame->frame->buf[0])
         return;
@@ -38,13 +38,10 @@ void ff_hevc_unref_frame(HEVCContext *s, HEVCFrame *frame, int flags)
     if(s->active_el_frame)
         is_up_sampled = ff_thread_get_il_up_status(s->avctx, frame->poc);
     
-
-    if (!frame->flags && (is_up_sampled != 1)) {
-     //   if(s->active_el_frame)
-       //     ff_thread_report_il_status2(s->avctx, frame->poc, 0);
-
+    if (!frame->flags && (is_up_sampled == 2)) {
+        if(s->active_el_frame)
+            ff_thread_report_il_status2(s->avctx, frame->poc, 0);
         ff_thread_release_buffer(s->avctx, &frame->tf);
-
         av_buffer_unref(&frame->tab_mvf_buf);
         frame->tab_mvf = NULL;
 
@@ -53,6 +50,25 @@ void ff_hevc_unref_frame(HEVCContext *s, HEVCFrame *frame, int flags)
         frame->rpl_tab    = NULL;
         frame->refPicList = NULL;
 
+        frame->collocated_ref = NULL;
+    }
+}
+
+void ff_hevc_unref_frame1(HEVCContext *s, HEVCFrame *frame, int flags)
+{
+
+    /* frame->frame can be NULL if context init failed */
+    if (!frame->frame || !frame->frame->buf[0])
+        return;
+    frame->flags &= ~flags;
+    if (!frame->flags) {
+        ff_thread_release_buffer(s->avctx, &frame->tf);
+        av_buffer_unref(&frame->tab_mvf_buf);
+        frame->tab_mvf = NULL;
+        av_buffer_unref(&frame->rpl_buf);
+        av_buffer_unref(&frame->rpl_tab_buf);
+        frame->rpl_tab    = NULL;
+        frame->refPicList = NULL;
         frame->collocated_ref = NULL;
     }
 }
@@ -189,6 +205,7 @@ int ff_hevc_set_new_iter_layer_ref(HEVCContext *s, AVFrame **frame, int poc)
     ref->flags          = HEVC_FRAME_FLAG_LONG_REF;
     ref->sequence       = s->seq_decode;
     ref->window         = s->sps->output_window;
+   
     if (s->threads_type & FF_THREAD_FRAME)
         ff_thread_report_progress(&s->inter_layer_ref->tf, INT_MAX, 0);
     
@@ -425,10 +442,8 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
                 for( list=0; list < nb_list; list++) {
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].x  = 0;
                     refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].mv[list].y  = 0;
-                    if( xBL0 < s->BL_frame->frame->coded_width && yBL0 < s->BL_frame->frame->coded_height){
-                        refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].ref_idx[list]   = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].ref_idx[list];
-                        refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].pred_flag[list] = refBL->tab_mvf[yBL*pic_width_in_min_puBL+xBL].pred_flag[list];
-                    }
+                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].ref_idx[list]   = 0;
+                    refEL->tab_mvf[(yELIndex*pic_width_in_min_pu)+xELIndex].pred_flag[list] = 0;
                 }
             }
             for(i =0; i < 4; i++)
@@ -438,8 +453,10 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
                         for(list=0; list < nb_list; list++) {
                             refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].mv[list].x  = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].mv[list].x;
                             refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].mv[list].y = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].mv[list].y;
-                            refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].ref_idx[list] = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].ref_idx[list];
-                            refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].pred_flag[list] = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].pred_flag[list];
+                           
+                                refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].ref_idx[list] = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].ref_idx[list];
+                                refEL->tab_mvf[((yELIndex+i) *pic_width_in_min_pu)+xELIndex+j].pred_flag[list] = refEL->tab_mvf[yELIndex*pic_width_in_min_pu+xELIndex].pred_flag[list];
+                            
                         }
                     }
                 }
@@ -626,7 +643,7 @@ static HEVCFrame *generate_missing_ref(HEVCContext *s, int poc)
 
     if (s->threads_type & FF_THREAD_FRAME)
 
-        ff_thread_report_progress(&frame->tf, INT_MAX, 0);
+    ff_thread_report_progress(&frame->tf, INT_MAX, 0);
 
     return frame;
 }
@@ -673,10 +690,6 @@ static void init_upsampled_mv_fields(HEVCContext *s) {
 }
 #endif
 
-
-
-
-
 int ff_hevc_frame_rps(HEVCContext *s)
 {
     int ctb_size                  = 1<<s->sps->log2_ctb_size;
@@ -703,6 +716,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
         if(!(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT) && s->sps->set_mfm_enabled_flag)  {
 #if !ACTIVE_PU_UPSAMPLING
             int *arg, *ret, cmpt = (s->sps->height / ctb_size) + (s->sps->height%ctb_size ? 1:0);
+            
             arg = av_malloc(cmpt*sizeof(int));
             ret = av_malloc(cmpt*sizeof(int));
             for(i=0; i < cmpt; i++)
@@ -807,8 +821,11 @@ int ff_hevc_frame_rps(HEVCContext *s)
        // printf(" \n");
     }*/
     /* release any frames that are now unused */
-    for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++)
-        ff_hevc_unref_frame(s, &s->DPB[i], 0);
+        for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++){
+            //printf("Call unref --- \n");
+            ff_hevc_unref_frame(s, &s->DPB[i], 0);
+            //printf("Unref called --- \n");
+        }
 
     return 0;
 }
