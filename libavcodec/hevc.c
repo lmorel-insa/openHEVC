@@ -462,20 +462,6 @@ static int decode_lt_rps(HEVCContext *s, LongTermRPS *rps, GetBitContext *gb)
 
     return 0;
 }
-#ifdef SVC_EXTENSION
-static void hls_upsample_v_bl_picture(AVCodecContext *avctxt, void *input_ctb_row){
-    HEVCContext *s = avctxt->priv_data;
-    int *channel = input_ctb_row;
-    s->hevcdsp.upsample_v_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma32, up_sample_filter_chroma32, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf, *channel);
-
-}
-static void hls_upsample_h_bl_picture(AVCodecContext *avctxt, void *input_ctb_row){
-   HEVCContext *s = avctxt->priv_data;
-    int *channel = input_ctb_row;
-    s->hevcdsp.upsample_h_base_layer_frame( s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma32, up_sample_filter_chroma32, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf, *channel);
-    
-}
-#endif
 
 static int set_sps(HEVCContext *s, const HEVCSPS *sps)
 {
@@ -2522,10 +2508,7 @@ static void restore_tqb_pixels(HEVCContext *s)
 static int hevc_frame_start(HEVCContext *s)
 {
     HEVCLocalContext *lc = s->HEVClc;
-    int ret, i;
-#ifdef SVC_EXTENSION
-    int *arg, *res, cmpt, ctb_size;
-#endif
+    int ret=0, ctb_size;
     memset(s->horizontal_bs, 0, 2 * s->bs_width * (s->bs_height + 1));
     memset(s->vertical_bs,   0, 2 * s->bs_width * (s->bs_height + 1));
     memset(s->cbf_luma,      0, s->sps->min_tb_width * s->sps->min_tb_height);
@@ -2540,10 +2523,6 @@ static int hevc_frame_start(HEVCContext *s)
 #ifdef SVC_EXTENSION
     if(s->nuh_layer_id ) {
         ctb_size =  1 << s->sps->log2_ctb_size;
-        /*
-         *  Set the BL frame
-         *  and upsample the base layer frame ans scale its MVs 
-         */
 #if ACTIVE_PU_UPSAMPLING
         
         memset (s->is_upsampled, 0, s->sps->ctb_width * s->sps->ctb_height);
@@ -2551,44 +2530,18 @@ static int hevc_frame_start(HEVCContext *s)
         if (s->threads_type&FF_THREAD_FRAME)
             ff_thread_await_il_progress(s->avctx, s->poc, &s->avctx->BL_frame);
 
-        if(s->avctx->BL_frame)
+        if(s->avctx->BL_frame != NULL)
              s->BL_frame = (HEVCFrame*)s->avctx->BL_frame;
         else
             goto fail;  // FIXME: add error concealment solution when the base layer frame is missing
 
 
-        
-        if ((ret = ff_hevc_set_new_iter_layer_ref(s, &s->EL_frame, s->poc)< 0))
-            return ret;
+        ret = ff_hevc_set_new_iter_layer_ref(s, &s->EL_frame, s->poc);
+        if (ret< 0)
+            goto fail;
 #if !ACTIVE_PU_UPSAMPLING || ACTIVE_BOTH_FRAME_AND_PU
-      //    up-sampling all the frame without parallel processing and SSE optimizations */
-        s->hevcdsp.upsample_base_layer_frame(s->EL_frame, s->BL_frame->frame, s->buffer_frame, up_sample_filter_luma, up_sample_filter_chroma, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf, 1);
-        
-      
-        /*cmpt   = s->sps->width;
-        cmpt = (cmpt / ctb_size) + (cmpt%ctb_size ? 1:0);
-        
-        arg = av_malloc(cmpt*sizeof(int));
-        res = av_malloc(cmpt*sizeof(int));
-        
-        
-        cmpt   = s->BL_frame->frame->height <= s->sps->height ? s->BL_frame->frame->height:s->sps->height;
-        cmpt = (cmpt / ctb_size) + (cmpt%ctb_size ? 1:0);
-        
-        for(i=0; i < cmpt; i++)
-            arg[i] = i;
-         s->avctx->execute(s->avctx, (void *) hls_upsample_h_bl_picture, arg, res, cmpt, sizeof(int));
-        
-        cmpt   = s->sps->width;
-        cmpt = (cmpt / ctb_size) + (cmpt%ctb_size ? 1:0);
-        
-        for(i=0; i < cmpt; i++)
-            arg[i] = i;
-        
-        s->avctx->execute(s->avctx, (void *) hls_upsample_v_bl_picture, arg, res, cmpt, sizeof(int));
-        av_free(arg);
-        av_free(res);*/
-#endif
+        s->hevcdsp.upsample_base_layer_frame(s->EL_frame, s->BL_frame->frame, s->buffer_frame, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf, 1);
+       #endif
     }
 #endif
     
