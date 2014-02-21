@@ -241,6 +241,12 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
 #ifdef SVC_EXTENSION
     if(s->decoder_id)    {
         int heightBL, widthBL, heightEL, widthEL;
+        const int phaseXC = 0;
+        const int phaseYC = 1;
+        const int phaseAlignFlag = ((HEVCVPS*)s->vps_list[sps->vps_id]->data)->m_phaseAlignFlag;
+        const int   phaseX = phaseAlignFlag   << 1;
+        const int   phaseY = phaseAlignFlag   << 1;
+        
         if (s->threads_type&FF_THREAD_FRAME)
             ff_thread_await_il_progress(s->avctx, 0, &s->avctx->BL_frame);
     
@@ -257,53 +263,26 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         }
         HEVCWindow scaled_ref_layer_window = sps->scaled_ref_layer_window[((HEVCVPS*)s->vps_list[sps->vps_id]->data)->m_refLayerId[s->nuh_layer_id][0]]; // m_phaseAlignFlag;
         
-        
         heightEL = sps->height - scaled_ref_layer_window.bottom_offset   - scaled_ref_layer_window.top_offset;
         widthEL  = sps->width  - scaled_ref_layer_window.left_offset     - scaled_ref_layer_window.right_offset;
         
-        
-        
-        s->sh.ScalingFactor[s->nuh_layer_id][0]   = av_clip_c(((widthEL  << 8) + (widthBL  >> 1)) / widthBL,  -4096, 4095);
-        s->sh.ScalingFactor[s->nuh_layer_id][1]   = av_clip_c(((heightEL << 8) + (heightBL >> 1)) / heightBL, -4096, 4095);
-      
-
-        s->sh.ScalingPosition[s->nuh_layer_id][0] = ((widthBL  << 16) + (widthEL  >> 1)) / widthEL;
-        s->sh.ScalingPosition[s->nuh_layer_id][1] = ((heightBL << 16) + (heightEL >> 1)) / heightEL;
-        
-       
-        
-       
-        
-        
-        
-        
-        s->up_filter_inf.scaleXLum = ( ( widthBL << 16 )  + ( widthEL >> 1 ) ) / widthEL;
+        s->sh.ScalingFactor[s->nuh_layer_id][0]   = av_clip_c(((widthEL  << 8) + (widthBL  >> 1)) / widthBL,  -4096, 4095 );
+        s->sh.ScalingFactor[s->nuh_layer_id][1]   = av_clip_c(((heightEL << 8) + (heightBL >> 1)) / heightBL, -4096, 4095 );
+        s->up_filter_inf.scaleXLum = ( ( widthBL << 16 )  + ( widthEL >> 1 ) ) / widthEL ;
         s->up_filter_inf.scaleYLum = ( ( heightBL << 16 ) + ( heightEL >> 1 ) ) / heightEL;
-        int phaseAlignFlag = ((HEVCVPS*)s->vps_list[sps->vps_id]->data)->m_phaseAlignFlag; 
-        int   phaseX = phaseAlignFlag   << 1;
-        int   phaseY = phaseAlignFlag   << 1;
-
-        s->up_filter_inf.addXLum   = (( phaseX * s->sh.ScalingPosition[s->nuh_layer_id][0] + 2 ) >> 2 )+ ( 1 << 11 );
-        s->up_filter_inf.addYLum   = (( phaseY * s->sh.ScalingPosition[s->nuh_layer_id][1] + 2 ) >> 2 )+ ( 1 << 11 );
         
-
-       
+        s->up_filter_inf.addXLum   = (( phaseX * s->up_filter_inf.scaleXLum + 2 ) >> 2 )+ ( 1 << 11 );
+        s->up_filter_inf.addYLum   = (( phaseY * s->up_filter_inf.scaleYLum + 2 ) >> 2 )+ ( 1 << 11 );
         
         widthEL  >>= 1;
         heightEL >>= 1;
         widthBL  >>= 1;
         heightBL >>= 1;
         
-        
-        int phaseXC = 0;
-        int phaseYC = 1;
-        s->up_filter_inf.addXCr   = ( ((phaseXC+phaseAlignFlag) * s->sh.ScalingPosition[s->nuh_layer_id][0] + 2) >> 2) + ( 1 << 11 );
-        s->up_filter_inf.addYCr   = ( ((phaseYC+phaseAlignFlag) * s->sh.ScalingPosition[s->nuh_layer_id][1] + 2) >> 2) + ( 1 << 11 );
-        
+        s->up_filter_inf.addXCr   = ( ((phaseXC+phaseAlignFlag) * s->up_filter_inf.scaleXLum + 2) >> 2) + ( 1 << 11 );
+        s->up_filter_inf.addYCr   = ( ((phaseYC+phaseAlignFlag) * s->up_filter_inf.scaleYLum + 2) >> 2) + ( 1 << 11 );
         s->up_filter_inf.scaleXCr     = s->up_filter_inf.scaleXLum;
         s->up_filter_inf.scaleYCr     = s->up_filter_inf.scaleYLum;
-
-        
 #if ACTIVE_BOTH_FRAME_AND_PU
         s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
         s->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));
@@ -320,7 +299,6 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         s->dynamic_alloc += (sps->ctb_width * sps->ctb_height);
 #endif
 #endif
-        
     }
 #endif
 

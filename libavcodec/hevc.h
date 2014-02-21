@@ -887,7 +887,7 @@ typedef struct SliceHeader {
 
 #ifdef SVC_EXTENSION
     int ScalingFactor[MAX_LAYERS][2];
-    int ScalingPosition[MAX_LAYERS][2];
+ //   int ScalingPosition[MAX_LAYERS][2];
     uint8_t m_bPocResetFlag;
     uint8_t m_bCrossLayerBLAFlag; 
 #endif
@@ -1307,6 +1307,9 @@ void ff_hevc_deblocking_boundary_strengths_h(HEVCContext *s, int x0, int y0,
                                            int slice_up_boundary);
 void ff_hevc_deblocking_boundary_strengths_v(HEVCContext *s, int x0, int y0,
                                            int slice_left_boundary);
+
+void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y);
+
 int ff_hevc_cu_qp_delta_sign_flag(HEVCContext *s);
 int ff_hevc_cu_qp_delta_abs(HEVCContext *s);
 void ff_hevc_hls_filter(HEVCContext *s, int x, int y);
