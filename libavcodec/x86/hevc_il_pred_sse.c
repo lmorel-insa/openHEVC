@@ -6,7 +6,6 @@
 #include "libavcodec/x86/hevcdsp.h"
 #include "libavcodec/hevc_up_sample_filter.h"
 #include "libavcodec/bit_depth_template.c"
-#include "libavcodec/hevcdsp.c"
 
 
 
@@ -37,7 +36,7 @@
 
 #ifdef  SVC_EXTENSION
 
-/*
+
 void ff_upsample_base_layer_frame_sse(struct AVFrame *FrameEL, struct AVFrame *FrameBL, short *Buffer[3], const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info, int channel)    {
     int widthBL =  FrameBL->coded_width;
     int heightBL = FrameBL->coded_height;
@@ -623,7 +622,7 @@ void ff_upsample_base_layer_frame_sse(struct AVFrame *FrameEL, struct AVFrame *F
     }
 
 }
-*/
+
 #define UPSAMPLE_H_TABLE()                                     \
 for( i = 0; i < block_w; i+=8 ){                                \
     m5      =   _mm_adds_epu16(m0,m3);                          \
@@ -640,7 +639,7 @@ for( i = 0; i < block_w; i+=8 ){                                \
     _mm_storeu_si128((__m128i *) &temp[i+4],m8);                \
     m0      =   _mm_add_epi16(m0,m6);                           \
 }
-/*
+
 void ff_upsample_filter_block_luma_h_2_8_sse( int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                     int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                     const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
@@ -707,7 +706,7 @@ void ff_upsample_filter_block_luma_h_2_8_sse( int16_t *dst, ptrdiff_t dststride,
     av_freep(&temp);
 }
 
-*/
+
 
 #define UPSAMPLE_L_LOAD_H()                                                                     \
 m14       = _mm_loadl_epi64((__m128i *)&up_sample_filter_luma[refPos16 & 15]);      \
@@ -721,7 +720,7 @@ m12       = _mm_or_si128(m12,m11)
 
 
 
-/*
+
 void ff_upsample_filter_block_luma_h_8_8_sse( int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                     int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                     const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
@@ -861,8 +860,8 @@ void ff_upsample_filter_block_luma_h_8_8_sse( int16_t *dst, ptrdiff_t dststride,
     }
     av_freep(&temp);
 }
-*/
-/*
+
+
 void ff_upsample_filter_block_cr_h_8_sse( int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                    int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                     struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
@@ -942,8 +941,8 @@ void ff_upsample_filter_block_cr_h_8_sse( int16_t *dst, ptrdiff_t dststride, uin
     av_freep(&temp);
 
 }
-*/
-/*
+
+
 void ff_upsample_filter_block_cr_h_8_8_sse( int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                    int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                    struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
@@ -1109,8 +1108,8 @@ void ff_upsample_filter_block_cr_h_8_8_sse( int16_t *dst, ptrdiff_t dststride, u
 
 }
 
-*/
-/*
+
+
 void ff_upsample_filter_block_cr_v_8_sse(uint8_t *dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
                                    int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                    struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
@@ -1237,7 +1236,7 @@ void ff_upsample_filter_block_cr_v_8_sse(uint8_t *dst, ptrdiff_t dststride, int1
 
     }
 }
-*/
+
 #define UPSAMPLE_CR_V_COEFF()                                      \
 c1      =   _mm_loadl_epi64((__m128i *)coeff);                      \
 c1      =   _mm_unpacklo_epi8(c0,c1);                               \
@@ -1287,7 +1286,7 @@ m1= _mm_unpacklo_epi32(m1,m1)
 #define UPSAMPLE_STORE_32()                                         \
         _mm_maskmoveu_si128(m1, m8,(char *)&dst_tmp[i])
 
-/*
+
 void ff_upsample_filter_block_cr_v_8_8_sse(uint8_t *dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
                                    int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                    struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
@@ -1347,7 +1346,7 @@ void ff_upsample_filter_block_cr_v_8_8_sse(uint8_t *dst, ptrdiff_t dststride, in
         }
     }
 }
-*/
+
 #if 0
 void ff_upsample_filter_block_luma_v_8_sse(uint8_t *dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
                                       int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
@@ -1547,7 +1546,7 @@ UNPACK_SRAI16_4(_mm_unpackhi_epi16, t, m);          \
 MUL_ADD_V_4(_mm_mullo_epi32, _mm_add_epi32, resulthi, t, coeff1,coeff2,coeff3,coeff4); \
 UPSAMPLE_L_COMPUTE_LO_V(resultlo, coeff1,coeff2,coeff3,coeff4)
 
-/*
+
 void ff_upsample_filter_block_luma_v_8_8_sse(uint8_t *dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
                                       int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                       const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
@@ -1654,7 +1653,7 @@ void ff_upsample_filter_block_luma_v_8_8_sse(uint8_t *dst, ptrdiff_t dststride, 
         }
     }
 }
-*/
+
 
 
 #undef LumHor_FILTER

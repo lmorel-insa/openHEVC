@@ -1551,18 +1551,7 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
     }
     
     
-   /* printf("heightEL %d \n", heightEL);
-    for(i=0; i < heightEL; i++) {
-        for(j=0; j < widthEL; j++) {
-            if(i==(heightEL-1))
-                printf("%d ", dstBufY[i*strideEL+j]);
-        }
-       // printf("\n \n");
-        
-    }
-    exit(-1);
-    */
-    
+      
     
     widthBL   = FrameBL->coded_width;
     heightBL  = FrameBL->coded_height;
@@ -1719,13 +1708,7 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
                         
                         
                         *dstV = av_clip_pixel( (CroVer_FILTER1(srcV1, coeff, widthEL) + iOffset) >> (nShift));
-                        /*if(i== 951 && j== 511){
-                            printf("%d %d %d %d %d \n", *dstU, srcU1[0], srcU1[widthEL], srcU1[widthEL*2], srcU1[widthEL*3]);
-                            printf("%d %d %d %d %d %d \n", *dstV, srcV1[-widthEL], srcV1[0], srcV1[widthEL], srcV1[widthEL*2], srcV1[widthEL*3]);
-                            exit(-1);
-                            
-                        }*/
-
+                        
                         
                         if( (i >= leftStartC) && (i <= rightEndC-2) )	{
                             srcU1++;
