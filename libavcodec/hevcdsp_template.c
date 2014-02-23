@@ -186,70 +186,66 @@ static void FUNC(transform_4x4_luma_add)(uint8_t *_dst, int16_t *coeffs,
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
-#define TR_4(dst, src, sstep, assign)                                          \
+#define TR_4(dst, src, dstep, sstep, assign)                                   \
     do {                                                                       \
         const int e0 = 64 * src[0 * sstep] + 64 * src[2 * sstep];              \
         const int e1 = 64 * src[0 * sstep] - 64 * src[2 * sstep];              \
         const int o0 = 83 * src[1 * sstep] + 36 * src[3 * sstep];              \
         const int o1 = 36 * src[1 * sstep] - 83 * src[3 * sstep];              \
                                                                                \
-        assign(dst[0], e0 + o0);                                               \
-        assign(dst[1], e1 + o1);                                               \
-        assign(dst[2], e1 - o1);                                               \
-        assign(dst[3], e0 - o0);                                               \
+        assign(dst[0 * dstep], e0 + o0);                                       \
+        assign(dst[1 * dstep], e1 + o1);                                       \
+        assign(dst[2 * dstep], e1 - o1);                                       \
+        assign(dst[3 * dstep], e0 - o0);                                       \
     } while (0)
-#define TR_8(dst, src, sstep, assign)                                          \
+
+#define TR_8(dst, src, dstep, sstep, assign)                                   \
     do {                                                                       \
         int i, j;                                                              \
         int e_8[4];                                                            \
-        int o_8[4] = {0};                                                      \
-        TR_4(e_8, src, 2 * sstep, SET);                                        \
-        for (j = 1; j < 8; j += 2)                                             \
-            for (i = 0; i < 4; i++)                                            \
+        int o_8[4] = { 0 };                                                    \
+        for (i = 0; i < 4; i++)                                                \
+            for (j = 1; j < 8; j += 2)                                         \
                 o_8[i] += transform[4 * j][i] * src[j * sstep];                \
+        TR_4(e_8, src, 1, 2 * sstep, SET);                                     \
+                                                                               \
         for (i = 0; i < 4; i++) {                                              \
-            assign(dst[    i], e_8[    i] + o_8[    i]);                       \
-            assign(dst[4 + i], e_8[3 - i] - o_8[3 - i]);                       \
+            assign(dst[i * dstep], e_8[i] + o_8[i]);                           \
+            assign(dst[(7 - i) * dstep], e_8[i] - o_8[i]);                     \
         }                                                                      \
     } while (0)
-#define TR_16(dst, src, sstep, assign)                                         \
+
+#define TR_16(dst, src, dstep, sstep, assign)                                  \
     do {                                                                       \
         int i, j;                                                              \
         int e_16[8];                                                           \
-        int o_16[8] = {0};                                                     \
-        TR_8(e_16, src, 2 * sstep, SET);                                       \
-        for (j = 1; j < 16; j += 2)                                            \
-            for (i = 0; i < 8; i++)                                            \
+        int o_16[8] = { 0 };                                                   \
+        for (i = 0; i < 8; i++)                                                \
+            for (j = 1; j < 16; j += 2)                                        \
                 o_16[i] += transform[2 * j][i] * src[j * sstep];               \
+        TR_8(e_16, src, 1, 2 * sstep, SET);                                    \
+                                                                               \
         for (i = 0; i < 8; i++) {                                              \
-            assign(dst[    i], e_16[    i] + o_16[    i]);                     \
-            assign(dst[8 + i], e_16[7 - i] - o_16[7 - i]);                     \
+            assign(dst[i * dstep], e_16[i] + o_16[i]);                         \
+            assign(dst[(15 - i) * dstep], e_16[i] - o_16[i]);                  \
         }                                                                      \
     } while (0)
-#define TR_32(dst, src, sstep, assign)                                         \
+
+#define TR_32(dst, src, dstep, sstep, assign)                                  \
     do {                                                                       \
         int i, j;                                                              \
         int e_32[16];                                                          \
-        int o_32[16] = {0};                                                    \
-        TR_16(e_32, src, 2 * sstep, SET);                                      \
-        for (j = 1; j < 32; j += 2)                                            \
-            for (i = 0; i < 16; i++)                                           \
+        int o_32[16] = { 0 };                                                  \
+        for (i = 0; i < 16; i++)                                               \
+            for (j = 1; j < 32; j += 2)                                        \
                 o_32[i] += transform[j][i] * src[j * sstep];                   \
+        TR_16(e_32, src, 1, 2 * sstep, SET);                                   \
+                                                                               \
         for (i = 0; i < 16; i++) {                                             \
-            assign(dst[     i], e_32[     i] + o_32[     i]);                  \
-            assign(dst[16 + i], e_32[15 - i] - o_32[15 - i]);                  \
+            assign(dst[i * dstep], e_32[i] + o_32[i]);                         \
+            assign(dst[(31 - i) * dstep], e_32[i] - o_32[i]);                  \
         }                                                                      \
     } while (0)
-
-#define TR_4_1( dst, src) TR_4( dst, src,  4, SCALE)
-#define TR_8_1( dst, src) TR_8( dst, src,  8, SCALE)
-#define TR_16_1(dst, src) TR_16(dst, src, 16, SCALE)
-#define TR_32_1(dst, src) TR_32(dst, src, 32, SCALE)
-
-#define TR_4_2( dst, src) TR_4( dst, src,  4, ADD_AND_SCALE)
-#define TR_8_2( dst, src) TR_8( dst, src,  8, ADD_AND_SCALE)
-#define TR_16_2(dst, src) TR_16(dst, src, 16, ADD_AND_SCALE)
-#define TR_32_2(dst, src) TR_32(dst, src, 32, ADD_AND_SCALE)
 
 #define TRANSFORM_ADD(H)                                                       \
 static void FUNC(transform_##H ##x ##H ##_add)(                                \
@@ -259,22 +255,18 @@ static void FUNC(transform_##H ##x ##H ##_add)(                                \
     int      stride  = _stride/sizeof(pixel);                                  \
     int      shift   = 7;                                                      \
     int      add     = 1 << (shift - 1);                                       \
-    int16_t  tmp[H*H];                                                         \
     int16_t *src     = coeffs;                                                 \
-    int16_t *ptr_tmp = tmp;                                                    \
                                                                                \
     for (i = 0; i < H; i++) {                                                  \
-        TR_ ## H ##_1(ptr_tmp, src);                                           \
+        TR_ ## H(src, src, H, H, SCALE);                                       \
         src++;                                                                 \
-        ptr_tmp += H;                                                          \
     }                                                                          \
                                                                                \
-    ptr_tmp = tmp;                                                             \
     shift   = 20 - BIT_DEPTH;                                                  \
     add     = 1 << (shift - 1);                                                \
     for (i = 0; i < H; i++) {                                                  \
-        TR_ ## H ##_2(dst, ptr_tmp);                                           \
-        ptr_tmp ++;                                                            \
+        TR_ ## H(dst, coeffs, 1, 1, ADD_AND_SCALE);                            \
+        coeffs += H;                                                           \
         dst    += stride;                                                      \
     }                                                                          \
 }
@@ -285,25 +277,21 @@ TRANSFORM_ADD(16)
 TRANSFORM_ADD(32)
 
 #undef TR_4
-#undef TR_4_1
-#undef TR_4_2
 #undef TR_8
-#undef TR_8_1
-#undef TR_8_2
 #undef TR_16
-#undef TR_16_1
-#undef TR_16_2
 #undef TR_32
-#undef TR_32_1
-#undef TR_32_2
+
+#undef SET
+#undef SCALE
+#undef ADD_AND_SCALE
 
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
-static void FUNC(sao_band_filter)(uint8_t *_dst, uint8_t *_src,
+static void FUNC(sao_band_filter_0)(uint8_t *_dst, uint8_t *_src,
                                   ptrdiff_t stride, SAOParams *sao,
                                   int *borders, int width, int height,
-                                  int c_idx, int class)
+                                  int c_idx)
 {
     pixel *dst = (pixel *)_dst;
     pixel *src = (pixel *)_src;
@@ -313,39 +301,9 @@ static void FUNC(sao_band_filter)(uint8_t *_dst, uint8_t *_src,
     int shift  = BIT_DEPTH - 5;
     int *sao_offset_val = sao->offset_val[c_idx];
     int sao_left_class  = sao->band_position[c_idx];
-    int init_y = 0, init_x = 0;
 
     stride /= sizeof(pixel);
 
-    switch (class) {
-    case 0:
-        if (!borders[2])
-            width -= (8 >> chroma) + 2;
-        if (!borders[3])
-            height -= (4 >> chroma) + 2;
-        break;
-    case 1:
-        init_y = -(4 >> chroma) - 2;
-        if (!borders[2])
-            width -= (8 >> chroma) + 2;
-        height = (4 >> chroma) + 2;
-        break;
-    case 2:
-        init_x = -(8 >> chroma) - 2;
-        width  =  (8 >> chroma) + 2;
-        if (!borders[3])
-            height -= (4 >> chroma) + 2;
-        break;
-    case 3:
-        init_y = -(4 >> chroma) - 2;
-        init_x = -(8 >> chroma) - 2;
-        width  =  (8 >> chroma) + 2;
-        height =  (4 >> chroma) + 2;
-        break;
-    }
-
-    dst = dst + (init_y * stride + init_x);
-    src = src + (init_y * stride + init_x);
     for (k = 0; k < 4; k++)
         offset_table[(k + sao_left_class) & 31] = sao_offset_val[k + 1];
     for (y = 0; y < height; y++) {
@@ -356,41 +314,10 @@ static void FUNC(sao_band_filter)(uint8_t *_dst, uint8_t *_src,
     }
 }
 
-static void FUNC(sao_band_filter_0)(uint8_t *dst, uint8_t *src,
-                                    ptrdiff_t stride, SAOParams *sao,
-                                    int *borders, int width, int height,
-                                    int c_idx)
-{
-    FUNC(sao_band_filter)(dst, src, stride, sao, borders,
-                          width, height, c_idx, 0);
-}
-
-static void FUNC(sao_band_filter_1)(uint8_t *dst, uint8_t *src,
-                                    ptrdiff_t stride, SAOParams *sao,
-                                    int *borders, int width, int height,
-                                    int c_idx)
-{
-    FUNC(sao_band_filter)(dst, src, stride, sao, borders,
-                          width, height, c_idx, 1);
-}
-
-static void FUNC(sao_band_filter_2)(uint8_t *dst, uint8_t *src,
-                                    ptrdiff_t stride, SAOParams *sao,
-                                    int *borders, int width, int height,
-                                    int c_idx)
-{
-    FUNC(sao_band_filter)(dst, src, stride, sao, borders,
-                          width, height, c_idx, 2);
-}
-
-static void FUNC(sao_band_filter_3)(uint8_t *_dst, uint8_t *_src,
-                                    ptrdiff_t stride, SAOParams *sao,
-                                    int *borders, int width, int height,
-                                    int c_idx)
-{
-    FUNC(sao_band_filter)(_dst, _src, stride, sao, borders,
-                          width, height, c_idx, 3);
-}
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
+#define CMP(a, b) ((a) > (b) ? 1 : ((a) == (b) ? 0 : -1))
 
 static void FUNC(sao_edge_filter)(uint8_t *_dst, uint8_t *_src,
                                   ptrdiff_t stride, SAOParams *sao,
@@ -408,7 +335,6 @@ static void FUNC(sao_edge_filter)(uint8_t *_dst, uint8_t *_src,
     int sao_eo_class    = sao->eo_class[c_idx];
     pixel *dst = (pixel *)_dst;
     pixel *src = (pixel *)_src;
-#define CMP(a, b) ((a) > (b) ? 1 : ((a) == (b) ? 0 : -1))
 
     int y_stride = init_y * stride;
     int pos_0_0  = pos[sao_eo_class][0][0];
@@ -435,29 +361,17 @@ static void FUNC(sao_edge_filter)(uint8_t *_dst, uint8_t *_src,
 static void FUNC(sao_edge_filter_0)(uint8_t *_dst, uint8_t *_src,
                                     ptrdiff_t stride, SAOParams *sao,
                                     int *borders, int _width, int _height,
-                                    int c_idx, uint8_t vert_edge,
-                                    uint8_t horiz_edge, uint8_t diag_edge)
+                                    int c_idx, uint8_t *vert_edge,
+                                    uint8_t *horiz_edge, uint8_t *diag_edge)
 {
+    int x, y;
     pixel *dst = (pixel *)_dst;
     pixel *src = (pixel *)_src;
-    int chroma = !!c_idx;
     int *sao_offset_val = sao->offset_val[c_idx];
     int sao_eo_class    = sao->eo_class[c_idx];
     int init_x = 0, init_y = 0, width = _width, height = _height;
 
-    int x, y;
-
-
     stride /= sizeof(pixel);
-
-    if (!borders[2])
-        width -= (8 >> chroma) + 2;
-    if (!borders[3])
-        height -= (4 >> chroma) + 2;
-
-    dst = dst + (init_y * stride + init_x);
-    src = src + (init_y * stride + init_x);
-    init_y = init_x = 0;
 
     FUNC(sao_edge_filter)((uint8_t *)dst, (uint8_t *)src, stride, sao, width, height, c_idx, init_x, init_y);
 
@@ -496,48 +410,22 @@ static void FUNC(sao_edge_filter_0)(uint8_t *_dst, uint8_t *_src,
             height--;
         }
     }
-
-    {
-        // Restore pixels that can't be modified
-        int save_upper_left = !diag_edge && sao_eo_class == SAO_EO_135D && !borders[0] && !borders[1];
-        if (vert_edge && sao_eo_class != SAO_EO_VERT)
-            for (y = init_y+save_upper_left; y< height; y++)
-                dst[y*stride] = src[y*stride];
-        if(horiz_edge && sao_eo_class != SAO_EO_HORIZ)
-            for(x = init_x+save_upper_left; x<width; x++)
-                dst[x] = src[x];
-        if(diag_edge && sao_eo_class == SAO_EO_135D)
-            dst[0] = src[0];
-    }
-
 }
 
 static void FUNC(sao_edge_filter_1)(uint8_t *_dst, uint8_t *_src,
                                     ptrdiff_t stride, SAOParams *sao,
                                     int *borders, int _width, int _height,
-                                    int c_idx, uint8_t vert_edge,
-                                    uint8_t horiz_edge, uint8_t diag_edge)
+                                    int c_idx, uint8_t *vert_edge,
+                                    uint8_t *horiz_edge, uint8_t *diag_edge)
 {
     int x, y;
     pixel *dst = (pixel *)_dst;
     pixel *src = (pixel *)_src;
-    int chroma = !!c_idx;
     int *sao_offset_val = sao->offset_val[c_idx];
     int sao_eo_class    = sao->eo_class[c_idx];
     int init_x = 0, init_y = 0, width = _width, height = _height;
 
-#define CMP(a, b) ((a) > (b) ? 1 : ((a) == (b) ? 0 : -1))
-
     stride /= sizeof(pixel);
-
-    init_y = -(4 >> chroma) - 2;
-    if (!borders[2])
-        width -= (8 >> chroma) + 2;
-    height = (4 >> chroma) + 2;
-
-    dst = dst + (init_y * stride + init_x);
-    src = src + (init_y * stride + init_x);
-    init_y = init_x = 0;
 
     FUNC(sao_edge_filter)((uint8_t *)dst, (uint8_t *)src, stride, sao, width, height, c_idx, init_x, init_y);
 
@@ -561,50 +449,6 @@ static void FUNC(sao_edge_filter_1)(uint8_t *_dst, uint8_t *_src,
             width--;
         }
     }
-
-    {
-        // Restore pixels that can't be modified
-        int save_lower_left = !diag_edge && sao_eo_class == SAO_EO_45D && !borders[0];
-        if(vert_edge && sao_eo_class != SAO_EO_VERT)
-            for(y = init_y; y< height-save_lower_left; y++)
-                dst[y*stride] = src[y*stride];
-        if(horiz_edge && sao_eo_class != SAO_EO_HORIZ)
-            for(x = init_x+save_lower_left; x<width; x++)
-                dst[(height-1)*stride+x] = src[(height-1)*stride+x];
-        if(diag_edge && sao_eo_class == SAO_EO_45D)
-            dst[stride*(height-1)] = src[stride*(height-1)];
-    }
-
-}
-
-static void FUNC(sao_edge_filter_2)(uint8_t *_dst, uint8_t *_src,
-                                    ptrdiff_t stride, SAOParams *sao,
-                                    int *borders, int _width, int _height,
-                                    int c_idx, uint8_t vert_edge,
-                                    uint8_t horiz_edge, uint8_t diag_edge)
-{
-    int x, y;
-    pixel *dst = (pixel *)_dst;
-    pixel *src = (pixel *)_src;
-    int chroma = !!c_idx;
-    int *sao_offset_val = sao->offset_val[c_idx];
-    int sao_eo_class    = sao->eo_class[c_idx];
-
-    int init_x = 0, init_y = 0, width = _width, height = _height;
-
-    stride /= sizeof(pixel);
-
-    init_x = -(8 >> chroma) - 2;
-    width  =  (8 >> chroma) + 2;
-    if (!borders[3])
-        height -= (4 >> chroma) + 2;
-
-    dst = dst + (init_y * stride + init_x);
-    src = src + (init_y * stride + init_x);
-    init_y = init_x = 0;
-
-    FUNC(sao_edge_filter)((uint8_t *)dst, (uint8_t *)src, stride, sao, width, height, c_idx, init_x, init_y);
-
     if (sao_eo_class != SAO_EO_HORIZ) {
         if (borders[1]) {
             int offset_val = sao_offset_val[0];
@@ -622,254 +466,47 @@ static void FUNC(sao_edge_filter_2)(uint8_t *_dst, uint8_t *_src,
     }
 
     {
+        int save_upper_left  = !diag_edge[0] && sao_eo_class == SAO_EO_135D && !borders[0] && !borders[1];
+        int save_upper_right = !diag_edge[1] && sao_eo_class == SAO_EO_45D  && !borders[1] && !borders[2];
+        int save_lower_right = !diag_edge[2] && sao_eo_class == SAO_EO_135D && !borders[2] && !borders[3];
+        int save_lower_left  = !diag_edge[3] && sao_eo_class == SAO_EO_45D  && !borders[0] && !borders[3];
+
         // Restore pixels that can't be modified
-        int save_upper_right = !diag_edge && sao_eo_class == SAO_EO_45D && !borders[1];
-        if(vert_edge && sao_eo_class != SAO_EO_VERT)
-            for(y = init_y+save_upper_right; y< height; y++)
+        if(vert_edge[0] && sao_eo_class != SAO_EO_VERT) {
+            for(y = init_y+save_upper_left; y< height-save_lower_left; y++)
+                dst[y*stride] = src[y*stride];
+        }
+        if(vert_edge[1] && sao_eo_class != SAO_EO_VERT) {
+            for(y = init_y+save_upper_right; y< height-save_lower_right; y++)
                 dst[y*stride+width-1] = src[y*stride+width-1];
-        if(horiz_edge && sao_eo_class != SAO_EO_HORIZ)
-            for(x = init_x; x<width-save_upper_right; x++)
+        }
+
+        if(horiz_edge[0] && sao_eo_class != SAO_EO_HORIZ) {
+            for(x = init_x+save_upper_left; x < width-save_upper_right; x++)
                 dst[x] = src[x];
-        if(diag_edge && sao_eo_class == SAO_EO_45D)
-            dst[width-1] = src[width-1];
-    }
-}
-
-static void FUNC(sao_edge_filter_3)(uint8_t *_dst, uint8_t *_src,
-                                    ptrdiff_t stride, SAOParams *sao,
-                                    int *borders, int _width, int _height,
-                                    int c_idx, uint8_t vert_edge,
-                                    uint8_t horiz_edge, uint8_t diag_edge)
-{
-    int x, y;
-    pixel *dst = (pixel *)_dst;
-    pixel *src = (pixel *)_src;
-    int chroma = !!c_idx;
-    int sao_eo_class    = sao->eo_class[c_idx];
-    int init_x = 0, init_y = 0, width = _width, height = _height;
-
-    stride /= sizeof(pixel);
-
-    init_y = -(4 >> chroma) - 2;
-    init_x = -(8 >> chroma) - 2;
-    width  =  (8 >> chroma) + 2;
-    height =  (4 >> chroma) + 2;
-
-
-    dst    = dst + (init_y * stride + init_x);
-    src    = src + (init_y * stride + init_x);
-    init_y = init_x = 0;
-
-    FUNC(sao_edge_filter)((uint8_t *)dst, (uint8_t *)src, stride, sao, width, height, c_idx, init_x, init_y);
-
-    {
-        // Restore pixels that can't be modified
-        int save_lower_right = !diag_edge && sao_eo_class == SAO_EO_135D;
-        if(vert_edge && sao_eo_class != SAO_EO_VERT)
-            for(y = init_y; y< height-save_lower_right; y++)
-                dst[y*stride+width-1] = src[y*stride+width-1];
-        if(horiz_edge && sao_eo_class != SAO_EO_HORIZ)
-            for(x = init_x; x<width-save_lower_right; x++)
+        }
+        if(horiz_edge[1] && sao_eo_class != SAO_EO_HORIZ) {
+            for(x = init_x+save_lower_left; x < width-save_lower_right; x++)
                 dst[(height-1)*stride+x] = src[(height-1)*stride+x];
-        if(diag_edge && sao_eo_class == SAO_EO_135D)
+        }
+        if(diag_edge[0] && sao_eo_class == SAO_EO_135D)
+            dst[0] = src[0];
+        if(diag_edge[1] && sao_eo_class == SAO_EO_45D)
+            dst[width-1] = src[width-1];
+        if(diag_edge[2] && sao_eo_class == SAO_EO_135D)
             dst[stride*(height-1)+width-1] = src[stride*(height-1)+width-1];
+        if(diag_edge[3] && sao_eo_class == SAO_EO_45D)
+            dst[stride*(height-1)] = src[stride*(height-1)];
+
     }
 }
 
 #undef CMP
-#undef SET
-#undef SCALE
-#undef ADD_AND_SCALE
 
-#define QPEL_FILTER_1(src, stride)      \
-    (1 * -src[x - 3 * stride] +         \
-     4 *  src[x - 2 * stride] -         \
-    10 *  src[x -     stride] +         \
-    58 *  src[x]              +         \
-    17 *  src[x +     stride] -         \
-     5 *  src[x + 2 * stride] +         \
-     1 *  src[x + 3 * stride])
-
-#define QPEL_FILTER_2(src, stride)      \
-    (1  * -src[x - 3 * stride] +        \
-     4  *  src[x - 2 * stride] -        \
-    11  *  src[x -     stride] +        \
-    40  *  src[x]              +        \
-    40  *  src[x +     stride] -        \
-    11  *  src[x + 2 * stride] +        \
-     4  *  src[x + 3 * stride] -        \
-     1  *  src[x + 4 * stride])
-
-#define QPEL_FILTER_3(src, stride)      \
-    (1  * src[x - 2 * stride] -         \
-     5  * src[x -     stride] +         \
-    17  * src[x]              +         \
-    58  * src[x + stride]     -         \
-    10  * src[x + 2 * stride] +         \
-     4  * src[x + 3 * stride] -         \
-     1  * src[x + 4 * stride])
-
-static void FUNC(put_hevc_qpel_pixels)(int16_t *dst, ptrdiff_t dststride,
-                                       uint8_t *_src, ptrdiff_t _srcstride,
-                                       int width, int height)
-{
-    int x, y;
-    pixel *src          = (pixel *)_src;
-    ptrdiff_t srcstride = _srcstride / sizeof(pixel);
-
-    for (y = 0; y < height; y++) {
-        for (x = 0; x < width; x++)
-            dst[x] = src[x] << (14 - BIT_DEPTH);
-        src += srcstride;
-        dst += dststride;
-    }
-}
-
-#define PUT_HEVC_QPEL_H(H)                                                     \
-static void FUNC(put_hevc_qpel_h ## H)(int16_t *dst,  ptrdiff_t dststride,     \
-                                       uint8_t *_src, ptrdiff_t _srcstride,    \
-                                       int width, int height)                  \
-{                                                                              \
-    int x, y;                                                                  \
-    pixel *src = (pixel*)_src;                                                 \
-    ptrdiff_t srcstride = _srcstride / sizeof(pixel);                          \
-                                                                               \
-    for (y = 0; y < height; y++) {                                             \
-        for (x = 0; x < width; x++)                                            \
-            dst[x] = QPEL_FILTER_ ## H(src, 1) >> (BIT_DEPTH - 8);             \
-        src += srcstride;                                                      \
-        dst += dststride;                                                      \
-    }                                                                          \
-}
-
-#define PUT_HEVC_QPEL_V(V)                                                     \
-static void FUNC(put_hevc_qpel_v ## V)(int16_t *dst,  ptrdiff_t dststride,     \
-                                       uint8_t *_src, ptrdiff_t _srcstride,    \
-                                       int width, int height)                  \
-{                                                                              \
-    int x, y;                                                                  \
-    pixel *src = (pixel*)_src;                                                 \
-    ptrdiff_t srcstride = _srcstride / sizeof(pixel);                          \
-                                                                               \
-    for (y = 0; y < height; y++)  {                                            \
-        for (x = 0; x < width; x++)                                            \
-            dst[x] = QPEL_FILTER_ ## V(src, srcstride) >> (BIT_DEPTH - 8);     \
-        src += srcstride;                                                      \
-        dst += dststride;                                                      \
-    }                                                                          \
-}
-
-#define PUT_HEVC_QPEL_V_14(V)                                                  \
-static void FUNC(put_hevc_qpel_v_14_ ## V)(int16_t *dst,  ptrdiff_t dststride,  \
-                                       uint8_t*_src, ptrdiff_t _srcstride,    \
-                                       int width, int height)                  \
-{                                                                              \
-    int x, y;                                                                  \
-    int16_t *src = (int16_t*)_src;                                           \
-    ptrdiff_t srcstride = _srcstride / sizeof(int16_t);                      \
-                                                                               \
-    for (y = 0; y < height; y++)  {                                            \
-        for (x = 0; x < width; x++)                                            \
-            dst[x] = QPEL_FILTER_ ## V(src, srcstride) >> (14 - 8);            \
-        src += srcstride;                                                      \
-        dst += dststride;                                                      \
-    }                                                                          \
-}
-
-
-PUT_HEVC_QPEL_H(1)
-PUT_HEVC_QPEL_H(2)
-PUT_HEVC_QPEL_H(3)
-PUT_HEVC_QPEL_V(1)
-PUT_HEVC_QPEL_V(2)
-PUT_HEVC_QPEL_V(3)
-
-PUT_HEVC_QPEL_V_14(1)
-PUT_HEVC_QPEL_V_14(2)
-PUT_HEVC_QPEL_V_14(3)
-
-
-// PUT_UNWEIGHTED_PRED_INIT
-#define PUT_WEIGHTED_PRED_INIT0()                                              \
-    int shift  = 14 - BIT_DEPTH;                                               \
-    int offset = 1 << (shift-1)
-//PUT_UNWEIGHTED_PRED_COMPUTE
-#define PUT_WEIGHTED_PRED_COMPUTE0()                                           \
-    dst[x] = av_clip_pixel((tmp + offset) >> shift)
-//PUT_UNWEIGHTED_PRED_END
-#define PUT_WEIGHTED_PRED_END0()
-
-// PUT_WEIGHTED_PRED_INIT
-#define PUT_WEIGHTED_PRED_INIT1()                                              \
-    int shift  = denom + 14 - BIT_DEPTH;                                       \
-    int offset = 1 << (shift-1);                                               \
-    int wx     = wlxFlag;                                                      \
-    int ox     = olxFlag << (BIT_DEPTH - 8)
-//PUT_WEIGHTED_PRED_COMPUTE
-#define PUT_WEIGHTED_PRED_COMPUTE1()                                           \
-    dst[x] = av_clip_pixel(((tmp*wx + offset) >> shift) + ox)
-//PUT_WEIGHTED_PRED_END
-#define PUT_WEIGHTED_PRED_END1()
-
-// PUT_WEIGHTED_PRED_ARG_INIT
-#define PUT_WEIGHTED_PRED_INIT2()                                              \
-    int shift  = 14 + 1 - BIT_DEPTH;                                           \
-    int offset = 1 << (shift-1)
-//PUT_WEIGHTED_PRED_ARG_COMPUTE
-#define PUT_WEIGHTED_PRED_COMPUTE2()                                           \
-    dst[x] = av_clip_pixel((src1[x] + tmp + offset) >> shift)
-//PUT_WEIGHTED_PRED_ARG_END
-#define PUT_WEIGHTED_PRED_END2()                                               \
-    src1 += src1stride;
-
-// WEIGHTED_PRED_ARG_INIT
-#define PUT_WEIGHTED_PRED_INIT3()                                              \
-    int shift  = denom + 14 - BIT_DEPTH + 1;                                   \
-    int w0     = wlxFlag;                                                      \
-    int w1     = wl1Flag;                                                      \
-    int o0     = olxFlag << (BIT_DEPTH - 8);                                   \
-    int o1     = ol1Flag << (BIT_DEPTH - 8);                                   \
-    int offset = (o0 + o1 + 1) << (shift - 1)
-//WEIGHTED_PRED_ARG_COMPUTE
-#define PUT_WEIGHTED_PRED_COMPUTE3()                                           \
-    dst[x] = av_clip_pixel((src1[x] * w0 + tmp * w1 + offset) >> shift)
-//WEIGHTED_PRED_ARG_END
-#define PUT_WEIGHTED_PRED_END3()                                               \
-        src1 += src1stride;
-
-
-static void FUNC(put_hevc_qpel_hv)(int16_t *dst, ptrdiff_t dststride,
-                                   uint8_t *_src, ptrdiff_t _srcstride,
-                                   int width, int height, int my, int mx,
-                                   void *s, ptrdiff_t idx)
-{
-    int16_t tmp_array[(MAX_PB_SIZE + 7) * MAX_PB_SIZE];
-    int16_t *tmp = tmp_array;
-    HEVCContext *_s= ( HEVCContext *) s;
-    uint8_t * src= (uint8_t *) _src;
-    ptrdiff_t srcstride = _srcstride;
-    src -= ff_hevc_qpel_extra_before[my] * srcstride;
-    _s->hevcdsp.put_hevc_qpel[idx][0][mx]( tmp, MAX_PB_SIZE,
-                              src, srcstride,
-                              width, height + ff_hevc_qpel_extra[my]);
-
-    tmp = tmp_array + ff_hevc_qpel_extra_before[my] * MAX_PB_SIZE;
-
-    _s->hevcdsp.put_hevc_qpel_v_14[idx][my]( dst, dststride,
-                              (uint8_t *) tmp, MAX_PB_SIZE<<1 ,
-                              width, height);
-
-}
-
-
-
-#define EPEL_FILTER(src, stride)                \
-    (filter_0 * src[x - stride] +               \
-     filter_1 * src[x]          +               \
-     filter_2 * src[x + stride] +               \
-     filter_3 * src[x + 2 * stride])
-
-static void FUNC(put_hevc_epel_pixels)(int16_t *dst, ptrdiff_t dststride,
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
+static void FUNC(put_hevc_pel_pixels)(int16_t *dst, ptrdiff_t dststride,
                                        uint8_t *_src, ptrdiff_t _srcstride,
                                        int width, int height, int mx, int my)
 {
@@ -885,18 +522,101 @@ static void FUNC(put_hevc_epel_pixels)(int16_t *dst, ptrdiff_t dststride,
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
+#define QPEL_FILTER(src, stride)                                               \
+    (filter[0] * src[x - 3 * stride] +                                         \
+     filter[1] * src[x - 2 * stride] +                                         \
+     filter[2] * src[x -     stride] +                                         \
+     filter[3] * src[x             ] +                                         \
+     filter[4] * src[x +     stride] +                                         \
+     filter[5] * src[x + 2 * stride] +                                         \
+     filter[6] * src[x + 3 * stride] +                                         \
+     filter[7] * src[x + 4 * stride])
+
+static void FUNC(put_hevc_qpel_h)(int16_t *dst,  ptrdiff_t dststride,
+                                       uint8_t *_src, ptrdiff_t _srcstride,
+                                       int width, int height, int mx, int my)
+{
+    int x, y;
+    pixel        *src       = (pixel*)_src;
+    ptrdiff_t     srcstride = _srcstride / sizeof(pixel);
+    const int8_t *filter    = ff_hevc_qpel_filters[mx - 1];
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++)
+            dst[x] = QPEL_FILTER(src, 1) >> (BIT_DEPTH - 8);
+        src += srcstride;
+        dst += dststride;
+    }
+}
+
+static void FUNC(put_hevc_qpel_v)(int16_t *dst,  ptrdiff_t dststride,
+                                       uint8_t *_src, ptrdiff_t _srcstride,
+                                       int width, int height, int mx, int my)
+{
+    int x, y;
+    pixel        *src       = (pixel*)_src;
+    ptrdiff_t     srcstride = _srcstride / sizeof(pixel);
+    const int8_t *filter    = ff_hevc_qpel_filters[my - 1];
+    for (y = 0; y < height; y++)  {
+        for (x = 0; x < width; x++)
+            dst[x] = QPEL_FILTER(src, srcstride) >> (BIT_DEPTH - 8);
+        src += srcstride;
+        dst += dststride;
+    }
+}
+
+static void FUNC(put_hevc_qpel_hv)(int16_t *dst,
+                                   ptrdiff_t dststride,
+                                   uint8_t *_src,
+                                   ptrdiff_t _srcstride,
+                                   int width, int height,
+                                   int mx, int my)
+{
+    int x, y;
+    const int8_t *filter;
+    pixel *src = (pixel*)_src;
+    ptrdiff_t srcstride = _srcstride / sizeof(pixel);
+    int16_t tmp_array[(MAX_PB_SIZE + QPEL_EXTRA) * MAX_PB_SIZE];
+    int16_t *tmp = tmp_array;
+
+    src   -= QPEL_EXTRA_BEFORE * srcstride;
+    filter = ff_hevc_qpel_filters[mx - 1];
+    for (y = 0; y < height + QPEL_EXTRA; y++) {
+        for (x = 0; x < width; x++)
+            tmp[x] = QPEL_FILTER(src, 1) >> (BIT_DEPTH - 8);
+        src += srcstride;
+        tmp += MAX_PB_SIZE;
+    }
+
+    tmp    = tmp_array + QPEL_EXTRA_BEFORE * MAX_PB_SIZE;
+    filter = ff_hevc_qpel_filters[my - 1];
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++)
+            dst[x] = QPEL_FILTER(tmp, MAX_PB_SIZE) >> 6;
+        tmp += MAX_PB_SIZE;
+        dst += dststride;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
+#define EPEL_FILTER(src, stride)                                               \
+    (filter[0] * src[x - stride] +                                             \
+     filter[1] * src[x]          +                                             \
+     filter[2] * src[x + stride] +                                             \
+     filter[3] * src[x + 2 * stride])
+
 static void FUNC(put_hevc_epel_h)(int16_t *dst, ptrdiff_t dststride,
-                                  uint8_t *_src, ptrdiff_t _srcstride,
-                                  int width, int height, int mx, int my)
+                                   uint8_t *_src, ptrdiff_t _srcstride,
+                                   int width, int height, int mx, int my)
 {
     int x, y;
     pixel *src = (pixel *)_src;
     ptrdiff_t srcstride  = _srcstride / sizeof(pixel);
     const int8_t *filter = ff_hevc_epel_filters[mx - 1];
-    int8_t filter_0 = filter[0];
-    int8_t filter_1 = filter[1];
-    int8_t filter_2 = filter[2];
-    int8_t filter_3 = filter[3];
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++)
             dst[x] = EPEL_FILTER(src, 1) >> (BIT_DEPTH - 8);
@@ -906,17 +626,13 @@ static void FUNC(put_hevc_epel_h)(int16_t *dst, ptrdiff_t dststride,
 }
 
 static void FUNC(put_hevc_epel_v)(int16_t *dst, ptrdiff_t dststride,
-                                  uint8_t *_src, ptrdiff_t _srcstride,
-                                  int width, int height, int mx, int my)
+                                   uint8_t *_src, ptrdiff_t _srcstride,
+                                   int width, int height, int mx, int my)
 {
     int x, y;
     pixel *src = (pixel *)_src;
     ptrdiff_t srcstride = _srcstride / sizeof(pixel);
     const int8_t *filter = ff_hevc_epel_filters[my - 1];
-    int8_t filter_0 = filter[0];
-    int8_t filter_1 = filter[1];
-    int8_t filter_2 = filter[2];
-    int8_t filter_3 = filter[3];
 
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++)
@@ -926,57 +642,43 @@ static void FUNC(put_hevc_epel_v)(int16_t *dst, ptrdiff_t dststride,
     }
 }
 
-static void FUNC(put_hevc_epel_v_14)(int16_t *dst, ptrdiff_t dststride,
-                                  uint8_t *_src, ptrdiff_t _srcstride,
-                                  int width, int height, int mx, int my)
+static void FUNC(put_hevc_epel_hv)(int16_t *dst, ptrdiff_t dststride,
+                                    uint8_t *_src, ptrdiff_t _srcstride,
+                                    int width, int height, int mx, int my)
 {
     int x, y;
-    int16_t *src = (int16_t *)_src;
-    ptrdiff_t srcstride = _srcstride / sizeof(int16_t);
-    const int8_t *filter = ff_hevc_epel_filters[my - 1];
-    int8_t filter_0 = filter[0];
-    int8_t filter_1 = filter[1];
-    int8_t filter_2 = filter[2];
-    int8_t filter_3 = filter[3];
+    pixel *src = (pixel *)_src;
+    ptrdiff_t srcstride = _srcstride / sizeof(pixel);
+    const int8_t *filter = ff_hevc_epel_filters[mx - 1];
+    int16_t tmp_array[(MAX_PB_SIZE + EPEL_EXTRA) * MAX_PB_SIZE];
+    int16_t *tmp = tmp_array;
+
+    src -= EPEL_EXTRA_BEFORE * srcstride;
+
+    for (y = 0; y < height + EPEL_EXTRA; y++) {
+        for (x = 0; x < width; x++)
+            tmp[x] = EPEL_FILTER(src, 1) >> (BIT_DEPTH - 8);
+        src += srcstride;
+        tmp += MAX_PB_SIZE;
+    }
+
+    tmp      = tmp_array + EPEL_EXTRA_BEFORE * MAX_PB_SIZE;
+    filter = ff_hevc_epel_filters[my - 1];
 
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++)
-            dst[x] = EPEL_FILTER(src, srcstride) >> 6;
-        src += srcstride;
+            dst[x] = EPEL_FILTER(tmp, MAX_PB_SIZE) >> 6;
+        tmp += MAX_PB_SIZE;
         dst += dststride;
     }
 }
 
-static void FUNC(put_hevc_epel_hv)(int16_t *dst, ptrdiff_t dststride,
-                                   uint8_t *_src, ptrdiff_t _srcstride,
-                                   int width, int height, int mx, int my,
-                                   void *s, ptrdiff_t idx)
-{
-    int16_t tmp_array[(MAX_PB_SIZE + 3) * MAX_PB_SIZE];
-    int16_t *tmp = tmp_array;
-    HEVCContext *_s= ( HEVCContext *) s;
-    uint8_t * src= (uint8_t *) _src;
-    src -= EPEL_EXTRA_BEFORE * _srcstride;
-    _s->hevcdsp.put_hevc_epel[idx][0][1]( tmp, MAX_PB_SIZE,
-                              src, _srcstride,
-                              width, height + EPEL_EXTRA,
-                              mx, my);
-
-    tmp      = tmp_array + EPEL_EXTRA_BEFORE * MAX_PB_SIZE;
-
-    _s->hevcdsp.put_hevc_epel_v_14[idx]( dst, dststride,
-                                       (uint8_t *) tmp, MAX_PB_SIZE<<1 ,
-                              width, height,
-                              mx, my);
-
-}
-
-
-
-
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
 static void FUNC(put_unweighted_pred)(uint8_t *_dst, ptrdiff_t _dststride,
-                                      int16_t *src, ptrdiff_t srcstride,
-                                      int width, int height)
+                                       int16_t *src, ptrdiff_t srcstride,
+                                       int width, int height)
 {
     int x, y;
     pixel *dst          = (pixel *)_dst;
@@ -997,9 +699,9 @@ static void FUNC(put_unweighted_pred)(uint8_t *_dst, ptrdiff_t _dststride,
 }
 
 static void FUNC(put_weighted_pred_avg)(uint8_t *_dst, ptrdiff_t _dststride,
-                                        int16_t *src1, int16_t *src2,
-                                        ptrdiff_t srcstride,
-                                        int width, int height)
+                                         int16_t *src1, int16_t *src2,
+                                         ptrdiff_t srcstride,
+                                         int width, int height)
 {
     int x, y;
     pixel *dst          = (pixel *)_dst;
@@ -1022,9 +724,9 @@ static void FUNC(put_weighted_pred_avg)(uint8_t *_dst, ptrdiff_t _dststride,
 }
 
 static void FUNC(weighted_pred)(uint8_t denom, int16_t wlxFlag, int16_t olxFlag,
-                                uint8_t *_dst, ptrdiff_t _dststride,
-                                int16_t *src, ptrdiff_t srcstride,
-                                int width, int height)
+                                 uint8_t *_dst, ptrdiff_t _dststride,
+                                 int16_t *src, ptrdiff_t srcstride,
+                                 int width, int height)
 {
     int shift, wx, ox, x, y, offset;
     pixel *dst          = (pixel *)_dst;
@@ -1050,12 +752,12 @@ static void FUNC(weighted_pred)(uint8_t denom, int16_t wlxFlag, int16_t olxFlag,
 }
 
 static void FUNC(weighted_pred_avg)(uint8_t denom,
-                                    int16_t wl0Flag, int16_t wl1Flag,
-                                    int16_t ol0Flag, int16_t ol1Flag,
-                                    uint8_t *_dst, ptrdiff_t _dststride,
-                                    int16_t *src1, int16_t *src2,
-                                    ptrdiff_t srcstride,
-                                    int width, int height)
+                                     int16_t wl0Flag, int16_t wl1Flag,
+                                     int16_t ol0Flag, int16_t ol1Flag,
+                                     uint8_t *_dst, ptrdiff_t _dststride,
+                                     int16_t *src1, int16_t *src2,
+                                     ptrdiff_t srcstride,
+                                     int width, int height)
 {
     int shift, log2Wd, w0, w1, o0, o1, x, y;
     pixel *dst = (pixel *)_dst;
@@ -1078,6 +780,9 @@ static void FUNC(weighted_pred_avg)(uint8_t denom,
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
 // line zero
 #define P3 pix[-4 * xstride]
 #define P2 pix[-3 * xstride]

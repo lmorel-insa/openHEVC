@@ -92,7 +92,7 @@ int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,
         uint8_t delta_rps_sign;
 
         if (is_slice_header) {
-            int delta_idx = get_ue_golomb_long(gb) + 1;
+            unsigned int delta_idx = get_ue_golomb_long(gb) + 1;
             if (delta_idx > sps->nb_st_rps) {
                 av_log(s->avctx, AV_LOG_ERROR,
                        "Invalid value of delta_idx in slice header RPS: %d > %d.\n",
@@ -192,7 +192,7 @@ int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,
 }
 
 
-static int decode_profile_tier_level(HEVCContext *s,  ProfileTierLevel *ptl)
+static void decode_profile_tier_level(HEVCContext *s, ProfileTierLevel *ptl)
 {
     int i;
     HEVCLocalContext *lc = s->HEVClc;
@@ -202,16 +202,19 @@ static int decode_profile_tier_level(HEVCContext *s,  ProfileTierLevel *ptl)
     ptl->profile_space = get_bits(gb, 2);
     ptl->tier_flag     = get_bits1(gb);
     ptl->profile_idc   = get_bits(gb, 5);
+
     print_cabac("XXX_profile_space", ptl->profile_space );
     print_cabac("XXX_tier_flag", ptl->tier_flag);
     print_cabac("XXX_profile_idc", ptl->profile_idc);
     
     if (ptl->profile_idc == 1)
         av_log(s->avctx, AV_LOG_DEBUG, "Main profile bitstream\n");
-    else if (ptl->profile_idc == 2)
-        av_log(s->avctx, AV_LOG_DEBUG, "Main10 profile bitstream\n");
+    else if (ptl->profile_idc == FF_PROFILE_HEVC_MAIN_10)
+        av_log(s->avctx, AV_LOG_DEBUG, "Main 10 profile bitstream\n");
+    else if (ptl->profile_idc == FF_PROFILE_HEVC_MAIN_STILL_PICTURE)
+        av_log(s->avctx, AV_LOG_DEBUG, "Main Still Picture profile bitstream\n");
     else
-        av_log(s->avctx, AV_LOG_WARNING, "No profile indication! (%d)\n", ptl->profile_idc);
+        av_log(s->avctx, AV_LOG_WARNING, "Unknown HEVC profile: %d\n", ptl->profile_idc);
 
     for (i = 0; i < 32; i++)
         ptl->profile_compatibility_flag[i] = get_bits1(gb);
@@ -219,6 +222,7 @@ static int decode_profile_tier_level(HEVCContext *s,  ProfileTierLevel *ptl)
     ptl->interlaced_source_flag     = get_bits1(gb);
     ptl->non_packed_constraint_flag = get_bits1(gb);
     ptl->frame_only_constraint_flag = get_bits1(gb);
+
     
     print_cabac("general_progressive_source_flag", ptl->progressive_source_flag);
     print_cabac("general_interlaced_source_flag", ptl->interlaced_source_flag);
@@ -242,12 +246,12 @@ static int parse_ptl(HEVCContext *s, PTL *ptl, int max_num_sub_layers)
     int i;
     HEVCLocalContext *lc = s->HEVClc;
     GetBitContext *gb = &lc->gb;
+
     print_cabac(" --- parse ptl --- ", s->nuh_layer_id);
     decode_profile_tier_level(s, &ptl->general_PTL);
     ptl->general_PTL.level_idc = get_bits(gb, 8);
     print_cabac("general_level_idc", ptl->general_PTL.level_idc);
 
-    
     for (i = 0; i < max_num_sub_layers - 1; i++) {
         ptl->sub_layer_profile_present_flag[i] = get_bits1(gb);
         print_cabac("sub_layer_profile_present_flag", ptl->sub_layer_profile_present_flag[i]);  
@@ -260,6 +264,7 @@ static int parse_ptl(HEVCContext *s, PTL *ptl, int max_num_sub_layers)
             print_cabac("reserved_zero_2bits", 0);
         }
     for (i = 0; i < max_num_sub_layers - 1; i++) {
+
         if (ptl->sub_layer_profile_present_flag[i]) {
             decode_profile_tier_level(s, &ptl->sub_layer_PTL[i]);
             ptl->sub_layer_PTL[i].level_idc = get_bits(gb, 8);
@@ -269,7 +274,7 @@ static int parse_ptl(HEVCContext *s, PTL *ptl, int max_num_sub_layers)
     return 0;
 }
 
-static void decode_sublayer_hrd(HEVCContext *s, int nb_cpb,
+static void decode_sublayer_hrd(HEVCContext *s, unsigned int nb_cpb,
                                 int subpic_params_present)
 {
     GetBitContext *gb = &s->HEVClc->gb;
@@ -323,7 +328,7 @@ static void decode_hrd(HEVCContext *s, int common_inf_present,
 
     for (i = 0; i < max_sublayers; i++) {
         int low_delay = 0;
-        int nb_cpb = 1;
+        unsigned int nb_cpb = 1;
         int fixed_rate = get_bits1(gb);
 
         if (!fixed_rate)
@@ -773,7 +778,6 @@ static void parseVPSVUI(GetBitContext *gb, HEVCVPS *vps)
 static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     int i, j, k;
     GetBitContext *gb = &s->HEVClc->gb;
-    
     print_cabac(" \n --- parse vps extention  --- \n ", s->nuh_layer_id);
     
 #if VPS_EXTN_MASK_AND_DIM_INFO
@@ -842,6 +846,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     
 //#if VPS_MOVE_DIR_DEPENDENCY_FLAG
 #if VPS_EXTN_DIRECT_REF_LAYERS
+
     vps->m_numDirectRefLayers[0] = 0;
     for( i = 1; i <= vps->vps_max_layers - 1; i++)  {
         int numDirectRefLayers = 0;
@@ -871,6 +876,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         }
     }
 #endif
+
     
 #if JCTVC_M0203_INTERLAYER_PRED_IDC
 #if N0120_MAX_TID_REF_PRESENT_FLAG
@@ -941,6 +947,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         vps->vps_profile_present_flag[i] = get_bits1(gb);
         print_cabac("vps_profile_present_flag", vps->vps_profile_present_flag[i]);
         if( !vps->vps_profile_present_flag[i] ) {
+
             vps->profile_ref[i] = get_bits(gb, 6)+1;
             print_cabac("profile_ref_minus1", vps->profile_ref[i]-1);
             vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
@@ -1125,6 +1132,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         }
     }
 #endif
+
 #if O0092_0094_DEPENDENCY_CONSTRAINT
     for(i = 1; i < vps->vps_max_layers; i++)
         setNumRefLayers(vps, vps->m_layerIdInNuh[i]);
@@ -1167,9 +1175,6 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)  {
 
     av_log(s->avctx, AV_LOG_DEBUG, "Decoding VPS\n");
 
-    if (!vps)
-        return AVERROR(ENOMEM);
-
     vps_id = get_bits(gb, 4);
     print_cabac("vps_video_parameter_set_id", vps_id);
     if (vps_id >= MAX_VPS_COUNT) {
@@ -1204,12 +1209,14 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)  {
         av_log(s->avctx, AV_LOG_ERROR, "vps_max_sub_layers out of range: %d\n",
                vps->vps_max_sub_layers);
         goto err;
+
     }*/
     
     if (parse_ptl(s, &vps->ptl, vps->vps_max_sub_layers) < 0) {
         av_log(s->avctx, AV_LOG_ERROR, "Error decoding profile tier level.\n");
         goto err;
     }
+    
     
     vps->vps_sub_layer_ordering_info_present_flag = get_bits1(gb);
     print_cabac("vps_sub_layer_ordering_info_present_flag", vps->vps_sub_layer_ordering_info_present_flag);
@@ -1310,7 +1317,6 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)  {
 #endif*/
     av_buffer_unref(&s->vps_list[vps_id]);
     s->vps_list[vps_id] = vps_buf;
-
     return 0;
 
 err:
@@ -1438,8 +1444,6 @@ static void decode_vui(HEVCContext *s, HEVCSPS *sps)
     if (vui->vui_timing_info_present_flag) {
         vui->vui_num_units_in_tick               = get_bits(gb, 32);
         vui->vui_time_scale                      = get_bits(gb, 32);
-        s->avctx->time_base.num                  = vui->vui_num_units_in_tick;
-        s->avctx->time_base.den                  = vui->vui_time_scale;
         vui->vui_poc_proportional_to_timing_flag = get_bits1(gb);
         
         print_cabac("vui_num_units_in_tick", vui->vui_num_units_in_tick);
@@ -1516,18 +1520,18 @@ static int scaling_list_data(HEVCContext *s, ScalingList *sl)
     GetBitContext *gb = &s->HEVClc->gb;
     uint8_t scaling_list_pred_mode_flag[4][6];
     int32_t scaling_list_dc_coef[2][6];
-    int size_id, matrix_id, i, pos, delta;
+    int size_id, matrix_id, i, pos;
 
     for (size_id = 0; size_id < 4; size_id++)
         for (matrix_id = 0; matrix_id < (size_id == 3 ? 2 : 6); matrix_id++) {
             scaling_list_pred_mode_flag[size_id][matrix_id] = get_bits1(gb);
             if (!scaling_list_pred_mode_flag[size_id][matrix_id]) {
-                delta = get_ue_golomb_long(gb);
+                unsigned int delta = get_ue_golomb_long(gb);
                 /* Only need to handle non-zero delta. Zero means default,
                  * which should already be in the arrays. */
                 if (delta) {
                     // Copy from previous array.
-                    if (matrix_id - delta < 0) {
+                    if (matrix_id < delta) {
                         av_log(s->avctx, AV_LOG_ERROR,
                                "Invalid delta in scaling list data: %d.\n", delta);
                         return AVERROR_INVALIDDATA;
@@ -1574,7 +1578,7 @@ static void parseSPSExtension( HEVCContext *s, HEVCSPS *sps )
 {
     GetBitContext *gb = &s->HEVClc->gb ;
     int i;
-    int inter_view = get_bits1(gb);
+    get_bits1(gb);  //int inter_view = 
     print_cabac("inter_view_mv_vert_constraint_flag",  inter_view);
     if( s->nuh_layer_id > 0 )
     {
@@ -1648,6 +1652,7 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
        sps->max_sub_layers           = vps->vps_max_sub_layers;
        sps->m_bTemporalIdNestingFlag = vps->vps_temporal_id_nesting_flag;
     }
+
     if ( s->nuh_layer_id == 0)
     {
         if (parse_ptl(s, &sps->ptl, sps->max_sub_layers) < 0) {
@@ -1832,8 +1837,11 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
         if (sps->temporal_layer[i].num_reorder_pics > sps->temporal_layer[i].max_dec_pic_buffering - 1) {
             av_log(s->avctx, AV_LOG_ERROR, "sps_max_num_reorder_pics out of range: %d\n",
                    sps->temporal_layer[i].num_reorder_pics);
-            ret = AVERROR_INVALIDDATA;
-            goto err;
+            if (sps->temporal_layer[i].num_reorder_pics > MAX_DPB_SIZE - 1) {
+                ret = AVERROR_INVALIDDATA;
+                goto err;
+            }
+            sps->temporal_layer[i].max_dec_pic_buffering = sps->temporal_layer[i].num_reorder_pics + 1;
         }
     }
 
@@ -1960,6 +1968,7 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     }
 
     sps->sps_temporal_mvp_enabled_flag          = get_bits1(gb);
+
      print_cabac("sps_temporal_mvp_enable_flag", sps->sps_temporal_mvp_enabled_flag);
 #if REF_IDX_MFM
     if(s->nuh_layer_id > 0)
@@ -1978,7 +1987,6 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     print_cabac("vui_parameters_present_flag", vui_present);
     if (vui_present)
         decode_vui(s, sps);
-
 
     if(get_bits1(gb)) { // sps_extension_flag
 #if O0142_CONDITIONAL_SPS_EXTENSION
@@ -2294,7 +2302,7 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
         print_cabac("uniform_spacing_flag", pps->uniform_spacing_flag);
         
         if (!pps->uniform_spacing_flag) {
-            int sum = 0;
+            uint64_t sum = 0;
             for (i = 0; i < pps->num_tile_columns - 1; i++) {
                 pps->column_width[i] = get_ue_golomb_long(gb) + 1;
                 sum                 += pps->column_width[i];
