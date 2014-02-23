@@ -991,7 +991,7 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
     int nb_list = s->sh.slice_type==B_SLICE ? 2:1;
     HEVCFrame *refBL = s->BL_frame;
     HEVCFrame *refEL = s->inter_layer_ref;
-
+     
     if(s->up_filter_inf.scaleXLum == 65536 && s->up_filter_inf.scaleYLum == 65536){
       /*  memcpy(refEL->tab_mvf_buf->data, refBL->tab_mvf_buf->data , refBL->tab_mvf_buf->size );*/
         
@@ -1005,7 +1005,7 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                     xBL = (xBL >>=4)<<(4-s->sps->log2_min_pu_size); // 4 <==> xBL & 0xFFFFFFF0
                     yBL = (yBL >>=4)<<(4-s->sps->log2_min_pu_size); // 4 <==> yBL & 0xFFFFFFF0
                     Ref_pre_unit = (yBL*pic_width_in_min_puBL)+xBL;
-                    if(!refBL->tab_mvf[Ref_pre_unit].pred_flag) {
+                    if(refBL->tab_mvf[Ref_pre_unit].pred_flag) {
                         memcpy(&refEL->tab_mvf[pre_unit], &refBL->tab_mvf[Ref_pre_unit], sizeof(MvField));
                     } else {
                         memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
@@ -1038,7 +1038,7 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                     xBL = (xBL >>=4)<<(4-s->sps->log2_min_pu_size); // 4 <==> xBL & 0xFFFFFFF0
                     yBL = (yBL >>=4)<<(4-s->sps->log2_min_pu_size); // 4 <==> yBL & 0xFFFFFFF0
                     Ref_pre_unit = (yBL*pic_width_in_min_puBL)+xBL;
-                    if(!refBL->tab_mvf[Ref_pre_unit].pred_flag) {
+                    if(refBL->tab_mvf[Ref_pre_unit].pred_flag) {
                         for( list=0; list < nb_list; list++) {
                             refEL->tab_mvf[pre_unit].mv[list].x  = av_clip_c( (s->sh.ScalingFactor[s->nuh_layer_id][0] * refBL->tab_mvf[Ref_pre_unit].mv[list].x + 127 + (s->sh.ScalingFactor[s->nuh_layer_id][0] * refBL->tab_mvf[Ref_pre_unit].mv[list].x < 0)) >> 8 , -32768, 32767);
                             refEL->tab_mvf[pre_unit].mv[list].y = av_clip_c( (s->sh.ScalingFactor[s->nuh_layer_id][1] * refBL->tab_mvf[Ref_pre_unit].mv[list].y + 127 + (s->sh.ScalingFactor[s->nuh_layer_id][1] * refBL->tab_mvf[Ref_pre_unit].mv[list].y < 0)) >> 8, -32768, 32767);

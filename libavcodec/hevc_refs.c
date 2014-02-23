@@ -361,6 +361,7 @@ static void set_refindex_data(HEVCContext *s){
     HEVCFrame  *refBL, *refEL, *ref;
     int nb_list = s->sh.slice_type==B_SLICE ? 2:1;
     refBL = s->BL_frame;
+     
     init_il_slice_rpl(s);
     refEL = s->inter_layer_ref;
     for( list=0; list < nb_list; list++) {
@@ -382,7 +383,7 @@ static void scale_upsampled_mv_field(AVCodecContext *avctxt, void *input_ctb_row
     int *index   = input_ctb_row, i, list;
     int ctb_size = 1 << s->sps->log2_ctb_size;
     int nb_list = s->sh.slice_type==B_SLICE ? 2:1;
-    
+
     
 
     HEVCFrame *refBL = s->BL_frame, *ref;

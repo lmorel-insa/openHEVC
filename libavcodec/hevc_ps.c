@@ -192,7 +192,7 @@ int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,
 }
 
 
-static void decode_profile_tier_level(HEVCContext *s, ProfileTierLevel *ptl)
+static int decode_profile_tier_level(HEVCContext *s, ProfileTierLevel *ptl)
 {
     int i;
     HEVCLocalContext *lc = s->HEVClc;
