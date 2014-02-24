@@ -202,10 +202,18 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth)
 #ifdef SVC_EXTENSION
 #define HEVC_DSP_UP(depth)                                                 \
     hevcdsp->upsample_base_layer_frame    = FUNC(upsample_base_layer_frame, depth); \
-    hevcdsp->upsample_filter_block_luma_h = FUNC(upsample_filter_block_luma_h, depth); \
-    hevcdsp->upsample_filter_block_luma_v = FUNC(upsample_filter_block_luma_v, depth); \
-    hevcdsp->upsample_filter_block_cr_h   = FUNC(upsample_filter_block_cr_h, depth); \
-    hevcdsp->upsample_filter_block_cr_v   = FUNC(upsample_filter_block_cr_v, depth);
+    hevcdsp->upsample_filter_block_luma_h[0] = FUNC(upsample_filter_block_luma_h_ALL, depth); \
+    hevcdsp->upsample_filter_block_luma_h[1] = FUNC(upsample_filter_block_luma_h_X2, depth); \
+    hevcdsp->upsample_filter_block_luma_h[2] = FUNC(upsample_filter_block_luma_h_X1_5, depth); \
+    hevcdsp->upsample_filter_block_luma_v[0] = FUNC(upsample_filter_block_luma_v_ALL, depth); \
+    hevcdsp->upsample_filter_block_luma_v[1] = FUNC(upsample_filter_block_luma_v_X2, depth); \
+    hevcdsp->upsample_filter_block_luma_v[2] = FUNC(upsample_filter_block_luma_v_X1_5, depth); \
+    hevcdsp->upsample_filter_block_cr_h[0]   = FUNC(upsample_filter_block_cr_h_ALL, depth); \
+    hevcdsp->upsample_filter_block_cr_h[1]   = FUNC(upsample_filter_block_cr_h_X2, depth); \
+    hevcdsp->upsample_filter_block_cr_h[2]   = FUNC(upsample_filter_block_cr_h_X1_5, depth); \
+    hevcdsp->upsample_filter_block_cr_v[0]   = FUNC(upsample_filter_block_cr_v_ALL, depth); \
+    hevcdsp->upsample_filter_block_cr_v[1]   = FUNC(upsample_filter_block_cr_v_X2, depth); \
+    hevcdsp->upsample_filter_block_cr_v[2]   = FUNC(upsample_filter_block_cr_v_X1_5, depth); \
     
     switch (bit_depth) {
     case 9:

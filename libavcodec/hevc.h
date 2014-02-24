@@ -303,6 +303,13 @@ enum ScanType {
 };
 
 #ifdef SVC_EXTENSION
+enum {
+    DEFAULT=0,
+    X2,
+    X1_5,
+    SNR,
+};
+
 typedef struct UpsamplInf {
 	int addXLum;
 	int addYLum;
@@ -312,6 +319,7 @@ typedef struct UpsamplInf {
 	int addYCr;
 	int scaleXCr;
 	int scaleYCr;
+    int idx; 
 } UpsamplInf;
 #endif
 

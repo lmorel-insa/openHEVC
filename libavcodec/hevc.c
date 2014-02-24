@@ -280,6 +280,26 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         s->up_filter_inf.addYCr   = ( ((phaseYC+phaseAlignFlag) * s->up_filter_inf.scaleYLum + 2) >> 2) + ( 1 << 11 );
         s->up_filter_inf.scaleXCr     = s->up_filter_inf.scaleXLum;
         s->up_filter_inf.scaleYCr     = s->up_filter_inf.scaleYLum;
+        
+
+        
+        if(s->up_filter_inf.scaleXLum == 65536 && s->up_filter_inf.scaleYLum == 65536)
+            s->up_filter_inf.idx = SNR;
+        else
+            if(s->up_filter_inf.scaleXLum == 32768 && s->up_filter_inf.scaleYLum == 32768)
+                s->up_filter_inf.idx = X2;
+            else
+                if(s->up_filter_inf.scaleXLum == 43691 && s->up_filter_inf.scaleYLum == 43691)
+                    s->up_filter_inf.idx = X1_5;
+                else
+                    s->up_filter_inf.idx = DEFAULT;
+ 
+            
+        
+        
+        
+        
+        
 #if ACTIVE_BOTH_FRAME_AND_PU
         s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
         s->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));
