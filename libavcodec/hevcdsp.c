@@ -201,7 +201,7 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth)
     
 #ifdef SVC_EXTENSION
 #define HEVC_DSP_UP(depth)                                                 \
-    hevcdsp->upsample_base_layer_frame    = FUNC(upsample_base_layer_frame, depth); \
+    hevcdsp->upsample_base_layer_frame       = FUNC(upsample_base_layer_frame, depth); \
     hevcdsp->upsample_filter_block_luma_h[0] = FUNC(upsample_filter_block_luma_h_ALL, depth); \
     hevcdsp->upsample_filter_block_luma_h[1] = FUNC(upsample_filter_block_luma_h_X2, depth); \
     hevcdsp->upsample_filter_block_luma_h[2] = FUNC(upsample_filter_block_luma_h_X1_5, depth); \
