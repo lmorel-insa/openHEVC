@@ -68,11 +68,26 @@ DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_luma[16][8] )=
     {  0,  1,  -2,   4,  63,  -3,  1,  0}
 };
 
-DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_luma_x2[2][8] )=
+DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_luma_x2[2][8] )= /*0 , 8 */
 {
     {  0,  0,   0,  64,   0,   0,  0,  0},
     { -1,  4, -11,  40,  40, -11,  4, -1}
 };
+
+DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_luma_x1_5[3][8] )= /* 0, 11, 5 */
+{
+    {  0,  0,   0,  64,   0,   0,  0,  0},
+    { -1,  3,  -8,  26,  52, -11,  4, -1},
+    { -1,  4, -11,  52,  26,  -8,  3, -1}
+};
+
+DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x1_5[3][4])= /* 0, 11, 5 */
+{
+    {  0,  64,   0,  0},
+    { -2,  20,  52, -6},
+    { -6,  52,  20, -2}
+};
+
 
 DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x2[2][4])=
 {
@@ -85,6 +100,11 @@ DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x2_v[2][4])=
         { -2,  10,  58, -2},
         { -6,  46,  28, -4},
 };
+
+
+
+
+
 typedef struct SAOParams {
     int offset_abs[3][4];   ///< sao_offset_abs
     int offset_sign[3][4];  ///< sao_offset_sign
