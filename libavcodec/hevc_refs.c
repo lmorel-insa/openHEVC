@@ -524,8 +524,6 @@ static HEVCFrame *generate_missing_ref(HEVCContext *s, int poc)
 #else
     int x, y; 
 #endif
-    
-    printf("Generate a missing refrence %d \n", poc);
     frame = alloc_frame(s);
     if (!frame)
         return NULL;

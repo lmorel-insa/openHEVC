@@ -2,7 +2,7 @@ include ../../config.mak
 
 vpath %.c $(SRC_PATH)/modules/openhevc_dec
 
-CFLAGS=$(OPTFLAGS) -I"$(SRC_PATH)/include" $(ffmpeg_lflags)
+CFLAGS=$(OPTFLAGS) -I"$(SRC_PATH)/include" $(hevc_lflags)
 
 ifeq ($(CONFIG_LINUX), yes)
 LDFLAGS+=-Wl,-Bsymbolic
@@ -18,7 +18,7 @@ CFLAGS+=-pg
 LDFLAGS+=-pg
 endif
 
-EXTRALIBS+= -L../../bin/gcc -lgpac $(ffmpeg_lflags)
+EXTRALIBS+= -L../../bin/gcc -lgpac $(hevc_lflags)
 
 #common obj
 OBJS= openhevc_dec.o openHevcWrapper.o
