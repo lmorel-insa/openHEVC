@@ -583,7 +583,8 @@ static int hls_slice_header(HEVCContext *s)
 
         s->seq_decode = (s->seq_decode + 1) & 0xff;
         s->max_ra     = INT_MAX;
-    }
+    } else 
+ 	   s->vps = (HEVCVPS*) s->vps_list[s->sps->vps_id]->data;
 
     s->avctx->profile = s->sps->ptl.general_PTL.profile_idc;
     s->avctx->level   = s->sps->ptl.general_PTL.level_idc;
