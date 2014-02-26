@@ -941,7 +941,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     print_cabac("vps_number_layer_sets_minus1", vps->vps_num_layer_sets-1);
     print_cabac("vps_num_profile_tier_level_minus1", vps->vps_num_profile_tier_level-1);
 
-    vps->PTLExt = av_malloc(sizeof(PTL*)*vps->vps_num_profile_tier_level); // TO DO add free
+    //vps->PTLExt = av_malloc(sizeof(PTL*)*vps->vps_num_profile_tier_level); // TO DO add free
     
     for(i = 1; i <= vps->vps_num_profile_tier_level - 1; i++)   {
         vps->vps_profile_present_flag[i] = get_bits1(gb);
@@ -950,11 +950,11 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
 
             vps->profile_ref[i] = get_bits(gb, 6)+1;
             print_cabac("profile_ref_minus1", vps->profile_ref[i]-1);
-            vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
-            memcpy(vps->PTLExt[i], vps->PTLExt[vps->profile_ref[i]], sizeof(PTL));
+            //vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
+            memcpy(&vps->PTLExt[i], &vps->PTLExt[vps->profile_ref[i]], sizeof(PTL));
         }
-        vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
-        parse_ptl(s, vps->PTLExt[i], vps->vps_max_sub_layers);
+        //vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
+        parse_ptl(s, &vps->PTLExt[i], vps->vps_max_sub_layers);
     }
 #endif
     vps->more_output_layer_sets_than_default_flag = get_bits1(gb);
@@ -1315,8 +1315,16 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)  {
     }
 #endif
 #endif*/
-    av_buffer_unref(&s->vps_list[vps_id]);
-    s->vps_list[vps_id] = vps_buf;
+
+
+    if (s->vps_list[vps_id] &&
+    		!memcmp(s->vps_list[vps_id]->data, vps_buf->data, vps_buf->size)) {
+    	av_buffer_unref(&vps_buf);
+    } else {
+    	av_buffer_unref(&s->vps_list[vps_id]);
+    	s->vps_list[vps_id] = vps_buf;
+    }
+
     return 0;
 
 err:

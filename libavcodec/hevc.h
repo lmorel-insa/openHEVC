@@ -572,7 +572,7 @@ typedef struct HEVCVPS {
 #if VPS_EXTN_PROFILE_INFO
     unsigned int    vps_profile_present_flag[MAX_VPS_LAYER_SETS_PLUS1];    // The value with index 0 will not be used.
     unsigned int    profile_ref[MAX_VPS_LAYER_SETS_PLUS1];    // The value with index 0 will not be used.
-    PTL**     PTLExt;
+    PTL     PTLExt[16]; //FIXME check consistence of the values 16
 #endif
 #if VPS_PROFILE_OUTPUT_LAYERS
     unsigned int       vps_num_profile_tier_level;
