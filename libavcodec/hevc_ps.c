@@ -1315,8 +1315,6 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)  {
     }
 #endif
 #endif*/
-
-
     if (s->vps_list[vps_id] &&
     		!memcmp(s->vps_list[vps_id]->data, vps_buf->data, vps_buf->size)) {
     	av_buffer_unref(&vps_buf);
@@ -1324,7 +1322,6 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)  {
     	av_buffer_unref(&s->vps_list[vps_id]);
     	s->vps_list[vps_id] = vps_buf;
     }
-
     return 0;
 
 err:
