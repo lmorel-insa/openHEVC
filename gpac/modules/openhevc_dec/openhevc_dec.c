@@ -30,7 +30,7 @@
 #include <gpac/internal/media_dev.h>
 #include <openHevcWrapper.h>
 
-//#define OPEN_SHVC
+#define OPEN_SHVC
 
 #if defined(WIN32) && !defined(_WIN32_WCE) && !defined(__GNUC__)
 #  pragma comment(lib, "libLibOpenHevcWrapper")
@@ -244,8 +244,10 @@ static GF_Err HEVC_SetCapabilities(GF_BaseDecoder *ifcg, GF_CodecCapability capa
 		/*switch up*/
 		if (capability.cap.valueInt) {
             ctx->base_only = GF_FALSE;
+			libOpenHevcSetActiveDecoders(ctx->openHevcHandle, 1); 
 		} else {
             ctx->base_only = GF_TRUE;
+			libOpenHevcSetActiveDecoders(ctx->openHevcHandle, 0);
 		}
 		return GF_OK;
 #endif
@@ -401,7 +403,7 @@ GF_BaseDecoder *NewHEVCDec()
 	GF_SAFEALLOC(ifcd, GF_MediaDecoder);
 	GF_SAFEALLOC(dec, HEVCDec);
 	GF_REGISTER_MODULE_INTERFACE(ifcd, GF_MEDIA_DECODER_INTERFACE, "HEVC Decoder", "gpac distribution")
-
+	printf("GPAC is using OpenHEVC... \n"); 
 	ifcd->privateStack = dec;
 
 	/*setup our own interface*/	

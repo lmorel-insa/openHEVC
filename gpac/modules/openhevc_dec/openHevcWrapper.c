@@ -115,8 +115,8 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         openHevcContext->avpkt.pts  = pts;
         len                         = avcodec_decode_video2( openHevcContext->c, openHevcContext->picture,
                                                              &got_picture[i], &openHevcContext->avpkt);
-//        if(i+1 < openHevcContexts->nb_decoders)
-//            openHevcContexts->wraper[i+1]->c->BL_frame = openHevcContexts->wraper[i]->c->BL_frame;
+        if(i+1 < openHevcContexts->nb_decoders)
+            openHevcContexts->wraper[i+1]->c->BL_frame = openHevcContexts->wraper[i]->c->BL_frame;
     }
     if (len < 0) {
         fprintf(stderr, "Error while decoding frame \n");
@@ -193,7 +193,7 @@ int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHe
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
     OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->active_layer];
-
+		
     if (got_picture) {
         openHevcFrame->pvY       = (void *) openHevcContext->picture->data[0];
         openHevcFrame->pvU       = (void *) openHevcContext->picture->data[1];
@@ -207,11 +207,11 @@ int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHe
 int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame_cpy *openHevcFrame)
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
+
     OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->active_layer];
     AVFrame                 *picture          = openHevcContext->picture;
     int y;
     int y_offset, y_offset2;
-
     if( got_picture ) {
         unsigned char *Y = (unsigned char *) openHevcFrame->pvY;
         unsigned char *U = (unsigned char *) openHevcFrame->pvU;
@@ -253,7 +253,6 @@ void libOpenHevcSetDebugMode(OpenHevc_Handle openHevcHandle, int val)
 void libOpenHevcSetActiveDecoders(OpenHevc_Handle openHevcHandle, int val)
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
-
     if (val >= 0 && val < openHevcContexts->nb_decoders)
         openHevcContexts->active_layer = val;
     else {
