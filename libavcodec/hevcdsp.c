@@ -106,10 +106,6 @@ DECLARE_ALIGNED(16, const int8_t, ff_hevc_qpel_filters[3][16]) = {
     {  0,  1, -5, 17, 58,-10,  4, -1,  0,  1, -5, 17, 58,-10,  4, -1}
 };
 
-
-
-
-
 #define BIT_DEPTH 8
 #include "hevcdsp_template.c"
 #undef BIT_DEPTH
@@ -197,7 +193,7 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth)
         HEVC_DSP(8);
         break;
     }
-    
+
 #ifdef SVC_EXTENSION
 #define HEVC_DSP_UP(depth)                                                 \
     hevcdsp->upsample_base_layer_frame       = FUNC(upsample_base_layer_frame, depth); \

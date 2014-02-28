@@ -30,7 +30,6 @@
 #include "hevc.h"
 #include "bit_depth_template.c"
 #include "hevc_up_sample_filter.h"
-
 #if ARCH_X86_64
 #include <emmintrin.h>
 #include <tmmintrin.h>

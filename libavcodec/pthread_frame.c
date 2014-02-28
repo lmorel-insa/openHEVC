@@ -120,7 +120,6 @@ typedef struct FrameThreadContext {
                                     */
 
     int die;                       ///< Set when threads should exit.
-   
     int is_decoded[MAX_POC];
     void* frames[MAX_POC];
     pthread_mutex_t il_progress_mutex; ///< Mutex used to protect frame progress values and progress_cond.
@@ -502,6 +501,7 @@ void ff_thread_await_progress(ThreadFrame *f, int n, int field)
     volatile int *progress = f->progress ? (int*)f->progress->data : NULL;
 
     if (!progress || progress[field] >= n) return;
+
     p = f->owner->internal->thread_ctx_frame;
 
     if (f->owner->debug&FF_DEBUG_THREADS)
@@ -619,7 +619,6 @@ void ff_thread_finish_setup(AVCodecContext *avctx) {
     PerThreadContext *p = avctx->internal->thread_ctx_frame;
 
     if (!(avctx->active_thread_type&FF_THREAD_FRAME)) return;
-    
     if(p->state == STATE_SETUP_FINISHED){
         av_log(avctx, AV_LOG_WARNING, "Multiple ff_thread_finish_setup() calls\n");
     }
@@ -746,10 +745,8 @@ int ff_frame_thread_init(AVCodecContext *avctx)
 
     fctx->threads = av_mallocz(sizeof(PerThreadContext) * thread_count);
     pthread_mutex_init(&fctx->buffer_mutex, NULL);
-    
     pthread_cond_init(&fctx->il_progress_cond, NULL);
     pthread_mutex_init(&fctx->il_progress_mutex, NULL);
-    
     fctx->delaying = 1;
 
     for (i = 0; i < thread_count; i++) {

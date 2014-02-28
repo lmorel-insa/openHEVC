@@ -1643,8 +1643,3 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
 #undef LumVer_FILTER
 #undef CroVer_FILTER
 #endif
-
-
-
-
-

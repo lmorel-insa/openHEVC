@@ -27,7 +27,6 @@ void FUNC(ff_emulated_edge_mc)(uint8_t *buf, const uint8_t *src,
                                ptrdiff_t src_linesize,
                                int block_w, int block_h,
                                int src_x, int src_y, int w, int h)
-
 {
     int x, y;
     int start_y, start_x, end_y, end_x;
@@ -82,6 +81,7 @@ void FUNC(ff_emulated_edge_mc)(uint8_t *buf, const uint8_t *src,
         memcpy(buf, src, w * sizeof(pixel));
         buf += buf_linesize;
     }
+
     buf -= block_h * buf_linesize + start_x * sizeof(pixel);
     while (block_h--) {
         pixel *bufp = (pixel *) buf;
