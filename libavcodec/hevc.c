@@ -35,7 +35,6 @@
 #include "cabac_functions.h"
 #include "dsputil.h"
 #include "golomb.h"
-#include "hevc_up_sample_filter.h"
 #include "hevc.h"
 
 
@@ -1682,6 +1681,10 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
     if (current_mv.pred_flag == PF_L0) {
         DECLARE_ALIGNED(16, int16_t,  tmp[MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp2[MAX_PB_SIZE * MAX_PB_SIZE]);
+        ref0 = refPicList[0].ref[current_mv.ref_idx[0]];
+
+        if (!ref0)
+            return;
 
         luma_mc(s, tmp, tmpstride, ref0->frame,
                 &current_mv.mv[0], x0, y0, nPbW, nPbH, idx);
@@ -1718,6 +1721,7 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
     } else if (current_mv.pred_flag == PF_L1) {
         DECLARE_ALIGNED(16, int16_t, tmp [MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp2[MAX_PB_SIZE * MAX_PB_SIZE]);
+        ref1 = refPicList[1].ref[current_mv.ref_idx[1]];
 
         if (!ref1)
             return;
@@ -1758,8 +1762,8 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
         DECLARE_ALIGNED(16, int16_t, tmp2[MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp3[MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp4[MAX_PB_SIZE * MAX_PB_SIZE]);
-        HEVCFrame *ref0 = refPicList[0].ref[current_mv.ref_idx[0]];
-        HEVCFrame *ref1 = refPicList[1].ref[current_mv.ref_idx[1]];
+        ref0 = refPicList[0].ref[current_mv.ref_idx[0]];
+        ref1 = refPicList[1].ref[current_mv.ref_idx[1]];
 
         if (!ref0 || !ref1)
             return;
@@ -2360,6 +2364,8 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
         more_data = hls_coding_quadtree(s, x_ctb, y_ctb, s->sps->log2_ctb_size, 0);
         if (more_data < 0) {
             s->tab_slice_address[ctb_addr_rs] = -1;
+            avpriv_atomic_int_set(&s1->wpp_err,  1);
+            ff_thread_report_progress2(s->avctx, ctb_row ,thread, SHIFT_CTB_WPP);
             return more_data;
         }
 
@@ -2491,7 +2497,7 @@ static int hls_slice_data(HEVCContext *s, const uint8_t *nal, int length)
 
     ff_alloc_entries(s->avctx, s->sh.num_entry_point_offsets + 1);
 
-    if (s->threads_number > 1 && s->sh.num_entry_point_offsets > 0) {
+    if (s->sh.num_entry_point_offsets > 0) {
         offset = (lc->gb.index >> 3);
         for (j = 0, cmpt = 0, startheader = offset + s->sh.entry_point_offset[0]; j < s->skipped_bytes; j++) {
             if (s->skipped_bytes_pos[j] >= offset && s->skipped_bytes_pos[j] < startheader) {
@@ -2516,10 +2522,17 @@ static int hls_slice_data(HEVCContext *s, const uint8_t *nal, int length)
         s->sh.size[s->sh.num_entry_point_offsets - 1] = length - offset;
         s->sh.offset[s->sh.num_entry_point_offsets - 1] = offset;
 
+        if(s->sh.offset[i - 1]+s->sh.size[i - 1] > length) {
+            av_log(s->avctx, AV_LOG_ERROR,
+                   "hls_slice_data:  packet length < image size : %d < %d\n",
+                   length, s->sh.offset[i - 1]+s->sh.size[i - 1]);
+            return AVERROR_INVALIDDATA;
+        }
+
         avpriv_atomic_int_set(&s->wpp_err, 0);
         ff_reset_entries(s->avctx);
     }
-    s->data = (uint8_t *) nal;
+    s->data = nal;
 
     for (i = 1; i < s->threads_number; i++) {
         s->sList[i]->HEVClc->first_qp_group = 1;
@@ -2743,7 +2756,6 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
     case NAL_RADL_R:
     case NAL_RASL_N:
     case NAL_RASL_R:
-
 #if 0
     {
         int loss_rate = 10;
@@ -2759,11 +2771,8 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
     if (ret == -10)
         return 0;
-
-
     if (ret < 0)
         return ret;
-
         if (s->max_ra == INT_MAX) {
             if (s->nal_unit_type == NAL_CRA_NUT || IS_BLA(s)) {
                 s->max_ra = s->poc;
@@ -3583,9 +3592,9 @@ static void hevc_decode_flush(AVCodecContext *avctx)
 #define PAR (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
 
 static const AVProfile profiles[] = {
-    { FF_PROFILE_HEVC_MAIN,                 "Main"              },
-    { FF_PROFILE_HEVC_MAIN_10,              "Main10"            },
-    { FF_PROFILE_HEVC_MAIN_STILL_PICTURE,   "MainStillPicture"  },
+    { FF_PROFILE_HEVC_MAIN,                 "Main"                },
+    { FF_PROFILE_HEVC_MAIN_10,              "Main 10"             },
+    { FF_PROFILE_HEVC_MAIN_STILL_PICTURE,   "Main Still Picture"  },
     { FF_PROFILE_UNKNOWN },
 };
 

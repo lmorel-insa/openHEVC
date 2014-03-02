@@ -194,6 +194,7 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth)
         break;
     }
 
+
 #ifdef SVC_EXTENSION
 #define HEVC_DSP_UP(depth)                                                 \
     hevcdsp->upsample_base_layer_frame       = FUNC(upsample_base_layer_frame, depth); \
@@ -222,7 +223,6 @@ void ff_hevc_dsp_init(HEVCDSPContext *hevcdsp, int bit_depth)
         break;
     }
 #endif
-
     if (ARCH_X86) ff_hevcdsp_init_x86(hevcdsp, bit_depth);
     if (ARCH_ARM) ff_hevcdsp_init_arm(hevcdsp, bit_depth);
 }

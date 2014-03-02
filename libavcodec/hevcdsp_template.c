@@ -25,7 +25,6 @@
 
 #include "bit_depth_template.c"
 #include "hevcdsp.h"
-#include "hevc_up_sample_filter.h"
 
 static void FUNC(put_pcm)(uint8_t *_dst, ptrdiff_t stride, int size,
                           GetBitContext *gb, int pcm_bit_depth)
@@ -973,6 +972,7 @@ static void FUNC(hevc_v_loop_filter_luma)(uint8_t *pix, ptrdiff_t stride,
 #undef TQ1
 #undef TQ2
 #undef TQ3
+
 
 #ifdef SVC_EXTENSION
 #define LumHor_FILTER(pel, coeff) \

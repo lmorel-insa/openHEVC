@@ -4,7 +4,6 @@
 #include "libavcodec/get_bits.h"
 #include "libavcodec/hevc.h"
 #include "libavcodec/x86/hevcdsp.h"
-#include "libavcodec/hevc_up_sample_filter.h"
 #include "libavcodec/bit_depth_template.c"
 
 
