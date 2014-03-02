@@ -564,7 +564,7 @@ static int hls_slice_header(HEVCContext *s)
         if (IS_IDR(s))
             ff_hevc_clear_refs(s);
     }
-    if (s->nal_unit_type >= 16 && s->nal_unit_type <= 23){
+    if (s->nal_unit_type >= 16 && s->nal_unit_type <= 23) {
         sh->no_output_of_prior_pics_flag = get_bits1(gb);
         print_cabac("no_output_of_prior_pics_flag", sh->no_output_of_prior_pics_flag);
     }
@@ -600,7 +600,7 @@ static int hls_slice_header(HEVCContext *s)
     if (!sh->first_slice_in_pic_flag) {
         int slice_address_length;
 
-        if (s->pps->dependent_slice_segments_enabled_flag){
+        if (s->pps->dependent_slice_segments_enabled_flag) {
             sh->dependent_slice_segment_flag = get_bits1(gb);
             print_cabac("dependent_slice_segment_flag", sh->dependent_slice_segment_flag);
         }
@@ -631,38 +631,40 @@ static int hls_slice_header(HEVCContext *s)
 
 #if SVC_EXTENSION
 #if POC_RESET_FLAG
-        int iBits = 0;
-        if(s->pps->num_extra_slice_header_bits > iBits) {
-            sh->m_bPocResetFlag = get_bits1(gb);
-            print_cabac("poc_reset_flag", sh->m_bPocResetFlag);
-            iBits++;
-        }
-        if(s->pps->num_extra_slice_header_bits > iBits) {
-            skip_bits1(gb);
-            print_cabac("skip  ", 0);
-            iBits++;
-        }
+        {
+            int iBits = 0;
+            if(s->pps->num_extra_slice_header_bits > iBits) {
+                sh->m_bPocResetFlag = get_bits1(gb);
+                print_cabac("poc_reset_flag", sh->m_bPocResetFlag);
+                iBits++;
+            }
+            if(s->pps->num_extra_slice_header_bits > iBits) {
+                skip_bits1(gb);
+                print_cabac("skip  ", 0);
+                iBits++;
+            }
 #if O0149_CROSS_LAYER_BLA_FLAG
-        if(s->pps->num_extra_slice_header_bits > iBits) {
-            sh->m_bCrossLayerBLAFlag = get_bits1(gb);
-            print_cabac("cross_layer_bla_flag", sh->m_bCrossLayerBLAFlag);
-            iBits++;
-        }
+            if(s->pps->num_extra_slice_header_bits > iBits) {
+                sh->m_bCrossLayerBLAFlag = get_bits1(gb);
+                print_cabac("cross_layer_bla_flag", sh->m_bCrossLayerBLAFlag);
+                iBits++;
+            }
 #endif
-        for (; iBits < s->pps->num_extra_slice_header_bits; iBits++) {
-            skip_bits1(gb);
-            print_cabac("skip ", 0);
-        }
+           for (; iBits < s->pps->num_extra_slice_header_bits; iBits++) {
+                skip_bits1(gb);
+                print_cabac("skip ", 0);
+            }
 #else
-        if(s->pps->num_extra_slice_header_bits>0) {
-            skip_bits1(gb);
-            print_cabac("skip ", 0);
-        }
-        for ( i = 1; i < s->pps->num_extra_slice_header_bits; i++) {
-            skip_bits1(gb);
-            print_cabac("skip ", 0);
-        }
+            if(s->pps->num_extra_slice_header_bits>0) {
+                skip_bits1(gb);
+                print_cabac("skip ", 0);
+            }
+            for ( i = 1; i < s->pps->num_extra_slice_header_bits; i++) {
+                skip_bits1(gb);
+                print_cabac("skip ", 0);
+            }
 #endif
+        }
 #else //SVC_EXTENSION
         for (i = 0; i < s->pps->num_extra_slice_header_bits; i++){
             skip_bits(gb, 1);  // slice_reserved_undetermined_flag[]
@@ -689,7 +691,7 @@ static int hls_slice_header(HEVCContext *s)
             print_cabac("pic_output_flag", sh->pic_output_flag);
         }
 
-        if (s->sps->separate_colour_plane_flag){
+        if (s->sps->separate_colour_plane_flag) {
             sh->colour_plane_id = get_bits(gb, 2);
             print_cabac("pic_output_flag", sh->pic_output_flag);
         }
@@ -748,7 +750,7 @@ static int hls_slice_header(HEVCContext *s)
                     return AVERROR_INVALIDDATA;
             }
 
-            if (s->sps->sps_temporal_mvp_enabled_flag){
+            if (s->sps->sps_temporal_mvp_enabled_flag) {
                 sh->slice_temporal_mvp_enabled_flag = get_bits1(gb);
                 print_cabac("slice_temporal_mvp_enable_flag", sh->slice_temporal_mvp_enabled_flag);
             } else
@@ -778,10 +780,10 @@ static int hls_slice_header(HEVCContext *s)
             if(s->sh.inter_layer_pred_enabled_flag) {
                 if(NumILRRefIdx>1)  {
                     int numBits = 1;
-                    while ((1 << numBits) < NumILRRefIdx)   {
+                    while ((1 << numBits) < NumILRRefIdx) {
                         numBits++;
                     }
-                    if(!s->vps->max_one_active_ref_layer_flag){
+                    if(!s->vps->max_one_active_ref_layer_flag) {
                         s->sh.active_num_ILR_ref_idx = get_bits(gb, numBits) + 1;
                         print_cabac("num_inter_layer_ref_pics_minus1", s->sh.active_num_ILR_ref_idx);
                     } else
@@ -801,7 +803,6 @@ static int hls_slice_header(HEVCContext *s)
             s->sh.active_num_ILR_ref_idx = s->vps->m_numDirectRefLayers[sc->layer_id];
 #endif
 #endif
-
         if (s->sps->sao_enabled) {
             sh->slice_sample_adaptive_offset_flag[0] = get_bits1(gb);
             print_cabac("slice_sao_luma_flag", sh->slice_sample_adaptive_offset_flag[0] );
@@ -826,7 +827,7 @@ static int hls_slice_header(HEVCContext *s)
             if (num_ref_idx_active_override_flag) { // num_ref_idx_active_override_flag
                 sh->nb_refs[L0] = get_ue_golomb_long(gb) + 1;
                 print_cabac("num_ref_idx_l0_active_minus1", sh->nb_refs[L0] -1);
-                if (sh->slice_type == B_SLICE){
+                if (sh->slice_type == B_SLICE) {
                     sh->nb_refs[L1] = get_ue_golomb_long(gb) + 1;
                     print_cabac("num_ref_idx_l1_active_minus1", sh->nb_refs[L1]-1);
                 }
@@ -859,14 +860,14 @@ static int hls_slice_header(HEVCContext *s)
                     sh->rpl_modification_flag[1] = get_bits1(gb);
                     print_cabac("ref_pic_list_modification_flag_l1", sh->rpl_modification_flag[1]);
                     if (sh->rpl_modification_flag[1] == 1)
-                        for (i = 0; i < sh->nb_refs[L1]; i++){
+                        for (i = 0; i < sh->nb_refs[L1]; i++) {
                             sh->list_entry_lx[1][i] = get_bits(gb, av_ceil_log2(nb_refs));
                             print_cabac("list_entry_l1", sh->list_entry_lx[1][i]);
                         }
                 }
             }
 
-            if (sh->slice_type == B_SLICE){
+            if (sh->slice_type == B_SLICE) {
                 sh->mvd_l1_zero_flag = get_bits1(gb);
                 print_cabac("mvd_l1_zero_flag", sh->mvd_l1_zero_flag);
             }
@@ -880,7 +881,7 @@ static int hls_slice_header(HEVCContext *s)
             sh->collocated_ref_idx = 0;
             if (sh->slice_temporal_mvp_enabled_flag) {
                 sh->collocated_list = L0;
-                if (sh->slice_type == B_SLICE){
+                if (sh->slice_type == B_SLICE) {
                     sh->collocated_list = !get_bits1(gb);
                     print_cabac("collocated_from_l0_flag", sh->collocated_list);
                 }
@@ -3607,7 +3608,7 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 10, PAR },
     { "temporal-layer-id", "set the max temporal id", OFFSET(temporal_layer_id),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 10, PAR },
-    { "quality_layer_id", "set the max temporal id", OFFSET(quality_layer_id),
+    { "quality_layer_id", "set the max quality id", OFFSET(quality_layer_id),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 10, PAR },
     { NULL },
 };

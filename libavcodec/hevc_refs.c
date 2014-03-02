@@ -601,10 +601,7 @@ static int add_candidate_ref(HEVCContext *s, RefPicList *list,
 
 #ifdef REF_IDX_FRAMEWORK
 static void init_upsampled_mv_fields(HEVCContext *s) {
-    int pic_width_in_min_pu = s->sps->width >> s->sps->log2_min_pu_size;
-    int pic_height_in_min_pu = s->sps->height >> s->sps->log2_min_pu_size;
     HEVCFrame *refEL = s->inter_layer_ref;
-    
     memset(refEL->tab_mvf_buf->data, 0, refEL->tab_mvf_buf->size); // is intra = 0
 }
 #endif
