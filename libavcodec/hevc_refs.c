@@ -648,9 +648,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
                 init_upsampled_mv_fields(s);
                 if(s->threads_type&FF_THREAD_FRAME)
                     ff_thread_report_il_status(s->avctx, s->poc, 2);
-
             }
-
 #endif
         }
 #endif
