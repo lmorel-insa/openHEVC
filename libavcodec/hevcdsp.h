@@ -26,6 +26,18 @@
 struct AVFrame;
 struct UpsamplInf;
 struct HEVCWindow;
+//#ifdef SVC_EXTENSION
+#define NTAPS_LUMA 8
+#define NTAPS_CHROMA 4
+#define US_FILTER_PREC  6
+
+#define MAX_EDGE  4
+#define MAX_EDGE_CR  2
+#define N_SHIFT (20-8)
+#define I_OFFSET (1 << (N_SHIFT - 1))
+
+
+
 
 /*      Upsampling filters      */
 DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma[16][4])=
@@ -100,6 +112,7 @@ DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x2_v[2][4])=
         { -2,  10,  58, -2},
         { -6,  46,  28, -4},
 };
+//#endif
 
 typedef struct SAOParams {
     int offset_abs[3][4];   ///< sao_offset_abs

@@ -29,7 +29,6 @@
 #include "golomb.h"
 #include "hevc.h"
 #include "bit_depth_template.c"
-#include "hevc_up_sample_filter.h"
 #if ARCH_X86_64
 #include <emmintrin.h>
 #include <tmmintrin.h>
@@ -356,6 +355,9 @@ static void deblocking_filter_CTB(HEVCContext *s, int x0, int y0)
     if (x0) {
         left_tc_offset   = s->deblock[ctb - 1].tc_offset;
         left_beta_offset = s->deblock[ctb - 1].beta_offset;
+    } else {
+        left_tc_offset   = 0;
+        left_beta_offset = 0;
     }
 
     x_end = x0 + ctb_size;

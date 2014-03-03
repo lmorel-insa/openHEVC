@@ -20,7 +20,6 @@
  */
 
 #include "bit_depth_template.c"
-#include "hevc_up_sample_filter.h"
 #include "hevc.h"
 void FUNC(ff_emulated_edge_mc)(uint8_t *buf, const uint8_t *src,
                                ptrdiff_t buf_linesize,

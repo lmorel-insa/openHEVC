@@ -209,7 +209,7 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
     do {
         int nb_output = 0;
         int min_poc   = INT_MAX;
-        int i, min_idx, ret =0;
+        int i, min_idx=0, ret;
 
         for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
             HEVCFrame *frame = &s->DPB[i];
@@ -321,7 +321,7 @@ static HEVCFrame *find_ref_idx(HEVCContext *s, int poc)
 {
     int i;
     int LtMask = (1 << s->sps->log2_max_poc_lsb) - 1;
-    
+
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         HEVCFrame *ref = &s->DPB[i];
         if (ref->frame->buf[0] && (ref->sequence == s->seq_decode)) {
@@ -329,15 +329,15 @@ static HEVCFrame *find_ref_idx(HEVCContext *s, int poc)
                 return ref;
         }
     }
-    
+
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         HEVCFrame *ref = &s->DPB[i];
-        if (ref->frame->buf[0] && (ref->sequence == s->seq_decode)) {
+        if (ref->frame->buf[0] && ref->sequence == s->seq_decode) {
             if (ref->poc == poc || (ref->poc & LtMask) == poc)
                 return ref;
         }
     }
-    
+
     av_log(s->avctx, AV_LOG_ERROR,
            "Could not find ref with POC %d\n", poc);
     return NULL;
@@ -599,12 +599,9 @@ static int add_candidate_ref(HEVCContext *s, RefPicList *list,
     return 0;
 }
 
-#if REF_IDX_FRAMEWORK
+#ifdef REF_IDX_FRAMEWORK
 static void init_upsampled_mv_fields(HEVCContext *s) {
-    int pic_width_in_min_pu = s->sps->width >> s->sps->log2_min_pu_size;
-    int pic_height_in_min_pu = s->sps->height >> s->sps->log2_min_pu_size;
     HEVCFrame *refEL = s->inter_layer_ref;
-    
     memset(refEL->tab_mvf_buf->data, 0, refEL->tab_mvf_buf->size); // is intra = 0
 }
 #endif

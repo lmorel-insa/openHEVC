@@ -35,7 +35,6 @@
 #include "cabac_functions.h"
 #include "dsputil.h"
 #include "golomb.h"
-#include "hevc_up_sample_filter.h"
 #include "hevc.h"
 
 
@@ -565,7 +564,7 @@ static int hls_slice_header(HEVCContext *s)
         if (IS_IDR(s))
             ff_hevc_clear_refs(s);
     }
-    if (s->nal_unit_type >= 16 && s->nal_unit_type <= 23){
+    if (s->nal_unit_type >= 16 && s->nal_unit_type <= 23) {
         sh->no_output_of_prior_pics_flag = get_bits1(gb);
         print_cabac("no_output_of_prior_pics_flag", sh->no_output_of_prior_pics_flag);
     }
@@ -601,7 +600,7 @@ static int hls_slice_header(HEVCContext *s)
     if (!sh->first_slice_in_pic_flag) {
         int slice_address_length;
 
-        if (s->pps->dependent_slice_segments_enabled_flag){
+        if (s->pps->dependent_slice_segments_enabled_flag) {
             sh->dependent_slice_segment_flag = get_bits1(gb);
             print_cabac("dependent_slice_segment_flag", sh->dependent_slice_segment_flag);
         }
@@ -632,38 +631,40 @@ static int hls_slice_header(HEVCContext *s)
 
 #if SVC_EXTENSION
 #if POC_RESET_FLAG
-        int iBits = 0;
-        if(s->pps->num_extra_slice_header_bits > iBits) {
-            sh->m_bPocResetFlag = get_bits1(gb);
-            print_cabac("poc_reset_flag", sh->m_bPocResetFlag);
-            iBits++;
-        }
-        if(s->pps->num_extra_slice_header_bits > iBits) {
-            skip_bits1(gb);
-            print_cabac("skip  ", 0);
-            iBits++;
-        }
+        {
+            int iBits = 0;
+            if(s->pps->num_extra_slice_header_bits > iBits) {
+                sh->m_bPocResetFlag = get_bits1(gb);
+                print_cabac("poc_reset_flag", sh->m_bPocResetFlag);
+                iBits++;
+            }
+            if(s->pps->num_extra_slice_header_bits > iBits) {
+                skip_bits1(gb);
+                print_cabac("skip  ", 0);
+                iBits++;
+            }
 #if O0149_CROSS_LAYER_BLA_FLAG
-        if(s->pps->num_extra_slice_header_bits > iBits) {
-            sh->m_bCrossLayerBLAFlag = get_bits1(gb);
-            print_cabac("cross_layer_bla_flag", sh->m_bCrossLayerBLAFlag);
-            iBits++;
-        }
+            if(s->pps->num_extra_slice_header_bits > iBits) {
+                sh->m_bCrossLayerBLAFlag = get_bits1(gb);
+                print_cabac("cross_layer_bla_flag", sh->m_bCrossLayerBLAFlag);
+                iBits++;
+            }
 #endif
-        for (; iBits < s->pps->num_extra_slice_header_bits; iBits++) {
-            skip_bits1(gb);
-            print_cabac("skip ", 0);
-        }
+           for (; iBits < s->pps->num_extra_slice_header_bits; iBits++) {
+                skip_bits1(gb);
+                print_cabac("skip ", 0);
+            }
 #else
-        if(s->pps->num_extra_slice_header_bits>0) {
-            skip_bits1(gb);
-            print_cabac("skip ", 0);
-        }
-        for ( i = 1; i < s->pps->num_extra_slice_header_bits; i++) {
-            skip_bits1(gb);
-            print_cabac("skip ", 0);
-        }
+            if(s->pps->num_extra_slice_header_bits>0) {
+                skip_bits1(gb);
+                print_cabac("skip ", 0);
+            }
+            for ( i = 1; i < s->pps->num_extra_slice_header_bits; i++) {
+                skip_bits1(gb);
+                print_cabac("skip ", 0);
+            }
 #endif
+        }
 #else //SVC_EXTENSION
         for (i = 0; i < s->pps->num_extra_slice_header_bits; i++){
             skip_bits(gb, 1);  // slice_reserved_undetermined_flag[]
@@ -690,7 +691,7 @@ static int hls_slice_header(HEVCContext *s)
             print_cabac("pic_output_flag", sh->pic_output_flag);
         }
 
-        if (s->sps->separate_colour_plane_flag){
+        if (s->sps->separate_colour_plane_flag) {
             sh->colour_plane_id = get_bits(gb, 2);
             print_cabac("pic_output_flag", sh->pic_output_flag);
         }
@@ -748,7 +749,7 @@ static int hls_slice_header(HEVCContext *s)
                 if (s->avctx->err_recognition & AV_EF_EXPLODE)
                     return AVERROR_INVALIDDATA;
             }
-            if (s->sps->sps_temporal_mvp_enabled_flag){
+            if (s->sps->sps_temporal_mvp_enabled_flag) {
                 sh->slice_temporal_mvp_enabled_flag = get_bits1(gb);
                 print_cabac("slice_temporal_mvp_enable_flag", sh->slice_temporal_mvp_enabled_flag);
             } else
@@ -778,10 +779,10 @@ static int hls_slice_header(HEVCContext *s)
             if(s->sh.inter_layer_pred_enabled_flag) {
                 if(NumILRRefIdx>1)  {
                     int numBits = 1;
-                    while ((1 << numBits) < NumILRRefIdx)   {
+                    while ((1 << numBits) < NumILRRefIdx) {
                         numBits++;
                     }
-                    if(!s->vps->max_one_active_ref_layer_flag){
+                    if(!s->vps->max_one_active_ref_layer_flag) {
                         s->sh.active_num_ILR_ref_idx = get_bits(gb, numBits) + 1;
                         print_cabac("num_inter_layer_ref_pics_minus1", s->sh.active_num_ILR_ref_idx);
                     } else
@@ -801,7 +802,6 @@ static int hls_slice_header(HEVCContext *s)
             s->sh.active_num_ILR_ref_idx = s->vps->m_numDirectRefLayers[sc->layer_id];
 #endif
 #endif
-
         if (s->sps->sao_enabled) {
             sh->slice_sample_adaptive_offset_flag[0] = get_bits1(gb);
             print_cabac("slice_sao_luma_flag", sh->slice_sample_adaptive_offset_flag[0] );
@@ -826,7 +826,7 @@ static int hls_slice_header(HEVCContext *s)
             if (num_ref_idx_active_override_flag) { // num_ref_idx_active_override_flag
                 sh->nb_refs[L0] = get_ue_golomb_long(gb) + 1;
                 print_cabac("num_ref_idx_l0_active_minus1", sh->nb_refs[L0] -1);
-                if (sh->slice_type == B_SLICE){
+                if (sh->slice_type == B_SLICE) {
                     sh->nb_refs[L1] = get_ue_golomb_long(gb) + 1;
                     print_cabac("num_ref_idx_l1_active_minus1", sh->nb_refs[L1]-1);
                 }
@@ -859,14 +859,14 @@ static int hls_slice_header(HEVCContext *s)
                     sh->rpl_modification_flag[1] = get_bits1(gb);
                     print_cabac("ref_pic_list_modification_flag_l1", sh->rpl_modification_flag[1]);
                     if (sh->rpl_modification_flag[1] == 1)
-                        for (i = 0; i < sh->nb_refs[L1]; i++){
+                        for (i = 0; i < sh->nb_refs[L1]; i++) {
                             sh->list_entry_lx[1][i] = get_bits(gb, av_ceil_log2(nb_refs));
                             print_cabac("list_entry_l1", sh->list_entry_lx[1][i]);
                         }
                 }
             }
 
-            if (sh->slice_type == B_SLICE){
+            if (sh->slice_type == B_SLICE) {
                 sh->mvd_l1_zero_flag = get_bits1(gb);
                 print_cabac("mvd_l1_zero_flag", sh->mvd_l1_zero_flag);
             }
@@ -880,7 +880,7 @@ static int hls_slice_header(HEVCContext *s)
             sh->collocated_ref_idx = 0;
             if (sh->slice_temporal_mvp_enabled_flag) {
                 sh->collocated_list = L0;
-                if (sh->slice_type == B_SLICE){
+                if (sh->slice_type == B_SLICE) {
                     sh->collocated_list = !get_bits1(gb);
                     print_cabac("collocated_from_l0_flag", sh->collocated_list);
                 }
@@ -1681,6 +1681,10 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
     if (current_mv.pred_flag == PF_L0) {
         DECLARE_ALIGNED(16, int16_t,  tmp[MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp2[MAX_PB_SIZE * MAX_PB_SIZE]);
+        ref0 = refPicList[0].ref[current_mv.ref_idx[0]];
+
+        if (!ref0)
+            return;
 
         luma_mc(s, tmp, tmpstride, ref0->frame,
                 &current_mv.mv[0], x0, y0, nPbW, nPbH, idx);
@@ -1717,6 +1721,7 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
     } else if (current_mv.pred_flag == PF_L1) {
         DECLARE_ALIGNED(16, int16_t, tmp [MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp2[MAX_PB_SIZE * MAX_PB_SIZE]);
+        ref1 = refPicList[1].ref[current_mv.ref_idx[1]];
 
         if (!ref1)
             return;
@@ -1757,8 +1762,8 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
         DECLARE_ALIGNED(16, int16_t, tmp2[MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp3[MAX_PB_SIZE * MAX_PB_SIZE]);
         DECLARE_ALIGNED(16, int16_t, tmp4[MAX_PB_SIZE * MAX_PB_SIZE]);
-        HEVCFrame *ref0 = refPicList[0].ref[current_mv.ref_idx[0]];
-        HEVCFrame *ref1 = refPicList[1].ref[current_mv.ref_idx[1]];
+        ref0 = refPicList[0].ref[current_mv.ref_idx[0]];
+        ref1 = refPicList[1].ref[current_mv.ref_idx[1]];
 
         if (!ref0 || !ref1)
             return;
@@ -2359,6 +2364,8 @@ static int hls_decode_entry_wpp(AVCodecContext *avctxt, void *input_ctb_row, int
         more_data = hls_coding_quadtree(s, x_ctb, y_ctb, s->sps->log2_ctb_size, 0);
         if (more_data < 0) {
             s->tab_slice_address[ctb_addr_rs] = -1;
+            avpriv_atomic_int_set(&s1->wpp_err,  1);
+            ff_thread_report_progress2(s->avctx, ctb_row ,thread, SHIFT_CTB_WPP);
             return more_data;
         }
 
@@ -2490,7 +2497,7 @@ static int hls_slice_data(HEVCContext *s, const uint8_t *nal, int length)
 
     ff_alloc_entries(s->avctx, s->sh.num_entry_point_offsets + 1);
 
-    if (s->threads_number > 1 && s->sh.num_entry_point_offsets > 0) {
+    if (s->sh.num_entry_point_offsets > 0) {
         offset = (lc->gb.index >> 3);
         for (j = 0, cmpt = 0, startheader = offset + s->sh.entry_point_offset[0]; j < s->skipped_bytes; j++) {
             if (s->skipped_bytes_pos[j] >= offset && s->skipped_bytes_pos[j] < startheader) {
@@ -2515,10 +2522,17 @@ static int hls_slice_data(HEVCContext *s, const uint8_t *nal, int length)
         s->sh.size[s->sh.num_entry_point_offsets - 1] = length - offset;
         s->sh.offset[s->sh.num_entry_point_offsets - 1] = offset;
 
+        if(s->sh.offset[i - 1]+s->sh.size[i - 1] > length) {
+            av_log(s->avctx, AV_LOG_ERROR,
+                   "hls_slice_data:  packet length < image size : %d < %d\n",
+                   length, s->sh.offset[i - 1]+s->sh.size[i - 1]);
+            return AVERROR_INVALIDDATA;
+        }
+
         avpriv_atomic_int_set(&s->wpp_err, 0);
         ff_reset_entries(s->avctx);
     }
-    s->data = (uint8_t *) nal;
+    s->data = nal;
 
     for (i = 1; i < s->threads_number; i++) {
         s->sList[i]->HEVClc->first_qp_group = 1;
@@ -2742,7 +2756,6 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
     case NAL_RADL_R:
     case NAL_RASL_N:
     case NAL_RASL_R:
-
 #if 0
     {
         int loss_rate = 10;
@@ -2758,11 +2771,8 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
     if (ret == -10)
         return 0;
-
-
     if (ret < 0)
         return ret;
-
         if (s->max_ra == INT_MAX) {
             if (s->nal_unit_type == NAL_CRA_NUT || IS_BLA(s)) {
                 s->max_ra = s->poc;
@@ -3582,9 +3592,9 @@ static void hevc_decode_flush(AVCodecContext *avctx)
 #define PAR (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
 
 static const AVProfile profiles[] = {
-    { FF_PROFILE_HEVC_MAIN,                 "Main"              },
-    { FF_PROFILE_HEVC_MAIN_10,              "Main10"            },
-    { FF_PROFILE_HEVC_MAIN_STILL_PICTURE,   "MainStillPicture"  },
+    { FF_PROFILE_HEVC_MAIN,                 "Main"                },
+    { FF_PROFILE_HEVC_MAIN_10,              "Main 10"             },
+    { FF_PROFILE_HEVC_MAIN_STILL_PICTURE,   "Main Still Picture"  },
     { FF_PROFILE_UNKNOWN },
 };
 
@@ -3597,7 +3607,7 @@ static const AVOption options[] = {
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 10, PAR },
     { "temporal-layer-id", "set the max temporal id", OFFSET(temporal_layer_id),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 10, PAR },
-    { "quality_layer_id", "set the max temporal id", OFFSET(quality_layer_id),
+    { "quality_layer_id", "set the max quality id", OFFSET(quality_layer_id),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 10, PAR },
     { NULL },
 };
