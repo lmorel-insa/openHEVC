@@ -1176,7 +1176,7 @@ static void FUNC(upsample_filter_block_luma_v_X2)( uint8_t *_dst, ptrdiff_t _dst
     const int8_t  *   coeff;
     pixel *dst_tmp, *dst    = (pixel *)_dst + y_EL * _dststride + x_EL;
     int16_t *   src_tmp;
-    
+
     for( j = 0; j < block_h; j++ )	{
     	y        = av_clip_c(y_EL+j, topStartL, bottomEndL-1);
         coeff    = up_sample_filter_luma_x2[(y-topStartL)&0x01];
