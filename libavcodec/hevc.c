@@ -748,7 +748,6 @@ static int hls_slice_header(HEVCContext *s)
                 if (s->avctx->err_recognition & AV_EF_EXPLODE)
                     return AVERROR_INVALIDDATA;
             }
-
             if (s->sps->sps_temporal_mvp_enabled_flag){
                 sh->slice_temporal_mvp_enabled_flag = get_bits1(gb);
                 print_cabac("slice_temporal_mvp_enable_flag", sh->slice_temporal_mvp_enabled_flag);
