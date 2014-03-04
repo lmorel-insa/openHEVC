@@ -15,12 +15,17 @@
 
 DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_luma_x2_sse[4][16] )= /*0 , 8 */
 {
-    { 0,  0,  -1,  4, 0,  0,  -1,  4, 0,  0,  -1,  4, 0,  0,  -1,  4},
-    { 0, 64, -11, 40, 0, 64, -11, 40, 0, 64, -11, 40, 0, 64, -11, 40},
-    { 0,  0,  40, -11,  0,   0, 40, -11, 0,   0, 40, -11,  0,  0, 40, -11},
-    { 0,   0, 4,  -1,  0,   0, 4,  -1,  0,   0, 4,  -1,  0,   0, 4,  -1},
+    { 0,  0,  -1,   4,  0,  0,  -1,   4, 0,  0,  -1,   4, 0,  0,  -1,   4},
+    { 0, 64, -11,  40,  0, 64, -11,  40, 0, 64, -11,  40, 0, 64, -11,  40},
+    { 0,  0,  40, -11,  0,  0,  40, -11, 0,  0,  40, -11, 0,  0,  40, -11},
+    { 0,   0, 4,   -1,  0,  0,   4,  -1, 0,  0,   4,  -1, 0,  0,   4,  -1}
 };
 
+DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x2_sse[2][16])=
+{
+    { 0, 64, -4, 36, 0, 64, -4, 36, 0, 64, -4, 36, 0, 64, -4, 36},
+    { 0,  0, 36, -4, 0,  0, 36, -4, 0,  0, 36, -4, 0,  0, 36, -4}
+};
 
 #define BIT_DEPTH 8
 
@@ -51,30 +56,8 @@ void ff_upsample_filter_block_luma_h_ALL_sse(int16_t *dst, ptrdiff_t dststride, 
             int x_EL, int x_BL, int block_w, int block_h, int widthEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
 
-
-
-
 }
-/*
-int x, i, j;
-    int16_t*   dst_tmp;
-    pixel*   src_tmp, *src = (pixel *) _src - x_BL;
-    const int8_t*   coeff;
 
-    for( i = 0; i < block_w; i++ )	{
-        x        = av_clip_c(i+x_EL, leftStartL, rightEndL);
-        coeff    = up_sample_filter_luma_x2[x&0x01];
-        dst_tmp  = _dst  + i;
-        src_tmp  = src + ((x-leftStartL)>>1);
-        for( j = 0; j < block_h ; j++ ) {
-            *dst_tmp  = LumHor_FILTER_Block(src_tmp, coeff);
-            src_tmp  += _srcstride;
-            dst_tmp  += _dststride;
-        }
-    }
-
-
- */
 void ff_upsample_filter_block_luma_h_X2_sse(int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
             int x_EL, int x_BL, int width, int height, int widthEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
@@ -158,9 +141,41 @@ void ff_upsample_filter_block_cr_h_ALL_sse(int16_t *dst, ptrdiff_t dststride, ui
 }
 
 void ff_upsample_filter_block_cr_h_X2_sse(int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
-            int x_EL, int x_BL, int block_w, int block_h, int widthEL,
+            int x_EL, int x_BL, int width, int height, int widthEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
+    int x, y;
+    __m128i x1, x2, x3, x4, f1, f2, r1;
+    uint8_t  *src = ((uint8_t*) _src) - x_BL;
+    ptrdiff_t srcstride = _srcstride;
 
+    f1 = _mm_load_si128((__m128i *) up_sample_filter_chroma_x2_sse[0]);
+    f2 = _mm_load_si128((__m128i *) up_sample_filter_chroma_x2_sse[1]);
+
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x += 8) {
+            int e = (x+x_EL)>>1;
+                x1 = _mm_loadu_si128((__m128i *) &src[e - 1]);
+                x2 = _mm_loadu_si128((__m128i *) &src[e ]);
+                x3 = _mm_loadu_si128((__m128i *) &src[e + 1]);
+                x4 = _mm_loadu_si128((__m128i *) &src[e + 2]);
+
+                x1 = _mm_unpacklo_epi8(x1, x1);
+                x2 = _mm_unpacklo_epi8(x2, x2);
+                x3 = _mm_unpacklo_epi8(x3, x3);
+                x4 = _mm_unpacklo_epi8(x4, x4);
+
+                x1 = _mm_unpacklo_epi8(x1, x2);
+                x2 = _mm_unpacklo_epi8(x3, x4);
+
+                x2 = _mm_maddubs_epi16(x2,f2);
+                x1 = _mm_maddubs_epi16(x1,f1);
+
+                r1 = _mm_add_epi16(x1, x2);
+                _mm_store_si128((__m128i *) &dst[x], r1);
+            }
+            src += srcstride;
+            dst += dststride;
+        }
 }
 
 void ff_upsample_filter_block_cr_h_X1_5_sse(int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
