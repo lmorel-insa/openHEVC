@@ -177,34 +177,23 @@ void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth)
                     c->sao_band_filter    = ff_hevc_sao_band_filter_0_8_sse;
 
 #ifdef SVC_EXTENSION
-
-//    c->upsample_filter_block_luma_h[0] = ff_upsample_filter_block_luma_h_ALL_sse;
     c->upsample_filter_block_luma_h[1] = ff_upsample_filter_block_luma_h_X2_sse;
-//    c->upsample_filter_block_luma_h[2] = ff_upsample_filter_block_luma_h_X1_5_sse;
-//    c->upsample_filter_block_cr_h[0]   = ff_upsample_filter_block_cr_h_ALL_sse;
     c->upsample_filter_block_cr_h[1]   = ff_upsample_filter_block_cr_h_X2_sse;
-//    c->upsample_filter_block_cr_h[2]   = ff_upsample_filter_block_cr_h_X1_5_sse;
-
-//    c->upsample_filter_block_luma_v[0] = ff_upsample_filter_block_luma_v_ALL_sse;
     c->upsample_filter_block_luma_v[1] = ff_upsample_filter_block_luma_v_X2_sse;
-//    c->upsample_filter_block_luma_v[2] = ff_upsample_filter_block_luma_v_X1_5_sse;
-    /*
-    c->upsample_filter_block_cr_v[0]   = ff_upsample_filter_block_cr_v_ALL_sse;
     c->upsample_filter_block_cr_v[1]   = ff_upsample_filter_block_cr_v_X2_sse;
+/*
+    c->upsample_filter_block_luma_h[0] = ff_upsample_filter_block_luma_h_ALL_sse;
+    c->upsample_filter_block_cr_h[0]   = ff_upsample_filter_block_cr_h_ALL_sse;
+    c->upsample_filter_block_luma_v[0] = ff_upsample_filter_block_luma_v_ALL_sse;
+    c->upsample_filter_block_cr_v[0]   = ff_upsample_filter_block_cr_v_ALL_sse;
+*/
+/*
+    c->upsample_filter_block_luma_h[2] = ff_upsample_filter_block_luma_h_X1_5_sse;
+    c->upsample_filter_block_cr_h[2]   = ff_upsample_filter_block_cr_h_X1_5_sse;
+    c->upsample_filter_block_luma_v[2] = ff_upsample_filter_block_luma_v_X1_5_sse;
     c->upsample_filter_block_cr_v[2]   = ff_upsample_filter_block_cr_v_X1_5_sse;
-    */
+*/
 #endif
-
-#ifdef SVC_EXTENSION
-
-                  /*  c->upsample_base_layer_frame     =    ff_upsample_base_layer_frame_sse;
-                    c->upsample_filter_block_luma_h   =   ff_upsample_filter_block_luma_h_8_8_sse;
-                    c->upsample_filter_block_luma_v   =   ff_upsample_filter_block_luma_v_8_8_sse;
-                    c->upsample_filter_block_cr_h     =   ff_upsample_filter_block_cr_h_8_8_sse;
-                    c->upsample_filter_block_cr_v     =   ff_upsample_filter_block_cr_v_8_8_sse;*/
-#endif
-
-
                 }
 #endif //__SSE4_1__
                 if (EXTERNAL_AVX(mm_flags)) {

@@ -112,6 +112,8 @@ DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x2_v[2][4])=
         { -2,  10,  58, -2},
         { -6,  46,  28, -4},
 };
+
+
 //#endif
 
 typedef struct SAOParams {

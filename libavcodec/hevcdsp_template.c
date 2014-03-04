@@ -1205,15 +1205,13 @@ static void FUNC(upsample_filter_block_cr_v_X2)( uint8_t *_dst, ptrdiff_t dststr
     int16_t *   src_tmp;
     pixel *dst_tmp, *dst    = (pixel *)_dst;
     for( j = 0; j < block_h; j++ )	{
-    	y =   av_clip_c(y_EL+j, topStartC, bottomEndC-1);
-    	refPos16 = ((( y - topStartC )* up_info->scaleYCr + up_info->addYCr) >> 12)-4;
-        phase    = refPos16 & 15;
-        coeff    = up_sample_filter_chroma[phase];
+        y =   av_clip_c(y_EL+j, topStartC, bottomEndC-1);
+        refPos16 = ((( y - topStartC )* up_info->scaleYCr + up_info->addYCr) >> 12)-4;
+        coeff = up_sample_filter_chroma_x2_v[y&0x01];
         refPos   = (refPos16>>4) - y_BL;
         src_tmp  = _src  + refPos  * _srcstride;
         dst_tmp  =  dst  + y* dststride + x_EL;
-        refPos = (refPos16>>4);
-        for( i = 0; i < block_w; i++ )	{
+        for( i = 0; i < block_w; i++ ) {
             *dst_tmp = av_clip_pixel( (CroVer_FILTER_Block(src_tmp, coeff, _srcstride) + I_OFFSET) >> (N_SHIFT));
             if( ((x_EL+i) >= leftStartC) && ((x_EL+i) <= rightEndC-2) )
                 src_tmp++;
@@ -1221,8 +1219,6 @@ static void FUNC(upsample_filter_block_cr_v_X2)( uint8_t *_dst, ptrdiff_t dststr
         }
     }
 }
-
-
 /*      ------- x1.5 spatial horizontal upsampling filter  --------    */
 static void FUNC(upsample_filter_block_luma_h_X1_5)( int16_t *_dst, ptrdiff_t _dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                                   int x_EL, int x_BL, int block_w, int block_h, int widthEL,
