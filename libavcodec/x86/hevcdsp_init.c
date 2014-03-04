@@ -184,10 +184,11 @@ void ff_hevcdsp_init_x86(HEVCDSPContext *c, const int bit_depth)
 //    c->upsample_filter_block_cr_h[0]   = ff_upsample_filter_block_cr_h_ALL_sse;
     c->upsample_filter_block_cr_h[1]   = ff_upsample_filter_block_cr_h_X2_sse;
 //    c->upsample_filter_block_cr_h[2]   = ff_upsample_filter_block_cr_h_X1_5_sse;
-    /*
-    c->upsample_filter_block_luma_v[0] = ff_upsample_filter_block_luma_v_ALL_sse;
+
+//    c->upsample_filter_block_luma_v[0] = ff_upsample_filter_block_luma_v_ALL_sse;
     c->upsample_filter_block_luma_v[1] = ff_upsample_filter_block_luma_v_X2_sse;
-    c->upsample_filter_block_luma_v[2] = ff_upsample_filter_block_luma_v_X1_5_sse;
+//    c->upsample_filter_block_luma_v[2] = ff_upsample_filter_block_luma_v_X1_5_sse;
+    /*
     c->upsample_filter_block_cr_v[0]   = ff_upsample_filter_block_cr_v_ALL_sse;
     c->upsample_filter_block_cr_v[1]   = ff_upsample_filter_block_cr_v_X2_sse;
     c->upsample_filter_block_cr_v[2]   = ff_upsample_filter_block_cr_v_X1_5_sse;
