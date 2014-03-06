@@ -974,18 +974,18 @@ static void FUNC(hevc_v_loop_filter_luma)(uint8_t *pix, ptrdiff_t stride,
 #undef TQ3
 
 #ifdef SVC_EXTENSION
-#define LumHor_FILTER(pel, coeff) \
-(pel[0]*coeff[0] + pel[1]*coeff[1] + pel[2]*coeff[2] + pel[3]*coeff[3] + pel[4]*coeff[4] + pel[5]*coeff[5] + pel[6]*coeff[6] + pel[7]*coeff[7])
-#define CroHor_FILTER(pel, coeff) \
-(pel[0]*coeff[0] + pel[1]*coeff[1] + pel[2]*coeff[2] + pel[3]*coeff[3])
+
+
 #define LumVer_FILTER(pel, coeff) \
 (pel[0]*coeff[0] + pel[1]*coeff[1] + pel[2]*coeff[2] + pel[3]*coeff[3] + pel[4]*coeff[4] + pel[5]*coeff[5] + pel[6]*coeff[6] + pel[7]*coeff[7])
 #define CroVer_FILTER(pel, coeff) \
 (pel[0]*coeff[0] + pel[1]*coeff[1] + pel[2]*coeff[2] + pel[3]*coeff[3])
+#define CroVer_FILTER1(pel, coeff, widthEL) \
+(pel[0]*coeff[0] + pel[widthEL]*coeff[1] + pel[widthEL*2]*coeff[2] + pel[widthEL*3]*coeff[3])
 #define LumVer_FILTER1(pel, coeff, width) \
 (pel[0]*coeff[0] + pel[width]*coeff[1] + pel[width*2]*coeff[2] + pel[width*3]*coeff[3] + pel[width*4]*coeff[4] + pel[width*5]*coeff[5] + pel[width*6]*coeff[6] + pel[width*7]*coeff[7])
 
-
+// Define the function for up-sampling
 #define LumHor_FILTER_Block(pel, coeff) \
 (pel[-3]*coeff[0] + pel[-2]*coeff[1] + pel[-1]*coeff[2] + pel[0]*coeff[3] + pel[1]*coeff[4] + pel[2]*coeff[5] + pel[3]*coeff[6] + pel[4]*coeff[7])
 #define CroHor_FILTER_Block(pel, coeff) \
@@ -994,15 +994,13 @@ static void FUNC(hevc_v_loop_filter_luma)(uint8_t *pix, ptrdiff_t stride,
 (pel[-3*width]*coeff[0] + pel[-2*width]*coeff[1] + pel[-width]*coeff[2] + pel[0]*coeff[3] + pel[width]*coeff[4] + pel[2*width]*coeff[5] + pel[3*width]*coeff[6] + pel[4*width]*coeff[7])
 #define CroVer_FILTER_Block(pel, coeff, width) \
 (pel[-width]*coeff[0] + pel[0]*coeff[1] + pel[width]*coeff[2] + pel[2*width]*coeff[3])
-
-// Define the function for up-sampling
-#define CroVer_FILTER1(pel, coeff, widthEL) \
-(pel[0]*coeff[0] + pel[widthEL]*coeff[1] + pel[widthEL*2]*coeff[2] + pel[widthEL*3]*coeff[3])
-
-
+#define LumHor_FILTER(pel, coeff) \
+(pel[0]*coeff[0] + pel[1]*coeff[1] + pel[2]*coeff[2] + pel[3]*coeff[3] + pel[4]*coeff[4] + pel[5]*coeff[5] + pel[6]*coeff[6] + pel[7]*coeff[7])
+#define CroHor_FILTER(pel, coeff) \
+(pel[0]*coeff[0] + pel[1]*coeff[1] + pel[2]*coeff[2] + pel[3]*coeff[3])
 
 /*      ------- Spatial horizontal upsampling filter  --------    */
-static void FUNC(upsample_filter_block_luma_h_ALL)( int16_t *_dst, ptrdiff_t _dststride, uint8_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_luma_h_all)( int16_t *_dst, ptrdiff_t _dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                         int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                         const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int rightEndL  = widthEL - Enhscal->right_offset;
@@ -1011,7 +1009,7 @@ static void FUNC(upsample_filter_block_luma_h_ALL)( int16_t *_dst, ptrdiff_t _ds
     int16_t*   dst_tmp;
     pixel*   src_tmp, *src = (pixel *) _src;
     const int8_t*   coeff;
-    
+
     for( i = 0; i < block_w; i++ )	{
         x        = av_clip_c(i+x_EL, leftStartL, rightEndL);
         refPos16 = (((x - leftStartL)*up_info->scaleXLum + up_info->addXLum) >> 12);
@@ -1028,12 +1026,9 @@ static void FUNC(upsample_filter_block_luma_h_ALL)( int16_t *_dst, ptrdiff_t _ds
     }
 }
 
-
-static void FUNC(upsample_filter_block_cr_h_ALL)(  int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_cr_h_all)(  int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                                  int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                                  const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
-    
-    
     int leftStartC = Enhscal->left_offset>>1;
     int rightEndC  = widthEL - (Enhscal->right_offset>>1);
     int x, i, j, phase, refPos16, refPos;
@@ -1058,21 +1053,21 @@ static void FUNC(upsample_filter_block_cr_h_ALL)(  int16_t *dst, ptrdiff_t dstst
 }
 
 /*      ------- Spatial vertical upsampling filter  --------    */
-static void FUNC(upsample_filter_block_luma_v_ALL)( uint8_t *_dst, ptrdiff_t _dststride, int16_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_luma_v_all)( uint8_t *_dst, ptrdiff_t _dststride, int16_t *_src, ptrdiff_t _srcstride,
                                                    int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                                    const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int topStartL  = Enhscal->top_offset;
     int bottomEndL = heightEL - Enhscal->bottom_offset;
     int rightEndL  = widthEL - Enhscal->right_offset;
     int leftStartL = Enhscal->left_offset;
-    
+
     int y, i, j, phase, refPos16, refPos;
     const int8_t  *   coeff;
     pixel *dst_tmp, *dst    = (pixel *)_dst;
     int16_t *   src_tmp;
     for( j = 0; j < block_h; j++ )	{
-    	y        =   av_clip_c(y_EL+j, topStartL, bottomEndL-1);
-    	refPos16 = ((( y - topStartL )* up_info->scaleYLum + up_info->addYLum) >> 12);
+        y        =   av_clip_c(y_EL+j, topStartL, bottomEndL-1);
+        refPos16 = ((( y - topStartL )* up_info->scaleYLum + up_info->addYLum) >> 12);
         phase    = refPos16 & 15;
         coeff    = up_sample_filter_luma[phase];
         refPos   = (refPos16 >> 4) -y_BL;
@@ -1087,7 +1082,7 @@ static void FUNC(upsample_filter_block_luma_v_ALL)( uint8_t *_dst, ptrdiff_t _ds
     }
 }
 
-static void FUNC(upsample_filter_block_cr_v_ALL)( uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_cr_v_all)( uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
                                                  int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                                  const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int leftStartC = Enhscal->left_offset>>1;
@@ -1099,8 +1094,8 @@ static void FUNC(upsample_filter_block_cr_v_ALL)( uint8_t *_dst, ptrdiff_t dstst
     int16_t *   src_tmp;
     pixel *dst_tmp, *dst    = (pixel *)_dst;
     for( j = 0; j < block_h; j++ )	{
-    	y =   av_clip_c(y_EL+j, topStartC, bottomEndC-1);
-    	refPos16 = ((( y - topStartC )* up_info->scaleYCr + up_info->addYCr) >> 12)-4;
+        y =   av_clip_c(y_EL+j, topStartC, bottomEndC-1);
+        refPos16 = ((( y - topStartC )* up_info->scaleYCr + up_info->addYCr) >> 12)-4;
         phase    = refPos16 & 15;
         coeff    = up_sample_filter_chroma[phase];
         refPos   = (refPos16>>4) - y_BL;
@@ -1117,7 +1112,7 @@ static void FUNC(upsample_filter_block_cr_v_ALL)( uint8_t *_dst, ptrdiff_t dstst
 }
 
 /*      ------- x2 spatial horizontal upsampling filter  --------    */
-static void FUNC(upsample_filter_block_luma_h_X2)( int16_t *_dst, ptrdiff_t _dststride, uint8_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_luma_h_x2)( int16_t *_dst, ptrdiff_t _dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                                   int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                                   const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int rightEndL  = widthEL - Enhscal->right_offset;
@@ -1126,7 +1121,7 @@ static void FUNC(upsample_filter_block_luma_h_X2)( int16_t *_dst, ptrdiff_t _dst
     int16_t*   dst_tmp;
     pixel*   src_tmp, *src = (pixel *) _src - x_BL;
     const int8_t*   coeff;
-    
+
     for( i = 0; i < block_w; i++ )	{
         x        = av_clip_c(i+x_EL, leftStartL, rightEndL);
         coeff    = up_sample_filter_luma_x2[x&0x01];
@@ -1140,7 +1135,7 @@ static void FUNC(upsample_filter_block_luma_h_X2)( int16_t *_dst, ptrdiff_t _dst
     }
 }
 
-static void FUNC(upsample_filter_block_cr_h_X2)(  int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_cr_h_x2)(  int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                                 int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                                 const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int leftStartC = Enhscal->left_offset>>1;
@@ -1165,7 +1160,7 @@ static void FUNC(upsample_filter_block_cr_h_X2)(  int16_t *dst, ptrdiff_t dststr
 
 /*      ------- x2 spatial vertical upsampling filter  --------    */
 
-static void FUNC(upsample_filter_block_luma_v_X2)( uint8_t *_dst, ptrdiff_t _dststride, int16_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_luma_v_x2)( uint8_t *_dst, ptrdiff_t _dststride, int16_t *_src, ptrdiff_t _srcstride,
                                                   int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                                   const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int topStartL  = Enhscal->top_offset;
@@ -1193,7 +1188,7 @@ static void FUNC(upsample_filter_block_luma_v_X2)( uint8_t *_dst, ptrdiff_t _dst
 }
 
 
-static void FUNC(upsample_filter_block_cr_v_X2)( uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_cr_v_x2)( uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
                                                 int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                                 const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int leftStartC = Enhscal->left_offset>>1;
@@ -1220,7 +1215,7 @@ static void FUNC(upsample_filter_block_cr_v_X2)( uint8_t *_dst, ptrdiff_t dststr
     }
 }
 /*      ------- x1.5 spatial horizontal upsampling filter  --------    */
-static void FUNC(upsample_filter_block_luma_h_X1_5)( int16_t *_dst, ptrdiff_t _dststride, uint8_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_luma_h_x1_5)( int16_t *_dst, ptrdiff_t _dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                                   int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                                   const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int rightEndL  = widthEL - Enhscal->right_offset;
@@ -1229,12 +1224,13 @@ static void FUNC(upsample_filter_block_luma_h_X1_5)( int16_t *_dst, ptrdiff_t _d
     int16_t*   dst_tmp;
     pixel*   src_tmp, *src = (pixel *) _src - x_BL;
     const int8_t*   coeff;
-    
+
     for( i = 0; i < block_w; i++ )	{
         x        = av_clip_c(i+x_EL, leftStartL, rightEndL);
         coeff    = up_sample_filter_luma_x1_5[(x-leftStartL)%3];
         dst_tmp  = _dst  + i;
         src_tmp  = src + (((x-leftStartL)<<1)/3);
+
         for( j = 0; j < block_h ; j++ ) {
             *dst_tmp  = LumHor_FILTER_Block(src_tmp, coeff);
             src_tmp  += _srcstride;
@@ -1243,7 +1239,7 @@ static void FUNC(upsample_filter_block_luma_h_X1_5)( int16_t *_dst, ptrdiff_t _d
     }
 }
 
-static void FUNC(upsample_filter_block_cr_h_X1_5)(  int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_cr_h_x1_5)(  int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
                                                   int x_EL, int x_BL, int block_w, int block_h, int widthEL,
                                                   const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int leftStartC = Enhscal->left_offset>>1;
@@ -1252,7 +1248,7 @@ static void FUNC(upsample_filter_block_cr_h_X1_5)(  int16_t *dst, ptrdiff_t dsts
     int16_t*  dst_tmp;
     pixel*   src_tmp, *src = (pixel *) _src - x_BL;
     const int8_t*  coeff;
-    
+
     for( i = 0; i < block_w; i++ )	{
         x        = av_clip_c(i+x_EL, leftStartC, rightEndC);
         coeff    = up_sample_filter_chroma_x1_5[(x-leftStartC)%3];
@@ -1266,19 +1262,18 @@ static void FUNC(upsample_filter_block_cr_h_X1_5)(  int16_t *dst, ptrdiff_t dsts
     }
 }
 
-static void FUNC(upsample_filter_block_luma_v_X1_5)( uint8_t *_dst, ptrdiff_t _dststride, int16_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_luma_v_x1_5)( uint8_t *_dst, ptrdiff_t _dststride, int16_t *_src, ptrdiff_t _srcstride,
                                                     int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                                     const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int topStartL  = Enhscal->top_offset;
     int bottomEndL = heightEL - Enhscal->bottom_offset;
     int rightEndL  = widthEL - Enhscal->right_offset;
     int leftStartL = Enhscal->left_offset;
-    
     int y, i, j;
     const int8_t  *   coeff;
     pixel *dst_tmp, *dst    = (pixel *)_dst + x_EL + y_EL * _dststride;
     int16_t *   src_tmp;
-    
+
     for( j = 0; j < block_h; j++ )	{
     	y        =   av_clip_c(y_EL+j, topStartL, bottomEndL-1);
         coeff    = up_sample_filter_luma_x1_5[(y - topStartL)%3];
@@ -1294,7 +1289,7 @@ static void FUNC(upsample_filter_block_luma_v_X1_5)( uint8_t *_dst, ptrdiff_t _d
     }
 }
 
-static void FUNC(upsample_filter_block_cr_v_X1_5)( uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
+static void FUNC(upsample_filter_block_cr_v_x1_5)( uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t _srcstride,
                                                   int y_BL, int x_EL, int y_EL, int block_w, int block_h, int widthEL, int heightEL,
                                                   const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int leftStartC = Enhscal->left_offset>>1;
@@ -1323,12 +1318,6 @@ static void FUNC(upsample_filter_block_cr_v_X1_5)( uint8_t *_dst, ptrdiff_t dsts
     }
 }
 
-
-
-
-
-
-
 static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFrame *FrameBL, short *Buffer[3], const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info, int channel)
 {
     int i,j, k;
@@ -1338,9 +1327,7 @@ static void FUNC(upsample_base_layer_frame)(struct AVFrame *FrameEL, struct AVFr
     int strideBL = FrameBL->linesize[0];
     int widthEL =  FrameEL->coded_width - Enhscal->left_offset - Enhscal->right_offset;
     int heightEL = FrameEL->coded_height - Enhscal->top_offset - Enhscal->bottom_offset;
-    
     int strideEL = FrameEL->linesize[0];
-    
     pixel *srcBufY = (pixel*)FrameBL->data[0];
     pixel *dstBufY = (pixel*)FrameEL->data[0];
     short *tempBufY = Buffer[0];
