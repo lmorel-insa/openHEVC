@@ -566,7 +566,7 @@ void ff_thread_await_il_progress(AVCodecContext *avxt, int poc, void ** out)
      
      */
     
-    FrameThreadContext *fctx = avxt->copy_opaque;
+    FrameThreadContext *fctx = ((AVCodecContext *)avxt->BL_avcontext)->internal->thread_ctx_frame;
     poc = poc & (MAX_POC-1);
     if (avxt->debug&FF_DEBUG_THREADS)
         av_log(avxt, AV_LOG_DEBUG, "thread awaiting for the BL to be decoded \n");
@@ -585,7 +585,7 @@ void ff_thread_report_il_status(AVCodecContext *avxt, int poc, int status)
     /*
      - Called by the upper layer decoder to report that the picture using this reference frame is decoded and the lower layer is not any more required by upper layer decoder
      */
-    FrameThreadContext *fctx = avxt->copy_opaque;
+    FrameThreadContext *fctx = ((AVCodecContext *)avxt->BL_avcontext)->internal->thread_ctx_frame;
     poc = poc & (MAX_POC-1);
     if (avxt->debug&FF_DEBUG_THREADS)
         av_log(avxt, AV_LOG_DEBUG, "Thead base layer decoded \n");

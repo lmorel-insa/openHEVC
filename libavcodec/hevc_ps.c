@@ -261,7 +261,7 @@ static void parse_ptl(HEVCContext *s, PTL *ptl, int max_num_sub_layers)
     for (i = 0; i < max_num_sub_layers - 1; i++) {
         if (ptl->sub_layer_profile_present_flag[i])
             decode_profile_tier_level(s, &ptl->sub_layer_PTL[i]);
-        if (ptl->sub_layer_level_present_flag[i]){
+        if (ptl->sub_layer_level_present_flag[i]) {
             ptl->sub_layer_PTL[i].level_idc = get_bits(gb, 8);
             print_cabac("sub_layer_level_idc", ptl->sub_layer_PTL[i].level_idc);
         }
@@ -1201,7 +1201,7 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
             int common_inf_present = 1;
             vps->m_hrdOpSetIdx[i] = get_ue_golomb_long(gb);// hrd_layer_set_idx
             print_cabac("hrd_op_set_idx", vps->m_hrdOpSetIdx[i]);     
-            if (i){
+            if (i) {
                 common_inf_present = get_bits1(gb);
                 print_cabac("cprms_present_flag", common_inf_present); 
             }

@@ -290,12 +290,6 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
                 else
                     s->up_filter_inf.idx = DEFAULT;
  
-            
-        
-        
-        
-        
-        
 #if ACTIVE_BOTH_FRAME_AND_PU
         s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
         s->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));

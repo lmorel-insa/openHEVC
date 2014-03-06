@@ -1066,8 +1066,8 @@ static void FUNC(upsample_filter_block_luma_v_all)( uint8_t *_dst, ptrdiff_t _ds
     pixel *dst_tmp, *dst    = (pixel *)_dst;
     int16_t *   src_tmp;
     for( j = 0; j < block_h; j++ )	{
-        y        =   av_clip_c(y_EL+j, topStartL, bottomEndL-1);
-        refPos16 = ((( y - topStartL )* up_info->scaleYLum + up_info->addYLum) >> 12);
+    	y        =   av_clip_c(y_EL+j, topStartL, bottomEndL-1);
+    	refPos16 = ((( y - topStartL )* up_info->scaleYLum + up_info->addYLum) >> 12);
         phase    = refPos16 & 15;
         coeff    = up_sample_filter_luma[phase];
         refPos   = (refPos16 >> 4) -y_BL;

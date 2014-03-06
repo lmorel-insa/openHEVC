@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include "openHevcWrapper.h"
 #include "libavcodec/avcodec.h"
-#include "libavcodec/internal.h"
 #include "libavformat/avformat.h"
 #include "libavutil/mem.h"
 #include "libavutil/opt.h"
@@ -100,7 +99,7 @@ int libOpenHevcStartDecoder(OpenHevc_Handle openHevcHandle)
             return -1;
         }
         if(i+1 < openHevcContexts->nb_decoders)
-            openHevcContexts->wraper[i+1]->c->copy_opaque = openHevcContexts->wraper[i]->c->internal->thread_ctx_frame;
+            openHevcContexts->wraper[i+1]->c->BL_avcontext = openHevcContexts->wraper[i]->c;
     }
     return 1;
 }
