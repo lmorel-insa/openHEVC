@@ -355,7 +355,7 @@ void ff_upsample_filter_block_luma_h_x1_5_sse(int16_t *dst, ptrdiff_t dststride,
             int x_EL, int x_BL, int width, int height, int widthEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info) {
     int x, y, ref, ret;
-    __m128i x1, x2, x3, x4, r1, c[12], mask;
+    __m128i x1, x2, x3, x4, c[12], mask;
     uint8_t  *src       = (uint8_t*) _src - x_BL;
 
     c[0]  = _mm_load_si128((__m128i *) up_sample_filter_luma_x1_5_h_sse[0]);
@@ -399,16 +399,14 @@ void ff_upsample_filter_block_luma_h_x1_5_sse(int16_t *dst, ptrdiff_t dststride,
             x1 = _mm_add_epi16(x1, x2);
             x2 = _mm_add_epi16(x3, x4);
 
-            r1 = _mm_add_epi16(x1, x2);
-            _mm_store_si128((__m128i *) &dst[x], r1);
+            x4 = _mm_add_epi16(x1, x2);
+            _mm_store_si128((__m128i *) &dst[x], x4);
         }
         src += srcstride;
         dst += dststride;
     }
 }
-//printf("ret %d \n", ret);
-//printf("\n \n x1 %d %d %d %d %d %d %d %d \n", _mm_extract_epi8( x1, 0), _mm_extract_epi8( x1, 1), _mm_extract_epi8( x1, 2), _mm_extract_epi8( x1, 3), _mm_extract_epi8( x1, 4), _mm_extract_epi8( x1, 5), _mm_extract_epi8( x1, 6), _mm_extract_epi8( x1, 7));
-            //printf("x1 %d %d %d %d %d %d %d %d \n", _mm_extract_epi8( x1, 0), _mm_extract_epi8( x1, 1), _mm_extract_epi8( x1, 2), _mm_extract_epi8( x1, 3), _mm_extract_epi8( x1, 4), _mm_extract_epi8( x1, 5), _mm_extract_epi8( x1, 6), _mm_extract_epi8( x1, 7));
+
 void ff_upsample_filter_block_luma_v_x1_5_sse(uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t srcstride,
             int y_BL, int x_EL, int y_EL, int width, int height, int widthEL, int heightEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
