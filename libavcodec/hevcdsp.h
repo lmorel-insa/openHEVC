@@ -99,7 +99,12 @@ DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x1_5[3][4])= /*
     { -2,  20,  52, -6},
     { -6,  52,  20, -2}
 };
-
+DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_x1_5chroma[3][4])=
+{
+    {  0,   4,  62, -2},
+    { -4,  30,  42, -4},
+    { -4,  54,  16, -2}
+};
 
 DECLARE_ALIGNED(16, static const int8_t, up_sample_filter_chroma_x2[2][4])=
 {

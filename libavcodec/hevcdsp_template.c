@@ -1300,11 +1300,11 @@ static void FUNC(upsample_filter_block_cr_v_x1_5)( uint8_t *_dst, ptrdiff_t dsts
     const int8_t* coeff;
     int16_t *   src_tmp;
     pixel *dst_tmp, *dst    = (pixel *)_dst;
-    for( j = 0; j < block_h; j++ )	{
-    	y =   av_clip_c(y_EL+j, topStartC, bottomEndC-1);
-    	refPos16 = ((( y - topStartC )* up_info->scaleYCr + up_info->addYCr) >> 12)-4;
+    for( j = 0; j < block_h; j++ ) {
+        y =   av_clip_c(y_EL+j, topStartC, bottomEndC-1);
+        refPos16 = ((( y - topStartC )* up_info->scaleYCr + up_info->addYCr) >> 12)-4;
         phase    = refPos16 & 15;
-        coeff    = up_sample_filter_chroma[phase];
+        coeff    = up_sample_filter_x1_5chroma[y%3];
         refPos   = (refPos16>>4) - y_BL;
         src_tmp  = _src  + refPos  * _srcstride;
         dst_tmp  =  dst  + y* dststride + x_EL;
