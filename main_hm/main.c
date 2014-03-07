@@ -161,7 +161,7 @@ static void video_decode_example(const char *filename)
    
     libOpenHevcSetTemporalLayer_id(openHevcHandle, temporal_layer_id);
     libOpenHevcSetActiveDecoders(openHevcHandle, quality_layer_id);
-
+    libOpenHevcSetViewLayers(openHevcHandle, quality_layer_id);
 
 
 

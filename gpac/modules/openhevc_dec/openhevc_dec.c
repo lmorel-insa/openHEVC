@@ -105,7 +105,8 @@ static GF_Err HEVC_ConfigureStream(HEVCDec *ctx, GF_ESD *esd)
 	}
     ctx->openHevcHandle = libOpenHevcInit(ctx->nb_threads, ctx->threading_type);
 #ifdef OPEN_SHVC
-	libOpenHevcSetActiveDecoders(ctx->openHevcHandle, ctx->nb_layers);
+    libOpenHevcSetActiveDecoders(ctx->openHevcHandle, ctx->nb_layers);
+    libOpenHevcSetViewLayers(ctx->openHevcHandle, ctx->nb_layers);
 #endif
 
 	if (esd->decoderConfig && esd->decoderConfig->decoderSpecificInfo && esd->decoderConfig->decoderSpecificInfo->data) {
@@ -244,10 +245,12 @@ static GF_Err HEVC_SetCapabilities(GF_BaseDecoder *ifcg, GF_CodecCapability capa
 		/*switch up*/
 		if (capability.cap.valueInt) {
             ctx->base_only = GF_FALSE;
-			libOpenHevcSetActiveDecoders(ctx->openHevcHandle, 1); 
+            libOpenHevcSetViewLayers(ctx->openHevcHandle, 1);
+//			libOpenHevcSetActiveDecoders(ctx->openHevcHandle, 1);
 		} else {
             ctx->base_only = GF_TRUE;
-			libOpenHevcSetActiveDecoders(ctx->openHevcHandle, 0);
+            libOpenHevcSetViewLayers(ctx->openHevcHandle, 0);
+//			libOpenHevcSetActiveDecoders(ctx->openHevcHandle, 0);
 		}
 		return GF_OK;
 #endif

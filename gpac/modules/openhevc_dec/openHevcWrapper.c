@@ -39,6 +39,7 @@ typedef struct OpenHevcWrapperContexts {
     OpenHevcWrapperContext **wraper;
     int nb_decoders;
     int active_layer;
+    int display_layer;
     int set_vps;
 } OpenHevcWrapperContexts;
 
@@ -106,7 +107,7 @@ int libOpenHevcStartDecoder(OpenHevc_Handle openHevcHandle)
 
 int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts)
 {
-    int got_picture[MAX_DECODERS], len, i;
+    int got_picture[MAX_DECODERS], len=0, i;
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
     OpenHevcWrapperContext  *openHevcContext;
     for(i =0; i <= openHevcContexts->active_layer; i++)  {
@@ -124,7 +125,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
     }
-    return got_picture[openHevcContexts->active_layer];
+    return got_picture[openHevcContexts->display_layer];
 }
 
 void libOpenHevcCopyExtraData(OpenHevc_Handle openHevcHandle, unsigned char *extra_data, int extra_size_alloc)
@@ -144,7 +145,7 @@ void libOpenHevcCopyExtraData(OpenHevc_Handle openHevcHandle, unsigned char *ext
 void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo)
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
-    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->active_layer];
+    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->display_layer];
     AVFrame                 *picture          = openHevcContext->picture;
 
     openHevcFrameInfo->nYPitch    = picture->width;
@@ -183,7 +184,7 @@ void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInf
 void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo)
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
-    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->active_layer];
+    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->display_layer];
 
     libOpenHevcGetPictureInfo(openHevcHandle, openHevcFrameInfo);
     openHevcFrameInfo->nYPitch = openHevcContext->picture->linesize[0];
@@ -194,7 +195,7 @@ void libOpenHevcGetPictureSize2(OpenHevc_Handle openHevcHandle, OpenHevc_FrameIn
 int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHevc_Frame *openHevcFrame)
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
-    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->active_layer];
+    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->display_layer];
 		
     if (got_picture) {
         openHevcFrame->pvY       = (void *) openHevcContext->picture->data[0];
@@ -210,7 +211,7 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
 
-    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->active_layer];
+    OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->display_layer];
     AVFrame                 *picture          = openHevcContext->picture;
     int y;
     int y_offset, y_offset2;
@@ -242,7 +243,6 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
         }
         libOpenHevcGetPictureInfo(openHevcHandle, &openHevcFrame->frameInfo);
     }
-
     return 1;
 }
 
@@ -262,7 +262,16 @@ void libOpenHevcSetActiveDecoders(OpenHevc_Handle openHevcHandle, int val)
         openHevcContexts->active_layer = openHevcContexts->nb_decoders-1;
     }
 }
-
+void libOpenHevcSetViewLayers(OpenHevc_Handle openHevcHandle, int val)
+{
+    OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
+    if (val >= 0 && val < openHevcContexts->nb_decoders)
+        openHevcContexts->display_layer = val;
+    else {
+        fprintf(stderr, "The requested layer %d can not be viewed (it exceeds the number of allocated decoders %d ) \n", val, openHevcContexts->nb_decoders);
+        openHevcContexts->display_layer = openHevcContexts->nb_decoders-1;
+    }
+}
 void libOpenHevcSetCheckMD5(OpenHevc_Handle openHevcHandle, int val)
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
