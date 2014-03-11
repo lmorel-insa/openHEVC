@@ -287,8 +287,10 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
             else
                 if(s->up_filter_inf.scaleXLum == 43691 && s->up_filter_inf.scaleYLum == 43691)
                     s->up_filter_inf.idx = X1_5;
-                else
+                else {
                     s->up_filter_inf.idx = DEFAULT;
+                    av_log(s->avctx, AV_LOG_INFO, "DEFAULT mode: SSE optimizations are not implemented for spatial scalability with a ratio different from x2 and x1.5 \n");
+                }
  
 #if ACTIVE_BOTH_FRAME_AND_PU
         s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
