@@ -3253,7 +3253,7 @@ fail:
     return AVERROR(ENOMEM);
 }
 
-#if 0
+#if 1
 static int first;
 #endif
 
@@ -3267,7 +3267,7 @@ static av_cold int hevc_decode_free(AVCodecContext *avctx)
 
     av_freep(&s->md5_ctx);
 
-#if 0
+#if 1
     if(!first){
         printf("Times %ld  %ld  %ld  ", layers_time[0], layers_time[1], layers_time[2]);
         first = 1;
