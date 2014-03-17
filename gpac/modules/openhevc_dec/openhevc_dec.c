@@ -121,7 +121,7 @@ static GF_Err HEVC_ConfigureStream(HEVCDec *ctx, GF_ESD *esd)
 
 
 #ifdef OPEN_SHVC
-    ctx->openHevcHandle = libOpenHevcInit(ctx->nb_threads, ctx->nb_layers);
+    ctx->openHevcHandle = libOpenHevcInit(ctx->nb_threads, ctx->threading_type);
     libOpenHevcSetActiveDecoders(ctx->openHevcHandle, ctx->nb_layers);
     libOpenHevcSetViewLayers(ctx->openHevcHandle, ctx->nb_layers);
 #else
@@ -129,7 +129,7 @@ static GF_Err HEVC_ConfigureStream(HEVCDec *ctx, GF_ESD *esd)
 #endif
 
 	if (esd->decoderConfig && esd->decoderConfig->decoderSpecificInfo && esd->decoderConfig->decoderSpecificInfo->data) {
-		libOpenHevcCopyExtraData(ctx->openHevcHandle, esd->decoderConfig->decoderSpecificInfo->data, esd->decoderConfig->decoderSpecificInfo->dataLength+8);
+		libOpenHevcCopyExtraData(ctx->openHevcHandle, (u8 *) esd->decoderConfig->decoderSpecificInfo->data, esd->decoderConfig->decoderSpecificInfo->dataLength+8);
 	}
 
 #ifndef GPAC_DISABLE_LOG
@@ -179,7 +179,7 @@ static GF_Err HEVC_AttachStream(GF_BaseDecoder *ifcg, GF_ESD *esd)
 
 	sOpt = gf_modules_get_option((GF_BaseInterface *)ifcg, "OpenHEVC", "ThreadingType");
 	if (sOpt && !strcmp(sOpt, "wpp")) ctx->threading_type = 2;
-	else if (sOpt && !strcmp(sOpt, "frame+wpp")) ctx->threading_type = 3;
+	else if (sOpt && !strcmp(sOpt, "frame+wpp")) ctx->threading_type = 4;
 	else {
 		ctx->threading_type = 1;
 		if (!sOpt) gf_modules_set_option((GF_BaseInterface *)ifcg, "OpenHEVC", "ThreadingType", "frame");
@@ -423,7 +423,7 @@ static GF_Err HEVC_ProcessData(GF_MediaDecoder *ifcg,
 		return HEVC_flush_picture(ctx, outBuffer, outBufferLength);
 	}
 	
-	got_pic = libOpenHevcDecode(ctx->openHevcHandle, inBuffer, inBufferLength, 0);
+	got_pic = libOpenHevcDecode(ctx->openHevcHandle, (u8 *) inBuffer, inBufferLength, 0);
 	if (got_pic>0) {
 		e = HEVC_flush_picture(ctx, outBuffer, outBufferLength);
 		if (e) return e;
