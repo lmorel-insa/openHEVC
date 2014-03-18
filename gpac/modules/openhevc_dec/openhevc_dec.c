@@ -51,10 +51,10 @@ typedef struct
 
 	GF_ESD *esd;
 	OpenHevc_Handle openHevcHandle;
-#ifdef OPEN_SHVC
+//#ifdef OPEN_SHVC
     u32 nb_layers;
     Bool base_only;
-#endif
+//#endif
 
 	u32 output_cb_size;
 
@@ -72,10 +72,10 @@ static GF_Err HEVC_ConfigureStream(HEVCDec *ctx, GF_ESD *esd)
 	ctx->ES_ID = esd->ESID;
 	ctx->width = ctx->height = ctx->out_size = ctx->luma_bpp = ctx->chroma_bpp = 0;
 	
-#ifdef OPEN_SHVC
+//#ifdef OPEN_SHVC
     ctx->nb_layers = 1;
     ctx->base_only = GF_FALSE;
-#endif
+//#endif
     
     
 	if (esd->decoderConfig->decoderSpecificInfo && esd->decoderConfig->decoderSpecificInfo->data) {
@@ -101,9 +101,9 @@ static GF_Err HEVC_ConfigureStream(HEVCDec *ctx, GF_ESD *esd)
 					ctx->chroma_bpp = MAX(hevc.sps[idx].bit_depth_chroma, ctx->chroma_bpp);
 
 					if (hdr & 0x1f8) {
-#ifdef OPEN_SHVC
+//#ifdef OPEN_SHVC
 						ctx->nb_layers ++;
-#endif
+//#endif
                     }
 				}
 	            else if (ar->type==GF_HEVC_NALU_VID_PARAM) {
@@ -120,13 +120,13 @@ static GF_Err HEVC_ConfigureStream(HEVCDec *ctx, GF_ESD *esd)
 	}
 
 
-#ifdef OPEN_SHVC
+//#ifdef OPEN_SHVC
     ctx->openHevcHandle = libOpenHevcInit(ctx->nb_threads, ctx->threading_type);
     libOpenHevcSetActiveDecoders(ctx->openHevcHandle, ctx->nb_layers);
     libOpenHevcSetViewLayers(ctx->openHevcHandle, ctx->nb_layers);
-#else
-	ctx->openHevcHandle = libOpenHevcInit(ctx->nb_threads, ctx->threading_type);
-#endif
+//#else
+//	ctx->openHevcHandle = libOpenHevcInit(ctx->nb_threads, ctx->threading_type);
+//#endif
 
 	if (esd->decoderConfig && esd->decoderConfig->decoderSpecificInfo && esd->decoderConfig->decoderSpecificInfo->data) {
 		libOpenHevcCopyExtraData(ctx->openHevcHandle, (u8 *) esd->decoderConfig->decoderSpecificInfo->data, esd->decoderConfig->decoderSpecificInfo->dataLength+8);
@@ -288,7 +288,7 @@ static GF_Err HEVC_SetCapabilities(GF_BaseDecoder *ifcg, GF_CodecCapability capa
 		if (ctx->openHevcHandle)
             libOpenHevcFlush(ctx->openHevcHandle);
         return GF_OK;
-#ifdef OPEN_SHVC
+//#ifdef OPEN_SHVC
 	case GF_CODEC_MEDIA_SWITCH_QUALITY:
 		/*switch up*/
 		if (capability.cap.valueInt) {
@@ -301,7 +301,7 @@ static GF_Err HEVC_SetCapabilities(GF_BaseDecoder *ifcg, GF_CodecCapability capa
 //			libOpenHevcSetActiveDecoders(ctx->openHevcHandle, 0);
 		}
 		return GF_OK;
-#endif
+//#endif
 	case GF_CODEC_DIRECT_OUTPUT:
 		ctx->direct_output = GF_TRUE;
 		if (ctx->conv_to_8bit && ctx->out_size)
