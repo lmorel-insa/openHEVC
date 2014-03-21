@@ -9,6 +9,10 @@
 #include "getopt.h"
 #include <libavformat/avformat.h>
 
+
+#define TIME2
+
+#ifdef TIME2
 #ifdef WIN32
 #include <Windows.h>
 #else
@@ -55,6 +59,7 @@ static unsigned long int GetTimeMs64()
     return ret;
 #endif
 }
+#endif
 
 typedef struct OpenHevcWrapperContext {
     AVCodec *codec;
@@ -127,7 +132,9 @@ static void video_decode_example(const char *filename)
     int stop_dec= 0;
     int got_picture;
     float time  = 0.0;
+#ifdef TIME2
     long unsigned int time_us = 0;
+#endif
     int video_stream_idx;
     char output_file2[256];
 
@@ -170,8 +177,9 @@ static void video_decode_example(const char *filename)
     openHevcFrameCpy.pvU = NULL;
     openHevcFrameCpy.pvV = NULL;
     Init_Time();
+#ifdef TIME2
     time_us = GetTimeMs64();
-
+#endif
    
     libOpenHevcSetTemporalLayer_id(openHevcHandle, temporal_layer_id);
     libOpenHevcSetActiveDecoders(openHevcHandle, quality_layer_id);
@@ -256,7 +264,9 @@ static void video_decode_example(const char *filename)
         }
     }
     time = SDL_GetTime()/1000.0;
+#ifdef TIME2
     time_us = GetTimeMs64() - time_us;
+#endif
     CloseSDLDisplay();
     if (fout) {
         fclose(fout);
@@ -268,7 +278,11 @@ static void video_decode_example(const char *filename)
     }
     avformat_close_input(&pFormatCtx);
     libOpenHevcClose(openHevcHandle);
-    printf("frame= %d fps= %.0f time= %.2f %ld video_size= %dx%d\n", nbFrame, nbFrame/time, time, time_us, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
+#ifdef TIME2
+    printf("frame= %d fps= %.0f time= %ld video_size= %dx%d\n", nbFrame, nbFrame/time, time_us, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
+#else
+    printf("frame= %d fps= %.0f time= %.2f video_size= %dx%d\n", nbFrame, nbFrame/time, time, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
+#endif
 }
 
 int main(int argc, char *argv[]) {
