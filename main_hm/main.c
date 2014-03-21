@@ -10,7 +10,7 @@
 #include <libavformat/avformat.h>
 
 
-//define TIME2
+#define TIME2
 
 #ifdef TIME2
 #ifdef WIN32
@@ -279,7 +279,7 @@ static void video_decode_example(const char *filename)
     avformat_close_input(&pFormatCtx);
     libOpenHevcClose(openHevcHandle);
 #ifdef TIME2
-    printf("frame= %d fps= %.0f time= %.2f %ld video_size= %dx%d\n", nbFrame, nbFrame/time, time, time_us, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
+    printf("frame= %d fps= %.0f time= %ld video_size= %dx%d\n", nbFrame, nbFrame/time, time_us, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
 #else
     printf("frame= %d fps= %.0f time= %.2f video_size= %dx%d\n", nbFrame, nbFrame/time, time, openHevcFrame.frameInfo.nWidth, openHevcFrame.frameInfo.nHeight);
 #endif
