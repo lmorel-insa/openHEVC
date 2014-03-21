@@ -858,21 +858,18 @@ static void upsample_block_luma(HEVCContext *s, HEVCFrame *ref0, int x0, int y0)
     int bl_height =  s->BL_frame->frame->coded_height;
     int bl_stride =  s->BL_frame->frame->linesize[0];
     int el_stride =  ref0->frame->linesize[0]; 
-     
-    
     int ePbW = x0 + ctb_size > el_width  ? el_width  - x0:ctb_size ;
     int ePbH = y0 + ctb_size > el_height ? el_height - y0:ctb_size;
-        
+
         
     if(s->up_filter_inf.idx == SNR){ /* x1 quality (SNR) scalability */
         
         copy_block (s->BL_frame->frame->data[0] + y0*bl_stride+x0, ref0->frame->data[0] + y0*el_stride+x0, bl_stride, el_stride, ePbH, ePbW );
         
-    } else
-     {    /* spatial scalability */
+    } else {    /* spatial scalability */
         int bl_edge_bottom, bl_edge_right, ret;
         int bPbW = ((( ePbW + 1 )*s->up_filter_inf.scaleXLum + s->up_filter_inf.addXLum) >> 12) >> 4; /*    FIXME: check if this method is correct  */
-        int bPbH = ((( ePbH + 1 ) *s->up_filter_inf.scaleYLum + s->up_filter_inf.addYLum) >> 12) >> 4;
+        int bPbH = ((( ePbH + 2 ) *s->up_filter_inf.scaleYLum + s->up_filter_inf.addYLum) >> 12) >> 4;
         
         int bl_x = (( (x0  - s->sps->pic_conf_win.left_offset) * s->up_filter_inf.scaleXLum + s->up_filter_inf.addXLum) >> 12) >> 4;
         int bl_y = (( (y0  - s->sps->pic_conf_win.top_offset) * s->up_filter_inf.scaleYLum + s->up_filter_inf.addYLum) >> 12) >> 4;
@@ -890,18 +887,17 @@ static void upsample_block_luma(HEVCContext *s, HEVCFrame *ref0, int x0, int y0)
         bl_edge_bottom =  (MAX_EDGE > (bl_height - bl_y - bPbH))  ? bl_height - bl_y - bPbH: MAX_EDGE;
          
         src = s->BL_frame->frame->data[0]+ (bl_y-bl_edge_top)*bl_stride+(bl_x-bl_edge_left);
-         ret = s->vdsp.emulated_edge_up_h(   src , bl_stride, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]],
+        ret = s->vdsp.emulated_edge_up_h(   src , bl_stride, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]],
                                           bPbW + bl_edge_left+bl_edge_right, bPbH + bl_edge_top + bl_edge_bottom,
                                           bl_edge_left , bl_edge_right, MAX_EDGE-1);
              
         if(ret)
             src += (MAX_EDGE-1);
         tmp0 = s->HEVClc->edge_emu_buffer_up_v+ ((MAX_EDGE-1)*MAX_EDGE_BUFFER_STRIDE);
-         
-         
+
         s->hevcdsp.upsample_filter_block_luma_h[s->up_filter_inf.idx](    tmp0, MAX_EDGE_BUFFER_STRIDE, src, bl_stride,
                                                     x0, bl_x, ePbW, bPbH + bl_edge_top + bl_edge_bottom, el_width,
-                                                    &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf);
+                                                    &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf/*, bl_y-bl_edge_top, s->buffer_frame[0]*/);
          
         ret = s->vdsp.emulated_edge_up_v(   tmp0, MAX_EDGE_BUFFER_STRIDE, &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]],
                                             ePbW, bPbH + bl_edge_top + bl_edge_bottom, x0, bl_edge_top ,
@@ -909,13 +905,12 @@ static void upsample_block_luma(HEVCContext *s, HEVCFrame *ref0, int x0, int y0)
         if(ret)
             tmp0 += ((MAX_EDGE-1)*MAX_EDGE_BUFFER_STRIDE);
         
-            s->hevcdsp.upsample_filter_block_luma_v[s->up_filter_inf.idx](    dst , ref0->frame->linesize[0], tmp0 , MAX_EDGE_BUFFER_STRIDE,
+        s->hevcdsp.upsample_filter_block_luma_v[s->up_filter_inf.idx](    dst , ref0->frame->linesize[0], tmp0 , MAX_EDGE_BUFFER_STRIDE,
                                                     bl_y , x0, y0, ePbW, ePbH, el_width, el_height,
                                                     &s->sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]], &s->up_filter_inf);
          
     }
     s->is_upsampled[(y0/ctb_size*s->sps->ctb_width)+(x0/ctb_size)] = 1;
-    
 }
 
 static void upsample_block_mc(HEVCContext *s, HEVCFrame *ref0, int x0, int y0) {
@@ -1015,12 +1010,11 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                     Ref_pre_unit = (yBL*pic_width_in_min_puBL)+xBL;
                     if(refBL->tab_mvf[Ref_pre_unit].pred_flag) {
                         memcpy(&refEL->tab_mvf[pre_unit], &refBL->tab_mvf[Ref_pre_unit], sizeof(MvField));
-                    } else {
+                    } else
                         memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
-                    }
-                } else {
+                } else 
                     memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
-                }
+
                 if( ((xEL+1)>>s->sps->log2_min_pu_size) < pic_width_in_min_pu && ((yEL+1)>>s->sps->log2_min_pu_size) < pic_height_in_min_pu) {
                     pre_unit_col = (((yEL+1)>>s->sps->log2_min_pu_size)*pic_width_in_min_pu) + ((xEL+1)>>s->sps->log2_min_pu_size);
                     memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvField));
@@ -1052,13 +1046,12 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                             refEL->tab_mvf[pre_unit].ref_idx[list] = refBL->tab_mvf[Ref_pre_unit].ref_idx[list];
                             refEL->tab_mvf[pre_unit].pred_flag = refBL->tab_mvf[Ref_pre_unit].pred_flag;
                         }
-                    } else {
+                    } else
                         memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
-                    }
                     
-                } else {
+                } else
                     memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
-                }
+
                 if( ((xEL+1)>>s->sps->log2_min_pu_size) < pic_width_in_min_pu && ((yEL+1)>>s->sps->log2_min_pu_size) < pic_height_in_min_pu) {
                     pre_unit_col = (((yEL+1)>>s->sps->log2_min_pu_size)*pic_width_in_min_pu) + ((xEL+1)>>s->sps->log2_min_pu_size);
                     memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvField));

@@ -289,7 +289,7 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
                     s->up_filter_inf.idx = X1_5;
                 else {
                     s->up_filter_inf.idx = DEFAULT;
-                    av_log(s->avctx, AV_LOG_INFO, "DEFAULT mode: SSE optimizations are not implemented for spatial scalability with a ratio different from x2 and x1.5 \n");
+                    av_log(s->avctx, AV_LOG_INFO, "DEFAULT mode: SSE optimizations are not implemented for spatial scalability with a ratio different from x2 and x1.5 %d %d   %d %d    %d %d %d %d \n", ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_width, ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_height, sps->height - scaled_ref_layer_window.bottom_offset   - scaled_ref_layer_window.top_offset, sps->width  - scaled_ref_layer_window.left_offset     - scaled_ref_layer_window.right_offset, scaled_ref_layer_window.bottom_offset, scaled_ref_layer_window.top_offset, scaled_ref_layer_window.left_offset, scaled_ref_layer_window.right_offset);
                 }
  
 #if ACTIVE_BOTH_FRAME_AND_PU
