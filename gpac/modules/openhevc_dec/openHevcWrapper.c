@@ -40,6 +40,7 @@ typedef struct OpenHevcWrapperContexts {
     int nb_decoders;
     int active_layer;
     int display_layer;
+    int set_display;
     int set_vps;
 } OpenHevcWrapperContexts;
 
@@ -50,10 +51,7 @@ OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int thread_type)
     OpenHevcWrapperContexts *openHevcContexts = av_mallocz(sizeof(OpenHevcWrapperContexts));
     OpenHevcWrapperContext  *openHevcContext;
     avcodec_register_all();
-    openHevcContexts->nb_decoders   = MAX_DECODERS;
-    openHevcContexts->active_layer  = MAX_DECODERS-1;
-    openHevcContexts->display_layer = MAX_DECODERS-1;
-
+    openHevcContexts->nb_decoders = MAX_DECODERS;
     openHevcContexts->wraper = av_malloc(sizeof(OpenHevcWrapperContext*)*openHevcContexts->nb_decoders);
     for(i=0; i < openHevcContexts->nb_decoders; i++){
         openHevcContext = openHevcContexts->wraper[i] = av_malloc(sizeof(OpenHevcWrapperContext));
@@ -128,7 +126,19 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
     }
-    return got_picture[openHevcContexts->display_layer];
+    if(openHevcContexts->set_display)
+        return got_picture[openHevcContexts->display_layer];
+    else
+        for(i=openHevcContexts->active_layer; i>=0; i--) {
+            if(got_picture[i]){
+                if(i != openHevcContexts->display_layer) {
+                    libOpenHevcSetViewLayers(openHevcContexts, i);
+                    openHevcContexts->set_display = 0;
+                }
+                return got_picture[i];
+            }
+        }
+    return 0;
 }
 
 void libOpenHevcCopyExtraData(OpenHevc_Handle openHevcHandle, unsigned char *extra_data, int extra_size_alloc)
@@ -199,7 +209,7 @@ int libOpenHevcGetOutput(OpenHevc_Handle openHevcHandle, int got_picture, OpenHe
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
     OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->display_layer];
-		
+
     if (got_picture) {
         openHevcFrame->pvY       = (void *) openHevcContext->picture->data[0];
         openHevcFrame->pvU       = (void *) openHevcContext->picture->data[1];
@@ -268,6 +278,7 @@ void libOpenHevcSetActiveDecoders(OpenHevc_Handle openHevcHandle, int val)
 void libOpenHevcSetViewLayers(OpenHevc_Handle openHevcHandle, int val)
 {
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
+    openHevcContexts->set_display = 1;
     if (val >= 0 && val < openHevcContexts->nb_decoders)
         openHevcContexts->display_layer = val;
     else {
