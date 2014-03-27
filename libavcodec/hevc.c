@@ -41,6 +41,8 @@
 #define POC_DISPLAY_MD5
 #ifdef POC_DISPLAY_MD5
 
+uint8_t ff_hevc_pel_weight[65] = { [2] = 0, [4] = 1, [6] = 2, [8] = 3, [12] = 4, [16] = 5, [24] = 6, [32] = 7, [48] = 8, [64] = 9 };
+
 static void printf_ref_pic_list(HEVCContext *s)
 {
     RefPicList  *refPicList = s->ref->refPicList;
@@ -560,10 +562,15 @@ static int hls_slice_header(HEVCContext *s)
         if (IS_IDR(s))
             ff_hevc_clear_refs(s);
     }
+        sh->no_output_of_prior_pics_flag = 0;
     if (s->nal_unit_type >= 16 && s->nal_unit_type <= 23) {
         sh->no_output_of_prior_pics_flag = get_bits1(gb);
         print_cabac("no_output_of_prior_pics_flag", sh->no_output_of_prior_pics_flag);
     }
+
+    if (s->nal_unit_type == NAL_CRA_NUT && s->last_eos == 1)
+        sh->no_output_of_prior_pics_flag = 1;
+
 
     sh->pps_id = get_ue_golomb_long(gb);
     print_cabac("slice_pic_parameter_set_id", sh->pps_id);
@@ -579,7 +586,13 @@ static int hls_slice_header(HEVCContext *s)
     s->pps = (HEVCPPS*)s->pps_list[sh->pps_id]->data;
 
     if (s->sps != (HEVCSPS*)s->sps_list[s->pps->sps_id]->data) {
+        const HEVCSPS* last_sps = s->sps;
         s->sps = (HEVCSPS*)s->sps_list[s->pps->sps_id]->data;
+        if(last_sps) {
+            if (s->sps->width !=  last_sps->width || s->sps->height != last_sps->height ||
+                s->sps->temporal_layer[s->sps->max_sub_layers - 1].max_dec_pic_buffering != last_sps->temporal_layer[last_sps->max_sub_layers - 1].max_dec_pic_buffering)
+                sh->no_output_of_prior_pics_flag = 0;
+        }
         ff_hevc_clear_refs(s);
         ret = set_sps(s, s->sps);
         if (ret < 0)
@@ -682,7 +695,8 @@ static int hls_slice_header(HEVCContext *s)
             return AVERROR_INVALIDDATA;
         }
 
-        if (s->pps->output_flag_present_flag){
+        sh->pic_output_flag = 1;
+        if (s->pps->output_flag_present_flag) {
             sh->pic_output_flag = get_bits1(gb);
             print_cabac("pic_output_flag", sh->pic_output_flag);
         }
@@ -1431,8 +1445,8 @@ static void luma_mc(HEVCContext *s, int16_t *dst, ptrdiff_t dststride,
         src = lc->edge_emu_buffer + buf_offset;
         srcstride = edge_emu_stride;
     }
-    s->hevcdsp.put_hevc_qpel[idx][!!my][!!mx](dst, dststride, src, srcstride, block_w,
-                                     block_h, mx, my);
+    s->hevcdsp.put_hevc_qpel[ff_hevc_pel_weight[block_w]][!!my][!!mx](dst, dststride, src, srcstride,
+                                     block_h, mx, my, block_w);
 }
 
 /**
@@ -1461,8 +1475,8 @@ static void chroma_mc(HEVCContext *s, int16_t *dst1, int16_t *dst2,
     int pic_width        = s->sps->width >> 1;
     int pic_height       = s->sps->height >> 1;
 
-    int mx = mv->x & 7;
-    int my = mv->y & 7;
+    intptr_t mx = mv->x & 7;
+    intptr_t my = mv->y & 7;
 
     x_off += mv->x >> 3;
     y_off += mv->y >> 3;
@@ -1489,8 +1503,8 @@ static void chroma_mc(HEVCContext *s, int16_t *dst1, int16_t *dst2,
 
         src1 = lc->edge_emu_buffer + buf_offset1;
         src1stride = edge_emu_stride;
-        s->hevcdsp.put_hevc_epel[idx][!!my][!!mx](dst1, dststride, src1, src1stride,
-                                             block_w, block_h, mx, my);
+        s->hevcdsp.put_hevc_epel[ff_hevc_pel_weight[block_w]][!!my][!!mx](dst1, dststride, src1, src1stride,
+                                                  block_h, mx, my, block_w);
 
         s->vdsp.emulated_edge_mc(lc->edge_emu_buffer, src2 - offset2,
                                  edge_emu_stride, src2stride,
@@ -1501,13 +1515,13 @@ static void chroma_mc(HEVCContext *s, int16_t *dst1, int16_t *dst2,
         src2 = lc->edge_emu_buffer + buf_offset2;
         src2stride = edge_emu_stride;
 
-        s->hevcdsp.put_hevc_epel[idx][!!my][!!mx](dst2, dststride, src2, src2stride,
-                                             block_w, block_h, mx, my);
+        s->hevcdsp.put_hevc_epel[ff_hevc_pel_weight[block_w]][!!my][!!mx](dst2, dststride, src2, src2stride,
+                                                  block_h, mx, my, block_w);
     } else {
-        s->hevcdsp.put_hevc_epel[idx][!!my][!!mx](dst1, dststride, src1, src1stride,
-                                             block_w, block_h, mx, my);
-        s->hevcdsp.put_hevc_epel[idx][!!my][!!mx](dst2, dststride, src2, src2stride,
-                                             block_w, block_h, mx, my);
+        s->hevcdsp.put_hevc_epel[ff_hevc_pel_weight[block_w]][!!my][!!mx](dst1, dststride, src1, src1stride,
+                                                  block_h, mx, my, block_w);
+        s->hevcdsp.put_hevc_epel[ff_hevc_pel_weight[block_w]][!!my][!!mx](dst2, dststride, src2, src2stride,
+                                                  block_h, mx, my, block_w);
     }
 }
 
@@ -2976,6 +2990,7 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
     int i, consumed, ret = 0;
 
     s->ref = NULL;
+    s->last_eos = s->eos;
     s->eos = 0;
     s->active_el_frame = 0; 
 
@@ -3390,9 +3405,11 @@ static av_cold int hevc_init_context(AVCodecContext *avctx)
         s->HEVClcList[i] = av_mallocz(sizeof(HEVCLocalContext));
         s->sList[i]->HEVClc = s->HEVClcList[i];
     }
+
 #if 0
     printf("### %ld ### \n", s->dynamic_alloc );
 #endif
+    s->eos = 0;
     return 0;
 
 fail:
@@ -3453,6 +3470,7 @@ static int hevc_update_thread_context(AVCodecContext *dst,
     s->seq_output           = s0->seq_output;
     s->pocTid0              = s0->pocTid0;
     s->max_ra               = s0->max_ra;
+    s->eos        = s0->eos;
     s->is_nalff             = s0->is_nalff;
     s->nal_length_size      = s0->nal_length_size;
     s->threads_number       = s0->threads_number;
@@ -3465,6 +3483,7 @@ static int hevc_update_thread_context(AVCodecContext *dst,
 
     if (s->sps != s0->sps)
         ret = set_sps(s, s0->sps);
+
     if (s0->eos) {
         s->seq_decode = (s->seq_decode + 1) & 0xff;
         s->max_ra = INT_MAX;

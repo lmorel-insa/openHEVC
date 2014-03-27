@@ -115,7 +115,6 @@ typedef struct Info {
 static void video_decode_example(const char *filename)
 {
     AVFormatContext *pFormatCtx=NULL;
-    AVInputFormat *file_iformat;
     AVPacket        packet;
 #if FRAME_CONCEALMENT
     FILE *fin_loss = NULL, *fin1 = NULL;
@@ -142,6 +141,11 @@ static void video_decode_example(const char *filename)
     OpenHevc_Frame_cpy openHevcFrameCpy;
     OpenHevc_Handle    openHevcHandle;
 
+    if (filename == NULL) {
+        printf("No input file specified.\nSpecify it with: -i <filename>\n");
+        exit(1);
+    }
+
     openHevcHandle = libOpenHevcInit(nb_pthreads, thread_type/*, pFormatCtx*/);
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
 
@@ -151,9 +155,8 @@ static void video_decode_example(const char *filename)
     }
     av_register_all();
     pFormatCtx = avformat_alloc_context();
-    file_iformat = (AVInputFormat *) av_guess_format(NULL, filename, NULL);
-    
-    if(avformat_open_input(&pFormatCtx, filename, file_iformat, NULL)!=0) {
+
+    if(avformat_open_input(&pFormatCtx, filename, NULL, NULL)!=0) {
         printf("%s",filename);
         exit(1); // Couldn't open file
     }
@@ -259,9 +262,12 @@ static void video_decode_example(const char *filename)
                     fwrite( openHevcFrameCpy.pvV , sizeof(uint8_t) , nbData / 4, fout);
                 }
                 nbFrame++;
-            } else  if (stop_dec==1 && nbFrame)
+            } else {
+                if (stop_dec==1 && nbFrame)
                 stop = 1;
+            }
         }
+        av_free_packet(&packet);
     }
     time = SDL_GetTime()/1000.0;
 #ifdef TIME2

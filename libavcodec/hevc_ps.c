@@ -1128,7 +1128,9 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
     vps->vps_max_sub_layers           = get_bits(gb, 3) + 1;
     print_cabac("vps_max_sub_layers_minus1", vps->vps_max_sub_layers-1);
     vps->vps_temporal_id_nesting_flag = get_bits1(gb);
+
     print_cabac("vps_temporal_id_nesting_flag", vps->vps_temporal_id_nesting_flag);
+
     if (vps->vps_max_sub_layers > MAX_SUB_LAYERS) {
         av_log(s->avctx, AV_LOG_ERROR, "vps_max_sub_layers out of range: %d\n",
                 vps->vps_max_sub_layers);
@@ -1810,8 +1812,13 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     }
     sps->amp_enabled_flag = get_bits1(gb);
     sps->sao_enabled      = get_bits1(gb);
+
     print_cabac("amp_enabled_flag", sps->amp_enabled_flag);
     print_cabac("sample_adaptive_offset_enabled_flag\n", sps->sao_enabled);
+
+    if (sps->sao_enabled)
+        av_log(s->avctx, AV_LOG_DEBUG, "SAO enabled\n");
+
 
     sps->pcm_enabled_flag = get_bits1(gb);
     print_cabac("pcm_enabled_flag", sps->pcm_enabled_flag);
@@ -2131,6 +2138,7 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
     pps->tiles_enabled_flag               = get_bits1(gb);
     pps->entropy_coding_sync_enabled_flag = get_bits1(gb);
 
+
     print_cabac("pps_cb_qp_offset", pps->cb_qp_offset);
     print_cabac("pps_cr_qp_offset", pps->cr_qp_offset);
     print_cabac("pps_slice_chroma_qp_offsets_present_flag", pps->pic_slice_level_chroma_qp_offsets_present_flag);
@@ -2140,7 +2148,12 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
     print_cabac("tiles_enabled_flag", pps->tiles_enabled_flag);
     print_cabac("entropy_coding_sync_enabled_flag", pps->entropy_coding_sync_enabled_flag);
 
+    if (pps->entropy_coding_sync_enabled_flag)
+        av_log(s->avctx, AV_LOG_DEBUG, "WPP enabled\n");
+
+
     if (pps->tiles_enabled_flag) {
+        av_log(s->avctx, AV_LOG_DEBUG, "Tiles enabled\n");
         pps->num_tile_columns = get_ue_golomb_long(gb) + 1;
         pps->num_tile_rows    = get_ue_golomb_long(gb) + 1;
 
