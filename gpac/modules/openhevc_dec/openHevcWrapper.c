@@ -110,7 +110,7 @@ int libOpenHevcStartDecoder(OpenHevc_Handle openHevcHandle)
 
 int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int au_len, int64_t pts)
 {
-    int got_picture[MAX_DECODERS], len=0, i;
+    int got_picture[MAX_DECODERS], len=0, i, max_layer;
     OpenHevcWrapperContexts *openHevcContexts = (OpenHevcWrapperContexts *) openHevcHandle;
     OpenHevcWrapperContext  *openHevcContext;
     for(i =0; i <= openHevcContexts->active_layer; i++)  {
@@ -128,19 +128,20 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
         fprintf(stderr, "Error while decoding frame \n");
         return -1;
     }
-
     if(openHevcContexts->set_display)
-        return got_picture[openHevcContexts->display_layer];
+        max_layer = openHevcContexts->display_layer;
     else
-        for(i=openHevcContexts->active_layer; i>=0; i--) {
-            if(got_picture[i]){
-                if(i != openHevcContexts->display_layer) {
-                    libOpenHevcSetViewLayers(openHevcContexts, i);
-                    openHevcContexts->set_display = 0;
-                }
-                return got_picture[i];
+        max_layer = openHevcContexts->active_layer;
+
+    for(i=max_layer; i>=0; i--) {
+        if(got_picture[i]){
+            if(i != openHevcContexts->display_layer) {
+                if (i >= 0 && i < openHevcContexts->nb_decoders)
+                    openHevcContexts->display_layer = i;
             }
+            return got_picture[i];
         }
+    }
     return 0;
 }
 
@@ -230,6 +231,7 @@ int libOpenHevcGetOutputCpy(OpenHevc_Handle openHevcHandle, int got_picture, Ope
 
     OpenHevcWrapperContext  *openHevcContext  = openHevcContexts->wraper[openHevcContexts->display_layer];
     AVFrame                 *picture          = openHevcContext->picture;
+
     int y;
     int y_offset, y_offset2;
     if( got_picture ) {
