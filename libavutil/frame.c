@@ -178,11 +178,6 @@ int av_frame_ref(AVFrame *dst, AVFrame *src)
     dst->format         = src->format;
     dst->width          = src->width;
     dst->height         = src->height;
-//#if 1
-  //  dst->coded_width          = src->coded_width;
-   // dst->coded_height         = src->coded_height;
-//#endif
-    
     dst->channel_layout = src->channel_layout;
     dst->nb_samples     = src->nb_samples;
 
