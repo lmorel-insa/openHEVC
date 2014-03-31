@@ -253,7 +253,7 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         widthBL  = ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_width;
         
         if(!heightBL || !widthBL)    {
-            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing  \n");
+            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing: widthBL: %d heightBL: %d \n", widthBL, heightBL);
             goto fail;
         }
         HEVCWindow scaled_ref_layer_window = sps->scaled_ref_layer_window[((HEVCVPS*)s->vps_list[sps->vps_id]->data)->m_refLayerId[s->nuh_layer_id][0]]; // m_phaseAlignFlag;
@@ -2772,7 +2772,6 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
         int var = (rand()%100);
         if( var < loss_rate && (s->nal_unit_type != NAL_VPS) && (s->nal_unit_type != NAL_SPS) && (s->nal_unit_type != NAL_PPS))
             get_bits(gb, 3);
-            
             //  Packet loss
             //return 0;
     }

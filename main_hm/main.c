@@ -19,7 +19,7 @@
 #include <sys/time.h>
 //#include <ctime>
 #endif
-#define FRAME_CONCEALMENT                0
+#define FRAME_CONCEALMENT   0
 
 
 /* Returns the amount of milliseconds elapsed since the UNIX epoch. Works on both
@@ -187,7 +187,6 @@ static void video_decode_example(const char *filename)
     libOpenHevcSetTemporalLayer_id(openHevcHandle, temporal_layer_id);
     libOpenHevcSetActiveDecoders(openHevcHandle, quality_layer_id);
     libOpenHevcSetViewLayers(openHevcHandle, quality_layer_id);
-
 #if FRAME_CONCEALMENT
     fin_loss = fopen( "/Users/wassim/Softwares/shvc_transmission/parser/hevc_parser/BascketBall_Loss.txt", "rb");
     fin1 = fopen( "/Users/wassim/Softwares/shvc_transmission/parser/hevc_parser/BascketBall.txt", "rb");
@@ -203,7 +202,6 @@ static void video_decode_example(const char *filename)
         if(is_received)
             fscanf(fin_loss, "%d    %d    %d    %d    %d        %d \n", &info_loss.NbFrame, &info_loss.Poc, &info_loss.Tid, &info_loss.Qid, &info_loss.type, &info_loss.size);
         fscanf(fin1, "%d    %d    %d    %d    %d        %d \n", &info.NbFrame, &info.Poc, &info.Tid, &info.Qid, &info.type, &info.size);
-                
         if(info_loss.NbFrame == info.NbFrame)
             is_received = 1;
         else
