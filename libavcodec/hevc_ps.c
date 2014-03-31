@@ -1515,10 +1515,13 @@ static void parseSPSExtension( HEVCContext *s, HEVCSPS *sps )
             sps->scaled_ref_layer_window[i].top_offset    = get_se_golomb(gb)<<1;
             sps->scaled_ref_layer_window[i].right_offset  = get_se_golomb(gb)<<1;
             sps->scaled_ref_layer_window[i].bottom_offset = get_se_golomb(gb)<<1;
+            sps->scaled_ref_layer_window[i].vert_phase_position_enable_flag = get_bits1(gb);
+
             print_cabac("scaled_ref_layer_left_offset",  sps->scaled_ref_layer_window[i].left_offset);
             print_cabac("scaled_ref_layer_top_offset",  sps->scaled_ref_layer_window[i].top_offset);
             print_cabac("scaled_ref_layer_right_offset",  sps->scaled_ref_layer_window[i].right_offset);
             print_cabac("scaled_ref_layer_bottom_offset",  sps->scaled_ref_layer_window[i].bottom_offset);
+            print_cabac("vert_phase_position_enable_flag",  sps->scaled_ref_layer_window[i].vert_phase_position_enable_flag);
         }
     }
 }

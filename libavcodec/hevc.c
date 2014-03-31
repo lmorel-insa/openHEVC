@@ -235,65 +235,7 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
         goto fail;
 #ifdef SVC_EXTENSION
     if(s->decoder_id)    {
-        int heightBL, widthBL, heightEL, widthEL;
-        const int phaseXC = 0;
-        const int phaseYC = 1;
-        const int phaseAlignFlag = ((HEVCVPS*)s->vps_list[sps->vps_id]->data)->m_phaseAlignFlag;
-        const int   phaseX = phaseAlignFlag   << 1;
-        const int   phaseY = phaseAlignFlag   << 1;
-        
-        if (s->threads_type&FF_THREAD_FRAME)
-            ff_thread_await_il_progress(s->avctx, 0, &s->avctx->BL_frame);
-    
-        if(!s->avctx->BL_frame)    {
-            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing  \n");
-            goto fail;
-        }
-        heightBL = ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_height;
-        widthBL  = ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_width;
-        
-        if(!heightBL || !widthBL)    {
-            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing  \n");
-            goto fail;
-        }
-        HEVCWindow scaled_ref_layer_window = sps->scaled_ref_layer_window[((HEVCVPS*)s->vps_list[sps->vps_id]->data)->m_refLayerId[s->nuh_layer_id][0]]; // m_phaseAlignFlag;
-        
-        heightEL = sps->height - scaled_ref_layer_window.bottom_offset   - scaled_ref_layer_window.top_offset;
-        widthEL  = sps->width  - scaled_ref_layer_window.left_offset     - scaled_ref_layer_window.right_offset;
-        
-        s->sh.ScalingFactor[s->nuh_layer_id][0]   = av_clip_c(((widthEL  << 8) + (widthBL  >> 1)) / widthBL,  -4096, 4095 );
-        s->sh.ScalingFactor[s->nuh_layer_id][1]   = av_clip_c(((heightEL << 8) + (heightBL >> 1)) / heightBL, -4096, 4095 );
-        s->up_filter_inf.scaleXLum = ( ( widthBL << 16 )  + ( widthEL >> 1 ) ) / widthEL ;
-        s->up_filter_inf.scaleYLum = ( ( heightBL << 16 ) + ( heightEL >> 1 ) ) / heightEL;
-        
-        s->up_filter_inf.addXLum   = (( phaseX * s->up_filter_inf.scaleXLum + 2 ) >> 2 )+ ( 1 << 11 );
-        s->up_filter_inf.addYLum   = (( phaseY * s->up_filter_inf.scaleYLum + 2 ) >> 2 )+ ( 1 << 11 );
-        
-        widthEL  >>= 1;
-        heightEL >>= 1;
-        widthBL  >>= 1;
-        heightBL >>= 1;
-        
-        s->up_filter_inf.addXCr   = ( ((phaseXC+phaseAlignFlag) * s->up_filter_inf.scaleXLum + 2) >> 2) + ( 1 << 11 );
-        s->up_filter_inf.addYCr   = ( ((phaseYC+phaseAlignFlag) * s->up_filter_inf.scaleYLum + 2) >> 2) + ( 1 << 11 );
-        s->up_filter_inf.scaleXCr     = s->up_filter_inf.scaleXLum;
-        s->up_filter_inf.scaleYCr     = s->up_filter_inf.scaleYLum;
-        
-
-        
-        if(s->up_filter_inf.scaleXLum == 65536 && s->up_filter_inf.scaleYLum == 65536)
-            s->up_filter_inf.idx = SNR;
-        else
-            if(s->up_filter_inf.scaleXLum == 32768 && s->up_filter_inf.scaleYLum == 32768)
-                s->up_filter_inf.idx = X2;
-            else
-                if(s->up_filter_inf.scaleXLum == 43691 && s->up_filter_inf.scaleYLum == 43691)
-                    s->up_filter_inf.idx = X1_5;
-                else {
-                    s->up_filter_inf.idx = DEFAULT;
-                    av_log(s->avctx, AV_LOG_INFO, "DEFAULT mode: SSE optimizations are not implemented for spatial scalability with a ratio different from x2 and x1.5 \n");
-                }
- 
+         
 #if ACTIVE_BOTH_FRAME_AND_PU
         s->buffer_frame[0] = av_malloc(pic_size*sizeof(short));
         s->buffer_frame[1] = av_malloc((pic_size>>2)*sizeof(short));
@@ -540,6 +482,69 @@ fail:
     pic_arrays_free(s);
     s->sps = NULL;
     return ret;
+}
+static int compute_upsampling_inf(HEVCContext *s) {
+    int heightBL, widthBL, heightEL, widthEL;
+    const int phaseXC = 0;
+    const int phaseYC = 1;
+    const HEVCSPS *sps = s->sps;
+    const int phaseAlignFlag = s->vps->m_phaseAlignFlag;
+    const int verphaseAlignFlag = s->sh.vert_phase_position_flag[s->vps->m_refLayerId[s->nuh_layer_id][0]];
+    const int   phaseX = phaseAlignFlag   << 1;
+    const int   phaseY = verphaseAlignFlag   << 1;
+
+    if (s->threads_type&FF_THREAD_FRAME)
+        ff_thread_await_il_progress(s->avctx, 0, &s->avctx->BL_frame);
+
+    if(!s->avctx->BL_frame)    {
+        av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing  \n");
+        return -1;
+    }
+    heightBL = ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_height;
+    widthBL  = ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_width;
+
+    if(!heightBL || !widthBL)    {
+        av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing  \n");
+        return -1;
+    }
+    HEVCWindow scaled_ref_layer_window = sps->scaled_ref_layer_window[s->vps->m_refLayerId[s->nuh_layer_id][0]]; // m_phaseAlignFlag;
+
+    heightEL = sps->height - scaled_ref_layer_window.bottom_offset   - scaled_ref_layer_window.top_offset;
+    widthEL  = sps->width  - scaled_ref_layer_window.left_offset     - scaled_ref_layer_window.right_offset;
+
+    s->sh.ScalingFactor[s->nuh_layer_id][0]   = av_clip_c(((widthEL  << 8) + (widthBL  >> 1)) / widthBL,  -4096, 4095 );
+    s->sh.ScalingFactor[s->nuh_layer_id][1]   = av_clip_c(((heightEL << 8) + (heightBL >> 1)) / heightBL, -4096, 4095 );
+    s->up_filter_inf.scaleXLum = ( ( widthBL << 16 )  + ( widthEL >> 1 ) ) / widthEL ;
+    s->up_filter_inf.scaleYLum = ( ( heightBL << 16 ) + ( heightEL >> 1 ) ) / heightEL;
+
+    s->up_filter_inf.addXLum   = (( phaseX * s->up_filter_inf.scaleXLum + 2 ) >> 2 )+ ( 1 << 11 );
+    s->up_filter_inf.addYLum   = (( phaseY * s->up_filter_inf.scaleYLum + 2 ) >> 2 )+ ( 1 << 11 );
+
+    widthEL  >>= 1;
+    heightEL >>= 1;
+    widthBL  >>= 1;
+    heightBL >>= 1;
+
+    s->up_filter_inf.addXCr   = ( ((phaseXC+phaseAlignFlag) * s->up_filter_inf.scaleXLum + 2) >> 2) + ( 1 << 11 );
+    s->up_filter_inf.addYCr   = ( ((phaseYC+phaseAlignFlag) * s->up_filter_inf.scaleYLum + 2) >> 2) + ( 1 << 11 );
+    s->up_filter_inf.scaleXCr     = s->up_filter_inf.scaleXLum;
+    s->up_filter_inf.scaleYCr     = s->up_filter_inf.scaleYLum;
+
+
+
+    if(s->up_filter_inf.scaleXLum == 65536 && s->up_filter_inf.scaleYLum == 65536)
+        s->up_filter_inf.idx = SNR;
+    else
+        if(s->up_filter_inf.scaleXLum == 32768 && s->up_filter_inf.scaleYLum == 32768)
+            s->up_filter_inf.idx = X2;
+        else
+            if(s->up_filter_inf.scaleXLum == 43691 && s->up_filter_inf.scaleYLum == 43691)
+                s->up_filter_inf.idx = X1_5;
+            else {
+                s->up_filter_inf.idx = DEFAULT;
+                av_log(s->avctx, AV_LOG_INFO, "DEFAULT mode: SSE optimizations are not implemented for spatial scalability with a ratio different from x2 and x1.5 \n");
+            }
+    return 0;
 }
 
 static int hls_slice_header(HEVCContext *s)
@@ -812,6 +817,15 @@ static int hls_slice_header(HEVCContext *s)
             s->sh.active_num_ILR_ref_idx = s->vps->m_numDirectRefLayers[sc->layer_id];
 #endif
 #endif
+/*
+        for( i = 0; i < s->sh.active_num_ILR_ref_idx; i++ )
+			if (s->sps->scaled_ref_layer_window[0].vert_phase_position_enable_flag ) //sps-> vert_phase_position_enable_flag[ RefPicLayerId[ i ] ] )
+				sh->vert_phase_position_flag[ RefPicLayerId[ i ]]
+*/
+        if(s->nuh_layer_id > 0)
+            if(compute_upsampling_inf(s)  < 0)
+                return AVERROR_INVALIDDATA;
+            
         if (s->sps->sao_enabled) {
             sh->slice_sample_adaptive_offset_flag[0] = get_bits1(gb);
             print_cabac("slice_sao_luma_flag", sh->slice_sample_adaptive_offset_flag[0] );

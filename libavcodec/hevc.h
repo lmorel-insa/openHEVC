@@ -346,6 +346,7 @@ typedef struct HEVCWindow {
     int right_offset;
     int top_offset;
     int bottom_offset;
+    uint8_t vert_phase_position_enable_flag;
 } HEVCWindow;
 
 typedef struct VUI {
@@ -907,7 +908,8 @@ typedef struct SliceHeader {
     int ScalingFactor[MAX_LAYERS][2];
  //   int ScalingPosition[MAX_LAYERS][2];
     uint8_t m_bPocResetFlag;
-    uint8_t m_bCrossLayerBLAFlag; 
+    uint8_t m_bCrossLayerBLAFlag;
+     int vert_phase_position_flag[MAX_LAYERS];
 #endif
 
     int slice_ctb_addr_rs;
