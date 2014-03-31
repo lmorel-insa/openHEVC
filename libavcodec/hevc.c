@@ -246,14 +246,14 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
             ff_thread_await_il_progress(s->avctx, 0, &s->avctx->BL_frame);
     
         if(!s->avctx->BL_frame)    {
-            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing  \n");
+            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing -- \n");
             goto fail;
         }
         heightBL = ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_height;
         widthBL  = ((HEVCFrame*)s->avctx->BL_frame)->frame->coded_width;
         
         if(!heightBL || !widthBL)    {
-            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing  \n");
+            av_log(s->avctx, AV_LOG_ERROR, "Informations related to the inter layer refrence frame are missing -- \n");
             goto fail;
         }
         HEVCWindow scaled_ref_layer_window = sps->scaled_ref_layer_window[((HEVCVPS*)s->vps_list[sps->vps_id]->data)->m_refLayerId[s->nuh_layer_id][0]]; // m_phaseAlignFlag;
