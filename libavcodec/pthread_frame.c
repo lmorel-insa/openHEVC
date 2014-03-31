@@ -620,6 +620,7 @@ void ff_thread_finish_setup(AVCodecContext *avctx) {
     PerThreadContext *p = avctx->internal->thread_ctx_frame;
 
     if (!(avctx->active_thread_type&FF_THREAD_FRAME)) return;
+
     if(p->state == STATE_SETUP_FINISHED){
         av_log(avctx, AV_LOG_WARNING, "Multiple ff_thread_finish_setup() calls\n");
     }

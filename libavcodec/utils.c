@@ -470,6 +470,7 @@ static int video_get_buffer(AVCodecContext *s, AVFrame *pic)
     pic->extended_data = pic->data;
 
     av_pix_fmt_get_chroma_sub_sample(s->pix_fmt, &h_chroma_shift, &v_chroma_shift);
+
     for (i = 0; i < 4 && pool->pools[i]; i++) {
         const int h_shift = i == 0 ? 0 : h_chroma_shift;
         const int v_shift = i == 0 ? 0 : v_chroma_shift;
@@ -477,15 +478,13 @@ static int video_get_buffer(AVCodecContext *s, AVFrame *pic)
         pic->linesize[i] = pool->linesize[i];
 
         pic->buf[i] = av_buffer_pool_get(pool->pools[i]);
-
         if (!pic->buf[i])
             goto fail;
+
         // no edge if EDGE EMU or not planar YUV
         if ((s->flags & CODEC_FLAG_EMU_EDGE) || !pool->pools[2])
             pic->data[i] = pic->buf[i]->data;
         else {
-            
-
             pic->data[i] = pic->buf[i]->data +
                 FFALIGN((pic->linesize[i] * EDGE_WIDTH >> v_shift) +
                         (pixel_size * EDGE_WIDTH >> h_shift), pool->stride_align[i]);
@@ -615,7 +614,6 @@ int ff_get_buffer(AVCodecContext *avctx, AVFrame *frame, int flags)
      * When all the planes are freed, the dummy buffer's free callback calls
      * release_buffer().
      */
-
     if (avctx->get_buffer) {
         CompatReleaseBufPriv *priv = NULL;
         AVBufferRef *dummy_buf = NULL;
@@ -681,6 +679,7 @@ do {                                                                    \
             for (i = 0; i < planes; i++) {
                 int v_shift    = (i == 1 || i == 2) ? desc->log2_chroma_h : 0;
                 int plane_size = (frame->height >> v_shift) * frame->linesize[i];
+
                 WRAP_PLANE(frame->buf[i], frame->data[i], plane_size);
             }
         } else {
