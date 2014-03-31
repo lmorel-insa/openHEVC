@@ -274,8 +274,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
     dst->frame_number     = src->frame_number;
     dst->reordered_opaque = src->reordered_opaque;
     dst->thread_safe_callbacks = src->thread_safe_callbacks;
-    dst->ptk = src->pkt;
-    
+    dst->pkt = src->pkt;
+
     if (src->slice_count && src->slice_offset) {
         if (dst->slice_count < src->slice_count) {
             int *tmp = av_realloc(dst->slice_offset, src->slice_count *
