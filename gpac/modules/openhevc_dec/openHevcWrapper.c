@@ -139,6 +139,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
                 if (i >= 0 && i < openHevcContexts->nb_decoders)
                     openHevcContexts->display_layer = i;
             }
+            fprintf(stderr, "Display layer %d  \n", i);
             return got_picture[i];
         }
     }
