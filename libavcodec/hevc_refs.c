@@ -711,12 +711,14 @@ int ff_hevc_frame_rps(HEVCContext *s)
         for (i = 0; short_rps && i < short_rps->num_delta_pocs; i++) {
             int poc = s->poc + short_rps->delta_poc[i];
             HEVCFrame *ref = find_ref_idx(s, poc);
-            mark_ref(ref, HEVC_FRAME_FLAG_SHORT_REF);
+            if (ref)
+                mark_ref(ref, HEVC_FRAME_FLAG_SHORT_REF);
         }
         for (i = 0; long_rps && i < long_rps->nb_refs; i++) {
             int poc  = long_rps->poc[i];
             HEVCFrame *ref = find_ref_idx(s, poc);
-            mark_ref(ref, HEVC_FRAME_FLAG_LONG_REF);
+            if (ref)
+                mark_ref(ref, HEVC_FRAME_FLAG_LONG_REF);
         }
     }
 #endif

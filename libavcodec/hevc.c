@@ -2601,6 +2601,8 @@ static int hevc_frame_start(HEVCContext *s)
     int ret=0, ctb_size;
     int pic_size_in_ctb  = ((s->sps->width  >> s->sps->log2_min_cb_size) + 1) *
                            ((s->sps->height >> s->sps->log2_min_cb_size) + 1);
+    av_log(s->avctx, AV_LOG_DEBUG, "frame start %d\n", s->decoder_id);
+
 
     memset(s->horizontal_bs, 0, 2 * s->bs_width * (s->bs_height + 1));
     memset(s->vertical_bs,   0, 2 * s->bs_width * (s->bs_height + 1));
@@ -3237,6 +3239,7 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
         av_frame_move_ref(data, s->output_frame);
         *got_output = 1;
     }
+    av_log(s->avctx, AV_LOG_DEBUG, "frame end %d\n", s->decoder_id);
 
     return avpkt->size;
 }
