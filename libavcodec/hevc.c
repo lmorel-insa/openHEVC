@@ -2732,23 +2732,16 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
     switch (s->nal_unit_type) {
     case NAL_VPS:
-    	av_log(s->avctx, AV_LOG_ERROR, "VPS %d  \n",
-    	               s->decoder_id);
-
         ret = ff_hevc_decode_nal_vps(s);
         if (ret < 0)
             goto fail;
         break;
     case NAL_SPS:
-    	av_log(s->avctx, AV_LOG_ERROR, "SPS %d  \n",
-    	    	               s->decoder_id);
         ret = ff_hevc_decode_nal_sps(s);
         if (ret < 0)
             goto fail;
         break;
     case NAL_PPS:
-    	av_log(s->avctx, AV_LOG_ERROR, "PPS %d  \n",
-    	    	               s->decoder_id);
         ret = ff_hevc_decode_nal_pps(s);
         if (ret < 0)
             goto fail;
@@ -2786,8 +2779,6 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
     }
 #endif
     ret = hls_slice_header(s);
-	av_log(s->avctx, AV_LOG_ERROR, "Decode layer %d %d  \n",
-	    	               s->decoder_id, s->nal_unit_type);
     if (ret == -10)
         return 0;
     if (ret < 0)
