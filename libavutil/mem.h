@@ -32,6 +32,7 @@
 #include "attributes.h"
 #include "error.h"
 #include "avutil.h"
+#include "internal.h"
 
 /**
  * @addtogroup lavu_mem

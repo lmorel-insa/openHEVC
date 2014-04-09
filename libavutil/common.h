@@ -42,6 +42,7 @@
 #include "attributes.h"
 #include "version.h"
 #include "libavutil/avconfig.h"
+#include "libavutil/internal.h"
 
 #if AV_HAVE_BIGENDIAN
 #   define AV_NE(be, le) (be)
