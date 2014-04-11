@@ -44,6 +44,7 @@
 #include "libavutil/intfloat.h"
 #include "libavutil/intreadwrite.h"
 #include "libavutil/lzo.h"
+#include "libavutil/intmath.h"
 
 #include "libavcodec/bytestream.h"
 #include "libavcodec/mpeg4audio.h"

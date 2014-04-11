@@ -19,7 +19,7 @@
 #include <stdint.h>
 
 #include "cpu.h"
-#include "cpu_internal.h"
+//#include "cpu_internal.h"
 #include "config.h"
 #include "opt.h"
 #include "common.h"
