@@ -866,7 +866,6 @@ static void upsample_block_luma(HEVCContext *s, HEVCFrame *ref0, int x0, int y0)
     int ePbW = x0 + ctb_size > el_width  ? el_width  - x0:ctb_size ;
     int ePbH = y0 + ctb_size > el_height ? el_height - y0:ctb_size;
 
-        
     if(s->up_filter_inf.idx == SNR){ /* x1 quality (SNR) scalability */
         
         copy_block (s->BL_frame->frame->data[0] + y0*bl_stride+x0, ref0->frame->data[0] + y0*el_stride+x0, bl_stride, el_stride, ePbH, ePbW );
