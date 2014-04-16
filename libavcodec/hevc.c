@@ -2506,7 +2506,7 @@ static int hls_slice_data(HEVCContext *s, const uint8_t *nal, int length)
     int i, j, res = 0;
 
     ff_alloc_entries(s->avctx, s->sh.num_entry_point_offsets + 1);
-
+    
     if (s->sh.num_entry_point_offsets > 0) {
         offset = (lc->gb.index >> 3);
         for (j = 0, cmpt = 0, startheader = offset + s->sh.entry_point_offset[0]; j < s->skipped_bytes; j++) {
@@ -2725,9 +2725,12 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
 
     if ((s->temporal_id > s->temporal_layer_id) || (ret > s->quality_layer_id))
         return 0;
-    s->avctx->layers_size += length;
-    
+   
     s->nuh_layer_id = ret;
+    s->avctx->layers_size += length;
+    av_log(s->avctx, AV_LOG_ERROR,
+           "Decode NAL type %d decoder id %d \n", s->nal_unit_type, s->decoder_id);
+
     time_mp = GetTimeMs64();
 
     switch (s->nal_unit_type) {
