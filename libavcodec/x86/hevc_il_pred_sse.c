@@ -180,7 +180,7 @@ void ff_upsample_filter_block_luma_h_x2_sse(int16_t *dst, ptrdiff_t dststride, u
         dst += dststride;
     }
 }
-
+#ifdef __SSE4_1__
 void ff_upsample_filter_block_luma_v_x2_sse(uint8_t *_dst, ptrdiff_t _dststride, int16_t *_src, ptrdiff_t srcstride,
             int y_BL, int x_EL, int y_EL, int width, int height, int widthEL, int heightEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
@@ -262,6 +262,7 @@ void ff_upsample_filter_block_luma_v_x2_sse(uint8_t *_dst, ptrdiff_t _dststride,
         dst += _dststride;
     }
 }
+#endif
 
 void ff_upsample_filter_block_cr_h_x2_sse(int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t _srcstride,
             int x_EL, int x_BL, int width, int height, int widthEL,
@@ -301,6 +302,7 @@ void ff_upsample_filter_block_cr_h_x2_sse(int16_t *dst, ptrdiff_t dststride, uin
         }
 }
 
+#ifdef __SSE4_1__
 void ff_upsample_filter_block_cr_v_x2_sse(uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t srcstride,
         int y_BL, int x_EL, int y_EL, int width, int height, int widthEL, int heightEL,
         const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
@@ -354,6 +356,7 @@ void ff_upsample_filter_block_cr_v_x2_sse(uint8_t *_dst, ptrdiff_t dststride, in
         dst += dststride;
     }
 }
+#endif
 
 void ff_upsample_filter_block_luma_h_x1_5_sse(int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t srcstride,
             int x_EL, int x_BL, int width, int height, int widthEL,
@@ -411,6 +414,7 @@ void ff_upsample_filter_block_luma_h_x1_5_sse(int16_t *dst, ptrdiff_t dststride,
     }
 }
 
+#ifdef __SSE4_1__
 void ff_upsample_filter_block_luma_v_x1_5_sse(uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t srcstride,
             int y_BL, int x_EL, int y_EL, int width, int height, int widthEL, int heightEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
@@ -497,7 +501,7 @@ void ff_upsample_filter_block_luma_v_x1_5_sse(uint8_t *_dst, ptrdiff_t dststride
         dst += dststride;
     }
 }
-
+#endif
 void ff_upsample_filter_block_cr_h_x1_5_sse(int16_t *dst, ptrdiff_t dststride, uint8_t *_src, ptrdiff_t srcstride,
             int x_EL, int x_BL, int width, int height, int widthEL,
             const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
@@ -535,6 +539,7 @@ void ff_upsample_filter_block_cr_h_x1_5_sse(int16_t *dst, ptrdiff_t dststride, u
     }
 }
 
+#ifdef __SSE4_1__
 void ff_upsample_filter_block_cr_v_x1_5_sse(uint8_t *_dst, ptrdiff_t dststride, int16_t *_src, ptrdiff_t srcstride,
         int y_BL, int x_EL, int y_EL, int width, int height, int widthEL, int heightEL,
         const struct HEVCWindow *Enhscal, struct UpsamplInf *up_info){
@@ -591,3 +596,4 @@ void ff_upsample_filter_block_cr_v_x1_5_sse(uint8_t *_dst, ptrdiff_t dststride, 
         dst += dststride;
     }
 }
+#endif
