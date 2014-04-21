@@ -146,7 +146,9 @@ static void video_decode_example(const char *filename)
         exit(1);
     }
 
-    openHevcHandle = libOpenHevcInit(nb_pthreads, thread_type/*, pFormatCtx*/);
+//    openHevcHandle = libOpenHevcInit(nb_pthreads, thread_type/*, pFormatCtx*/);
+    openHevcHandle = libOpenShevcInit(nb_pthreads, nb_pthreads_frame, thread_type, nb_pthreads1, nb_pthreads_frame1, thread_type1);
+
     libOpenHevcSetCheckMD5(openHevcHandle, check_md5_flags);
 
     if (!openHevcHandle) {

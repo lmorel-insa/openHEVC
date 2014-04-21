@@ -2728,8 +2728,8 @@ static int decode_nal_unit(HEVCContext *s, const uint8_t *nal, int length)
    
     s->nuh_layer_id = ret;
     s->avctx->layers_size += length;
-    av_log(s->avctx, AV_LOG_ERROR,
-           "Decode NAL type %d decoder id %d \n", s->nal_unit_type, s->decoder_id);
+//    av_log(s->avctx, AV_LOG_ERROR,
+  //         "Decode NAL type %d decoder id %d \n", s->nal_unit_type, s->decoder_id);
 
     time_mp = GetTimeMs64();
 
