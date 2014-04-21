@@ -855,7 +855,7 @@ static av_always_inline int abs_mvd_greater1_flag_decode(HEVCContext *s)
 {
     return GET_CABAC(elem_offset[ABS_MVD_GREATER1_FLAG] + 1);
 }
-#define Encryption 1
+#define Encryption 0
 #if Encryption
 static av_always_inline int mvd_decode(HEVCContext *s, unsigned int *keybits)
 {
