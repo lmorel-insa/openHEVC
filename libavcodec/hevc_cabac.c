@@ -855,7 +855,7 @@ static av_always_inline int abs_mvd_greater1_flag_decode(HEVCContext *s)
 {
     return GET_CABAC(elem_offset[ABS_MVD_GREATER1_FLAG] + 1);
 }
-#define Encryption 1
+#define Encryption 0
 #if Encryption
 static av_always_inline int mvd_decode(HEVCContext *s, unsigned int *keybits)
 {
@@ -1426,22 +1426,11 @@ void ff_hevc_hls_residual_coding(HEVCContext *s, int x0, int y0,
 }
 
 #if Encryption
-void change_xy(short *x,short *y) {
+void Exchange(short *x,short *y) {
     short temp = *x;
     *x         = *y;
     *y         = temp;
 }
-
-void change_greater(int *abs_mvd_greater0_flag_x,int *abs_mvd_greater1_flag_x,int *abs_mvd_greater0_flag_y, int *abs_mvd_greater1_flag_y) {
-
-    int temp                 = *abs_mvd_greater0_flag_x;
-    *abs_mvd_greater0_flag_x = *abs_mvd_greater0_flag_y;
-    *abs_mvd_greater0_flag_y = temp;
-    temp                     = *abs_mvd_greater1_flag_x;
-    *abs_mvd_greater1_flag_x = *abs_mvd_greater1_flag_y;
-    *abs_mvd_greater1_flag_y = temp;
-}
-
 void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
 {
     HEVCLocalContext *lc = s->HEVClc;
@@ -1489,11 +1478,30 @@ void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
     if( (abs(lc->pu.mvd.x) == 1 && abs(lc->pu.mvd.y) > 1) || (abs(lc->pu.mvd.x) > 1 && abs(lc->pu.mvd.y) == 1) )
         swap = 0;
     if( swap)
-        change_xy( &lc->pu.mvd.x, &lc->pu.mvd.y );
+        Exchange( &lc->pu.mvd.x, &lc->pu.mvd.y );
 }
 #else
 void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
 {
+    HEVCLocalContext *lc = s->HEVClc;
+    int x = abs_mvd_greater0_flag_decode(s);
+    int y = abs_mvd_greater0_flag_decode(s);
 
+    if (x)
+        x += abs_mvd_greater1_flag_decode(s);
+    if (y)
+        y += abs_mvd_greater1_flag_decode(s);
+
+    switch (x) {
+        case 2: lc->pu.mvd.x = mvd_decode(s);           break;
+        case 1: lc->pu.mvd.x = mvd_sign_flag_decode(s); break;
+        case 0: lc->pu.mvd.x = 0;                       break;
+    }
+
+    switch (y) {
+        case 2: lc->pu.mvd.y = mvd_decode(s);           break;
+        case 1: lc->pu.mvd.y = mvd_sign_flag_decode(s); break;
+        case 0: lc->pu.mvd.y = 0;                       break;
+    }
 }
 #endif
