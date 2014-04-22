@@ -855,7 +855,7 @@ static av_always_inline int abs_mvd_greater1_flag_decode(HEVCContext *s)
 {
     return GET_CABAC(elem_offset[ABS_MVD_GREATER1_FLAG] + 1);
 }
-#define Encryption 0
+#define Encryption 1
 #if Encryption
 static av_always_inline int mvd_decode(HEVCContext *s, unsigned int *keybits)
 {
@@ -1427,36 +1427,32 @@ void ff_hevc_hls_residual_coding(HEVCContext *s, int x0, int y0,
 
 #if Encryption
 void change_xy(short *x,short *y) {
-    short Temp = *x;
+    short temp = *x;
     *x         = *y;
-    *y         = Temp;
+    *y         = temp;
 }
 
 void change_greater(int *abs_mvd_greater0_flag_x,int *abs_mvd_greater1_flag_x,int *abs_mvd_greater0_flag_y, int *abs_mvd_greater1_flag_y) {
 
-    int Temp                 = *abs_mvd_greater0_flag_x;
+    int temp                 = *abs_mvd_greater0_flag_x;
     *abs_mvd_greater0_flag_x = *abs_mvd_greater0_flag_y;
-    *abs_mvd_greater0_flag_y = Temp;
-    Temp                     = *abs_mvd_greater1_flag_x;
-    *abs_mvd_greater1_flag_x = (*abs_mvd_greater1_flag_y);
-    *abs_mvd_greater1_flag_y = Temp;
+    *abs_mvd_greater0_flag_y = temp;
+    temp                     = *abs_mvd_greater1_flag_x;
+    *abs_mvd_greater1_flag_x = *abs_mvd_greater1_flag_y;
+    *abs_mvd_greater1_flag_y = temp;
 }
-#endif
-
 
 void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
 {
     HEVCLocalContext *lc = s->HEVClc;
-#if Encryption
     s->keybits = 0xFFFFFFFF;
     unsigned int mvd_sign_flag_x=0, mvd_sign_flag_y=0, swap = 0, i;
-    
-   srand (0);
+
+    srand (0);
     for(i=0; i< 64; i++) {
         s->keybits = s->keybits << 1;
         s->keybits = s->keybits | (unsigned int)(rand()%2);
     }
-#endif
     int x = abs_mvd_greater0_flag_decode(s);
 
     int y = abs_mvd_greater0_flag_decode(s);
@@ -1466,48 +1462,38 @@ void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
 
     if (y)
         y += abs_mvd_greater1_flag_decode(s);
-#if Encryption
     swap = s->keybits&0x00000001;
     s->keybits = s->keybits >> 1;
-#endif
 
-switch (x) {
-#if Encryption
+    switch (x) {
         case 2: lc->pu.mvd.x = mvd_decode(s, &s->keybits);           break;
-#else
-        case 2: lc->pu.mvd.x = mvd_decode(s);           break;
-#endif
         case 1: lc->pu.mvd.x = mvd_sign_flag_decode(s); break;
         case 0: lc->pu.mvd.x = 0;                       break;
     }
-#if Encryption
     if(x){
         mvd_sign_flag_x = lc->pu.mvd.x < 0 ? 1:0;
         mvd_sign_flag_x = mvd_sign_flag_x^(s->keybits&0x00000001);
         s->keybits = s->keybits >> 1;
     }
-#endif
+
     switch (y) {
-#if Encryption
         case 2: lc->pu.mvd.y = mvd_decode(s, &s->keybits);           break;
-#else
-        case 2: lc->pu.mvd.y = mvd_decode(s);           break;
-#endif
         case 1: lc->pu.mvd.y = mvd_sign_flag_decode(s); break;
         case 0: lc->pu.mvd.y = 0;                       break;
     }
-#if Encryption
-
     mvd_sign_flag_y = lc->pu.mvd.y < 0 ? 1:0;
     mvd_sign_flag_y = mvd_sign_flag_y^(s->keybits&0x00000001);
 
     lc->pu.mvd.x = mvd_sign_flag_x==1 ? -abs(lc->pu.mvd.x):abs(lc->pu.mvd.x);
     lc->pu.mvd.y = mvd_sign_flag_y==1 ? -abs(lc->pu.mvd.y):abs(lc->pu.mvd.y);
     if( (abs(lc->pu.mvd.x) == 1 && abs(lc->pu.mvd.y) > 1) || (abs(lc->pu.mvd.x) > 1 && abs(lc->pu.mvd.y) == 1) )
-       swap = 0;
+        swap = 0;
     if( swap)
         change_xy( &lc->pu.mvd.x, &lc->pu.mvd.y );
-#endif
+}
+#else
+void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
+{
 
 }
-
+#endif
