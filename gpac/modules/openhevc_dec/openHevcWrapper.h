@@ -69,6 +69,7 @@ typedef struct OpenHevc_Frame_cpy
 } OpenHevc_Frame_cpy;
 
 OpenHevc_Handle libOpenHevcInit(int nb_pthreads, int thread_type);
+OpenHevc_Handle libOpenShevcInit(int nb_pthreads_wpp, int thread_type_frame, int thread_type, int nb_pthreads_wpp1, int nb_pthreads_frame, int thread_type1);
 int libOpenHevcStartDecoder(OpenHevc_Handle openHevcHandle);
 int  libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff, int nal_len, int64_t pts);
 void libOpenHevcGetPictureInfo(OpenHevc_Handle openHevcHandle, OpenHevc_FrameInfo *openHevcFrameInfo);

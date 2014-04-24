@@ -52,10 +52,15 @@ void print_usage() {
     printf("     -a : disable AU\n");
     printf("     -c : no check md5\n");
     printf("     -f <thread type> (1: frame, 2: slice, 4: frameslice)\n");
+    printf("     -h <thread type decoder 1> (1: frame, 2: slice, 4: frameslice)\n");
+
     printf("     -i <input file>\n");
     printf("     -n : no display\n");
     printf("     -o <output file>\n");
     printf("     -p <number of threads> \n");
+    printf("     -b <number of threads frame > \n");
+    printf("     -g <number of threads decoder 1> \n");
+    printf("     -e <number of threads frame decoder 1> \n");
     printf("     -t <temporal layer id>\n");
     printf("     -w : Do not apply cropping windows\n");
     printf("     -l <Quality layer id> \n");
@@ -130,8 +135,7 @@ int getopt(int nargc, char * const *nargv, const char *ostr) {
 void init_main(int argc, char *argv[]) {
     // every command line option must be followed by ':' if it takes an
     // argument, and '::' if this argument is optional
-    const char *ostr = "achi:no:p:f:t:wl:";
-
+    const char *ostr = "achi:no:p:g:b:e:j:f:t:wl:";
     int c;
     check_md5_flags   = ENABLE;
     thread_type       = 1;
@@ -142,7 +146,9 @@ void init_main(int argc, char *argv[]) {
     temporal_layer_id = 7;
     no_cropping       = DISABLE;
     quality_layer_id  = 0; // Base layer
-
+    nb_pthreads_frame1 = 1;
+    nb_pthreads1 = 1;
+    thread_type1 = 2; 
     program           = argv[0];
     
     c = getopt(argc, argv, ostr);
@@ -173,6 +179,22 @@ void init_main(int argc, char *argv[]) {
         case 'p':
             nb_pthreads = atoi(optarg);
             break;
+        case 'g':
+            nb_pthreads1 = atoi(optarg);
+            break;
+        case 'b':
+            nb_pthreads_frame = atoi(optarg);
+            break;
+        case 'e':
+            nb_pthreads_frame1 = atoi(optarg);
+            break;
+        case 'j':
+            thread_type1 = atoi(optarg);
+            if (thread_type1!=1 && thread_type1!=2 && thread_type1!=4) {
+                print_usage();
+                exit(1);
+            }
+            break;
         case 't':
             temporal_layer_id = atoi(optarg);
             break;
@@ -187,7 +209,6 @@ void init_main(int argc, char *argv[]) {
             exit(1);
             break;
         }
-
         c = getopt(argc, argv, ostr);
     }
 }

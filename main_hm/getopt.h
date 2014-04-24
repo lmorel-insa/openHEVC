@@ -43,11 +43,16 @@
 
 
 int check_md5_flags;
-int thread_type;
 char *input_file;
 char display_flags;
 char *output_file;
+int thread_type;
 int nb_pthreads;
+int nb_pthreads_frame;
+
+int thread_type1;
+int nb_pthreads1;
+int nb_pthreads_frame1;
 int temporal_layer_id;
 int quality_layer_id;
 int no_cropping;

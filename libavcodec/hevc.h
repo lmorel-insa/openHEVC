@@ -1205,6 +1205,7 @@ typedef struct HEVCContext {
     int no_display_pic;
 #endif
     int     decode_checksum_sei;
+    unsigned int keybits; 
 } HEVCContext;
 
 int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,

@@ -855,7 +855,28 @@ static av_always_inline int abs_mvd_greater1_flag_decode(HEVCContext *s)
 {
     return GET_CABAC(elem_offset[ABS_MVD_GREATER1_FLAG] + 1);
 }
-
+#define Encryption 0
+#if Encryption
+static av_always_inline int mvd_decode(HEVCContext *s, unsigned int *keybits)
+{
+    int ret = 2;
+    int k = 1, b;
+    while (k < CABAC_MAX_BIN && get_cabac_bypass(&s->HEVClc->cc)) {
+        ret += 1 << k;
+        k++;
+    }
+    if (k == CABAC_MAX_BIN)
+        av_log(s->avctx, AV_LOG_ERROR, "CABAC_MAX_BIN : %d\n", k);
+    b = k;
+    while (k--) {
+        unsigned int e = get_cabac_bypass(&s->HEVClc->cc);
+        e = e ^(((*keybits)&(1<<k))>>k);
+        ret += e << k;
+    }
+    *keybits = (*keybits) >> b;
+    return get_cabac_bypass_sign(&s->HEVClc->cc, -ret);
+}
+#else 
 static av_always_inline int mvd_decode(HEVCContext *s)
 {
     int ret = 2;
@@ -867,11 +888,13 @@ static av_always_inline int mvd_decode(HEVCContext *s)
     }
     if (k == CABAC_MAX_BIN)
         av_log(s->avctx, AV_LOG_ERROR, "CABAC_MAX_BIN : %d\n", k);
-    while (k--)
+    while (k--) {
         ret += get_cabac_bypass(&s->HEVClc->cc) << k;
+    }
     return get_cabac_bypass_sign(&s->HEVClc->cc, -ret);
 }
 
+#endif
 static av_always_inline int mvd_sign_flag_decode(HEVCContext *s)
 {
     return get_cabac_bypass_sign(&s->HEVClc->cc, -1);
@@ -1402,6 +1425,62 @@ void ff_hevc_hls_residual_coding(HEVCContext *s, int x0, int y0,
     }
 }
 
+#if Encryption
+void Exchange(short *x,short *y) {
+    short temp = *x;
+    *x         = *y;
+    *y         = temp;
+}
+void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
+{
+    HEVCLocalContext *lc = s->HEVClc;
+    s->keybits = 0xFFFFFFFF;
+    unsigned int mvd_sign_flag_x=0, mvd_sign_flag_y=0, swap = 0, i;
+
+    srand (0);
+    for(i=0; i< 64; i++) {
+        s->keybits = s->keybits << 1;
+        s->keybits = s->keybits | (unsigned int)(rand()%2);
+    }
+    int x = abs_mvd_greater0_flag_decode(s);
+
+    int y = abs_mvd_greater0_flag_decode(s);
+
+    if (x)
+        x += abs_mvd_greater1_flag_decode(s);
+
+    if (y)
+        y += abs_mvd_greater1_flag_decode(s);
+    swap = s->keybits&0x00000001;
+    s->keybits = s->keybits >> 1;
+
+    switch (x) {
+        case 2: lc->pu.mvd.x = mvd_decode(s, &s->keybits);           break;
+        case 1: lc->pu.mvd.x = mvd_sign_flag_decode(s); break;
+        case 0: lc->pu.mvd.x = 0;                       break;
+    }
+    if(x){
+        mvd_sign_flag_x = lc->pu.mvd.x < 0 ? 1:0;
+        mvd_sign_flag_x = mvd_sign_flag_x^(s->keybits&0x00000001);
+        s->keybits = s->keybits >> 1;
+    }
+
+    switch (y) {
+        case 2: lc->pu.mvd.y = mvd_decode(s, &s->keybits);           break;
+        case 1: lc->pu.mvd.y = mvd_sign_flag_decode(s); break;
+        case 0: lc->pu.mvd.y = 0;                       break;
+    }
+    mvd_sign_flag_y = lc->pu.mvd.y < 0 ? 1:0;
+    mvd_sign_flag_y = mvd_sign_flag_y^(s->keybits&0x00000001);
+
+    lc->pu.mvd.x = mvd_sign_flag_x==1 ? -abs(lc->pu.mvd.x):abs(lc->pu.mvd.x);
+    lc->pu.mvd.y = mvd_sign_flag_y==1 ? -abs(lc->pu.mvd.y):abs(lc->pu.mvd.y);
+    if( (abs(lc->pu.mvd.x) == 1 && abs(lc->pu.mvd.y) > 1) || (abs(lc->pu.mvd.x) > 1 && abs(lc->pu.mvd.y) == 1) )
+        swap = 0;
+    if( swap)
+        Exchange( &lc->pu.mvd.x, &lc->pu.mvd.y );
+}
+#else
 void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
 {
     HEVCLocalContext *lc = s->HEVClc;
@@ -1414,15 +1493,15 @@ void ff_hevc_hls_mvd_coding(HEVCContext *s, int x0, int y0, int log2_cb_size)
         y += abs_mvd_greater1_flag_decode(s);
 
     switch (x) {
-    case 2: lc->pu.mvd.x = mvd_decode(s);           break;
-    case 1: lc->pu.mvd.x = mvd_sign_flag_decode(s); break;
-    case 0: lc->pu.mvd.x = 0;                       break;
+        case 2: lc->pu.mvd.x = mvd_decode(s);           break;
+        case 1: lc->pu.mvd.x = mvd_sign_flag_decode(s); break;
+        case 0: lc->pu.mvd.x = 0;                       break;
     }
 
     switch (y) {
-    case 2: lc->pu.mvd.y = mvd_decode(s);           break;
-    case 1: lc->pu.mvd.y = mvd_sign_flag_decode(s); break;
-    case 0: lc->pu.mvd.y = 0;                       break;
+        case 2: lc->pu.mvd.y = mvd_decode(s);           break;
+        case 1: lc->pu.mvd.y = mvd_sign_flag_decode(s); break;
+        case 0: lc->pu.mvd.y = 0;                       break;
     }
 }
-
+#endif
