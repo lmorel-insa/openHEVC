@@ -1250,7 +1250,13 @@ void ff_hevc_save_states(HEVCContext *s, int ctb_addr_ts);
 void ff_hevc_cabac_init(HEVCContext *s, int ctb_addr_ts);
 int ff_hevc_sao_merge_flag_decode(HEVCContext *s);
 int ff_hevc_sao_type_idx_decode(HEVCContext *s);
+
+#define EncryptSAOPars 0
+#if EncryptSAOPars
 int ff_hevc_sao_band_position_decode(HEVCContext *s);
+#else
+int ff_hevc_sao_band_position_decode(HEVCContext *s);
+#endif
 int ff_hevc_sao_offset_abs_decode(HEVCContext *s);
 int ff_hevc_sao_offset_sign_decode(HEVCContext *s);
 int ff_hevc_sao_eo_class_decode(HEVCContext *s);
