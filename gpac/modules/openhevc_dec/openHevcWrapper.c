@@ -170,6 +170,7 @@ int libOpenHevcDecode(OpenHevc_Handle openHevcHandle, const unsigned char *buff,
     for(i =0; i <= openHevcContexts->active_layer; i++)  {
         got_picture[i]              = 0;
         openHevcContext             = openHevcContexts->wraper[i];
+        openHevcContext->c->quality_id = openHevcContexts->active_layer;
         openHevcContext->avpkt.size = au_len;
         openHevcContext->avpkt.data = (uint8_t *) buff;
         openHevcContext->avpkt.pts  = pts;

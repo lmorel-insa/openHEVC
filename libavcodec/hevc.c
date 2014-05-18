@@ -2743,7 +2743,6 @@ static int hevc_frame_start(HEVCContext *s)
             ff_thread_await_il_progress(s->avctx, s->poc, &s->avctx->BL_frame);
 
         if(s->avctx->BL_frame != NULL)
-
              s->BL_frame = (HEVCFrame*)s->avctx->BL_frame;
         else
             goto fail;  // FIXME: add error concealment solution when the base layer frame is missing
@@ -3190,7 +3189,7 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
         if (ret < 0)
             goto fail;
         ret = hls_nal_unit(s);
-        if(ret == s->decoder_id+1 && s->quality_layer_id >= ret && s->threads_type&FF_THREAD_FRAME) {// FIXME also check the type of the nalu, it should be data nalu type
+        if(ret == s->decoder_id+1 && s->avctx->quality_id >= ret && s->threads_type&FF_THREAD_FRAME) {// FIXME also check the type of the nalu, it should be data nalu type
             s->active_el_frame = 1;
         }
         if (s->nal_unit_type == NAL_EOB_NUT ||
