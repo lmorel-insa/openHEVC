@@ -3190,13 +3190,11 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
         if (ret < 0)
             goto fail;
         ret = hls_nal_unit(s);
-        if(ret == s->decoder_id+1 && s->avctx->quality_id >= ret && s->threads_type&FF_THREAD_FRAME) {// FIXME also check the type of the nalu, it should be data nalu type
+        if(ret == s->decoder_id+1 && s->avctx->quality_id >= ret && (s->threads_type&FF_THREAD_FRAME)) // FIXME also check the type of the nalu, it should be data nalu type
             s->active_el_frame = 1;
-        }
         if (s->nal_unit_type == NAL_EOB_NUT ||
             s->nal_unit_type == NAL_EOS_NUT)
             s->eos = 1;
-
         buf    += consumed;
         length -= consumed;
     }
@@ -3218,7 +3216,6 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
 fail:
     if (s->ref && (s->threads_type & FF_THREAD_FRAME))
         ff_thread_report_progress(&s->ref->tf, INT_MAX, 0);
-
     return ret;
 }
 
@@ -3471,7 +3468,6 @@ static av_cold int hevc_init_context(AVCodecContext *avctx)
 #if 0
     printf("static ## %ld ## \n", sizeof(HEVCLocalContext) );
 #endif
-    
     s->HEVClcList[0] = s->HEVClc;
     s->sList[0] = s;
 
