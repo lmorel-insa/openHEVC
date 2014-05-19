@@ -237,6 +237,14 @@ list(APPEND libfilenames
 )
 endif()
 
+option(ENABLE_RVC "Build the mapping tool as a standalone executable" 0)
+if(ENABLE_RVC)
+    list(APPEND libfilenames
+        rvc/rvc.c
+    )
+    include_directories(rvc/)
+endif()
+
 if(WIN32)
     option(ENABLE_STATIC "enabled static library instead of shared" ON)
 else()
@@ -291,6 +299,13 @@ install(FILES
     libavcodec/hevcpred.h
     DESTINATION include
 )
+
+if(ENABLE_RVC)
+    install(FILES
+        rvc/rvc.h
+        DESTINATION include
+    )
+endif()
 
 install(
     TARGETS LibOpenHevcWrapper
