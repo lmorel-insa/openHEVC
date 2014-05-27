@@ -2,7 +2,7 @@
 
 #include <libavformat/avformat.h>
 
-void av_readFrameForCalOpen(void *formatCtx, void * packet, const char *filename) {
+void av_readFrameForCalOpen(void **formatCtx, void **packet, const char *filename) {
 	AVFormatContext *pFormatCtx = NULL;
 	AVPacket        *pPacket = av_malloc(sizeof(AVPacket));
 
@@ -15,15 +15,15 @@ void av_readFrameForCalOpen(void *formatCtx, void * packet, const char *filename
 	}
 	av_dump_format(pFormatCtx, 0, filename, 0);
 
-	formatCtx = (void*) pFormatCtx;
-	packet    = (void*) pPacket;
+	(*formatCtx) = (void*) pFormatCtx;
+	(*packet)    = (void*) pPacket;
 }
 
-int av_readFrameForCal(void *formatCtx, void * packet, uint8_t **data, int *size) {
+int av_readFrameForCal(void *formatCtx, void * packet, uint8_t *data, int *size) {
 	AVFormatContext *pFormatCtx = (AVFormatContext *) formatCtx;
 	AVPacket        *pPacket    = (AVPacket *) packet;
 	int ret = av_read_frame(pFormatCtx, pPacket);
-	(*data) = pPacket->data;
+	memcpy(data, pPacket->data, pPacket->size);	
 	(*size) = pPacket->size;
 	return ret;
 }
