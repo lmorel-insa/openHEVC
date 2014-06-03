@@ -19,7 +19,7 @@ void av_readFrameForCalOpen(void **formatCtx, void **packet, const char *filenam
 	(*packet)    = (void*) pPacket;
 }
 
-int av_readFrameForCal(void *formatCtx, void * packet, uint8_t *data, int *size) {
+int av_readFrameForCal(void *formatCtx, void *packet, uint8_t *data, int *size) {
 	AVFormatContext *pFormatCtx = (AVFormatContext *) formatCtx;
 	AVPacket        *pPacket    = (AVPacket *) packet;
 	int ret = av_read_frame(pFormatCtx, pPacket);
@@ -28,7 +28,7 @@ int av_readFrameForCal(void *formatCtx, void * packet, uint8_t *data, int *size)
 	return ret;
 }
 
-void av_readFrameForCalClose(void * packet) {
+void av_readFrameForCalClose(void *packet) {
 	AVPacket        *pPacket = (AVPacket *)packet;
 	av_free(pPacket);
 }
