@@ -109,8 +109,9 @@ int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,
         for (i = 0; i <= rps_ridx->num_delta_pocs; i++) {
             int used = rps->used[k] = get_bits1(gb);
 
-            if (!used)
+            if (!used){
                 use_delta_flag = get_bits1(gb);
+            }
 
             if (used || use_delta_flag) {
                 if (i < rps_ridx->num_delta_pocs)
@@ -128,6 +129,7 @@ int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,
 
         rps->num_delta_pocs    = k;
         rps->num_negative_pics = k0;
+
         // sort in increasing order (smallest first)
         if (rps->num_delta_pocs != 0) {
             int used, tmp;
@@ -232,20 +234,32 @@ static void decode_profile_tier_level(HEVCContext *s, PTLCommon *ptl)
     skip_bits(gb, 12); // XXX_reserved_zero_44bits[32..43]
 }
 
-static void parse_ptl(HEVCContext *s, PTL *ptl, int max_num_sub_layers)
+static void parse_ptl(HEVCContext *s, PTL *ptl, int max_num_sub_layers, unsigned int profilePresentFlag)
 {
-    int i;
+	int i;
     HEVCLocalContext *lc = s->HEVClc;
     GetBitContext *gb = &lc->gb;
 
     print_cabac(" --- parse ptl --- ", s->nuh_layer_id);
+#if H_MV
+    if(profilePresentFlag)
+    {
+#endif
     decode_profile_tier_level(s, &ptl->general_ptl);
+#if H_MV
+    }
+#endif
     ptl->general_ptl.level_idc = get_bits(gb, 8);
-    print_cabac("general_level_idc", ptl->general_PTL.level_idc);
+    print_cabac("general_level_idc", ptl->general_ptl.level_idc);
 
     for (i = 0; i < max_num_sub_layers - 1; i++) {
         ptl->sub_layer_profile_present_flag[i] = get_bits1(gb);
-        print_cabac("sub_layer_profile_present_flag", ptl->sub_layer_profile_present_flag[i]);  
+        print_cabac("sub_layer_profile_present_flag", ptl->sub_layer_profile_present_flag[i]);
+
+#if H_MV
+        ptl->sub_layer_profile_present_flag[i] &= profilePresentFlag;
+#endif
+
         ptl->sub_layer_level_present_flag[i]   = get_bits1(gb);
         print_cabac("sub_layer_level_present_flag", ptl->sub_layer_level_present_flag[i]); 
     }
@@ -255,7 +269,7 @@ static void parse_ptl(HEVCContext *s, PTL *ptl, int max_num_sub_layers)
             print_cabac("reserved_zero_2bits", 0);
         }
     for (i = 0; i < max_num_sub_layers - 1; i++) {
-        if (ptl->sub_layer_profile_present_flag[i])
+        if (ptl->sub_layer_profile_present_flag[i] && profilePresentFlag)
             decode_profile_tier_level(s, &ptl->sub_layer_ptl[i]);
         if (ptl->sub_layer_level_present_flag[i]) {
             ptl->sub_layer_ptl[i].level_idc = get_bits(gb, 8);
@@ -369,9 +383,10 @@ static int getNumViews(HEVCVPS *vps)
         {
             numViews++;
         }
-    }    
+    }
     return numViews;
 }
+
 
 #if O0092_0094_DEPENDENCY_CONSTRAINT
 static void setRefLayersFlags(HEVCVPS *vps, int currLayerId)
@@ -410,56 +425,66 @@ static void parseRepFormat( RepFormat *rep_format, GetBitContext *gb)
 {
     print_cabac(" --- parse RepFormat  --- ", 0);
 #if REPN_FORMAT_CONTROL_FLAG
+
+#if !H_MV
     rep_format->m_chromaAndBitDepthVpsPresentFlag = get_bits1(gb);
-    print_cabac("chroma_and_bit_depth_vps_present_flag", repFormat->m_chromaAndBitDepthVpsPresentFlag);
+    print_cabac("chroma_and_bit_depth_vps_present_flag", rep_format->m_chromaAndBitDepthVpsPresentFlag);
+#endif
+
     rep_format->m_picWidthVpsInLumaSamples = get_bits(gb, 16);
-    print_cabac("pic_width_in_luma_samples", repFormat->m_picWidthVpsInLumaSamples);
+    print_cabac("pic_width_in_luma_samples", rep_format->m_picWidthVpsInLumaSamples);
     rep_format->m_picHeightVpsInLumaSamples = get_bits(gb, 16);;
-    print_cabac("pic_height_in_luma_samples", repFormat->m_picHeightVpsInLumaSamples);
+    print_cabac("pic_height_in_luma_samples", rep_format->m_picHeightVpsInLumaSamples);
+
+#if H_MV
+    rep_format->m_chromaAndBitDepthVpsPresentFlag = get_bits1(gb);
+    print_cabac("chroma_and_bit_depth_vps_present_flag", rep_format->m_chromaAndBitDepthVpsPresentFlag);
+#endif
+
     if (rep_format->m_chromaAndBitDepthVpsPresentFlag)
     {
 #if AUXILIARY_PICTURES
 
         rep_format->m_chromaFormatVpsIdc = get_bits(gb, 2);
-        print_cabac("chroma_format_idc", repFormat->m_chromaFormatVpsIdc);
+        print_cabac("chroma_format_idc", rep_format->m_chromaFormatVpsIdc);
 #else
-        repFormat->m_picHeightVpsInLumaSamples = get_bits(gb, 2);
-        print_cabac("chroma_format_idc", repFormat->m_chromaFormatVpsIdc);
+        rep_format->m_picHeightVpsInLumaSamples = get_bits(gb, 2);
+        print_cabac("chroma_format_idc", rep_format->m_chromaFormatVpsIdc);
 #endif
 
         if (rep_format->m_chromaFormatVpsIdc == 3) {
             rep_format->m_separateColourPlaneVpsFlag = get_bits1(gb);
-            print_cabac("separate_colour_plane_flag", repFormat->m_separateColourPlaneVpsFlag);
+            print_cabac("separate_colour_plane_flag", rep_format->m_separateColourPlaneVpsFlag);
         }
 
         rep_format->m_bitDepthVpsLuma =   get_bits(gb, 4) + 8;
-        print_cabac("bit_depth_luma_minus8", repFormat->m_bitDepthVpsLuma-8);
+        print_cabac("bit_depth_luma_minus8", rep_format->m_bitDepthVpsLuma-8);
         rep_format->m_bitDepthVpsChroma = get_bits(gb, 4) + 8;
-        print_cabac("bit_depth_chroma_minus8", repFormat->m_bitDepthVpsChroma-8);
+        print_cabac("bit_depth_chroma_minus8", rep_format->m_bitDepthVpsChroma-8);
     }
 #else
 #if AUXILIARY_PICTURES
     rep_format->m_chromaFormatVpsIdc = get_bits(gb, 2);
-    print_cabac("chroma_format_idc", repFormat->m_chromaFormatVpsIdc);
+    print_cabac("chroma_format_idc", rep_format->m_chromaFormatVpsIdc);
 #else
     rep_format->m_chromaFormatVpsIdc = get_bits(gb, 2);
-    print_cabac("chroma_format_idc", repFormat->m_chromaFormatVpsIdc);
+    print_cabac("chroma_format_idc", rep_format->m_chromaFormatVpsIdc);
 #endif
 
     if( rep_format->m_chromaFormatVpsIdc == 3 ) {
         rep_format->m_separateColourPlaneVpsFlag = get_bits1(gb);
-        print_cabac("separate_colour_plane_flag", repFormat->m_separateColourPlaneVpsFlag);
+        print_cabac("separate_colour_plane_flag", rep_format->m_separateColourPlaneVpsFlag);
     }
 
     rep_format->m_picWidthVpsInLumaSamples =  get_bits(gb, 16);
-    print_cabac("pic_width_in_luma_samples", repFormat->m_picWidthVpsInLumaSamples);
+    print_cabac("pic_width_in_luma_samples", rep_format->m_picWidthVpsInLumaSamples);
 
     rep_format->m_picHeightVpsInLumaSamples = get_bits(gb, 16);
     rep_format->m_bitDepthVpsLuma   = get_bits(gb, 4);
     rep_format->m_bitDepthVpsChroma = get_bits(gb, 4);
-    print_cabac("pic_height_in_luma_samples", repFormat->m_picHeightVpsInLumaSamples);
-    print_cabac("bit_depth_luma_minus8", repFormat->m_bitDepthVpsLuma);
-    print_cabac("bit_depth_chroma_minus8", repFormat->m_bitDepthVpsChroma );
+    print_cabac("pic_height_in_luma_samples", rep_format->m_picHeightVpsInLumaSamples);
+    print_cabac("bit_depth_luma_minus8", rep_format->m_bitDepthVpsLuma);
+    print_cabac("bit_depth_chroma_minus8", rep_format->m_bitDepthVpsChroma );
 #endif 
 }
 
@@ -588,6 +613,52 @@ static void parseVPSVUI(GetBitContext *gb, HEVCVPS *vps)
         }
     }
 #endif
+
+#if H_MV
+#if VPS_VUI_VIDEO_SIGNAL
+	vps->m_vidSigPresentVpsFlag = get_bits1(gb);
+	print_cabac("video_signal_info_idx_present_flag",  vps->m_vidSigPresentVpsFlag);
+	if (vps->m_vidSigPresentVpsFlag) {
+		vps->m_vpsVidSigInfo = get_bits(gb, 4)+1;
+		print_cabac("vps_num_video_signal_info_minus1", vps->m_vpsVidSigInfo-1);
+	}
+	else
+		vps->m_vpsVidSigInfo = vps->vps_max_layers;
+
+	for(i = 0; i < vps->m_vpsVidSigInfo; i++) {
+		vps->m_vpsVidFormat[i] = get_bits(gb, 3);
+		vps->m_vpsFullRangeFlag[i] = get_bits1(gb) ;
+		vps->m_vpsColorPrimaries[i] = get_bits(gb, 8);
+		vps->m_vpsTransChar[i] = get_bits(gb, 8);
+		vps->m_vpsMatCoeff[i] = get_bits(gb, 8);
+
+		print_cabac("video_vps_format", vps->m_vpsVidFormat[i]);
+		print_cabac("video_full_range_vps_flag", vps->m_vpsFullRangeFlag[i]);
+		print_cabac("color_primaries_vps", vps->m_vpsColorPrimaries[i]);
+		print_cabac("transfer_characteristics_vps", vps->m_vpsTransChar[i]);
+		print_cabac("matrix_coeffs_vps", vps->m_vpsMatCoeff[i]);
+	}
+	if(!vps->m_vidSigPresentVpsFlag)
+	{
+		for (i=0; i < vps->vps_max_layers; i++)
+			vps->m_vpsVidSigIdx[i] = i;
+	}
+	else {
+		vps->m_vpsVidSigIdx[0] = 0;
+		if (vps->m_vpsVidSigInfo > 1 ) {
+			for (i=1; i < vps->vps_max_layers; i++) {
+				vps->m_vpsVidSigIdx[i] = get_bits(gb, 4);
+				print_cabac("vps_video_signal_info_idx", vps->m_vpsVidSigIdx[i]);
+			}
+		}
+		else {
+			for (i=1; i < vps->vps_max_layers; i++)
+				vps->m_vpsVidSigIdx[i] = 0;
+		}
+	}
+#endif
+#endif
+
 #if VPS_VUI_TILES_NOT_IN_USE__FLAG
     unsigned int layerIdx;
     int refCode = get_bits1(gb);
@@ -642,6 +713,9 @@ static void parseVPSVUI(GetBitContext *gb, HEVCVPS *vps)
             print_cabac("wpp_in_use_flag", vps->m_wppInUseFlag[i]);  
         }
 #endif
+
+    get_bits(gb,3); //vps_vui_reserved_zero_3bits added
+
 #if N0160_VUI_EXT_ILP_REF
     vps->m_numIlpRestrictedRefLayers = (get_bits1(gb)==1);
     print_cabac("num_ilp_restricted_ref_layers", vps->m_numIlpRestrictedRefLayers); 
@@ -664,6 +738,8 @@ static void parseVPSVUI(GetBitContext *gb, HEVCVPS *vps)
         }
     }
 #endif
+
+#if !H_MV
 #if VPS_VUI_VIDEO_SIGNAL
     vps->m_vidSigPresentVpsFlag = get_bits1(gb);
     print_cabac("video_signal_info_idx_present_flag",  vps->m_vidSigPresentVpsFlag);
@@ -706,7 +782,70 @@ static void parseVPSVUI(GetBitContext *gb, HEVCVPS *vps)
         }
     }
 #endif
+#endif
+#if H_MV
+    //added
+    	vps->m_vpsVuiBspHrdPresentFlag = get_bits1(gb);
+    	print_cabac("vps_vui_bsp_hrd_present_flag", vps->m_vpsVuiBspHrdPresentFlag);
+
+    	if(vps->m_vpsVuiBspHrdPresentFlag){
+    		//parseVpsVuiBspHrdParameters(s,vps); //SOUCI : à coder
+    	}
+    	for(i = 1; i < vps->vps_max_layers;i++){
+    		if(vps->m_numDirectRefLayers[vps->m_layerIdInNuh[i]] == 0){
+    			vps->m_baseLayerParameterSetCompatibilityFlag[i] = get_bits1(gb);
+    			print_cabac("base_layer_parameter_set_compatibility_flag",vps->m_baseLayerParameterSetCompatibilityFlag[i]);
+    		}
+    	}
+    	//end added
+#endif
 }
+#endif
+
+#if H_MV
+/*
+static int getNumScalabilityTypes(HEVCVPS *vps){
+	return scalTypeToScalIdx(vps, ScalabilityType(MAX_VPS_NUM_SCALABILITY_TYPES)); //SOUCI sur scalabilityType
+}*/
+
+static unsigned int xGetDimBitOffset(int j,HEVCVPS *vps){
+
+	unsigned int dimBitOffset = 0;
+	int dimIdx;
+	if(vps->m_splittingFlag && j == vps->m_numScalabilityTypes){
+		dimBitOffset = 6;
+	}
+	else{
+		for(dimIdx = 0; dimIdx<= j-1 ; dimIdx++){
+			dimBitOffset += getDimensionIdLen(dimIdx,vps);
+		}
+	}
+	return dimBitOffset;
+}
+
+int getDimensionIdLen(int sIdx,HEVCVPS * vps){
+	if(vps->m_dimensionIdLen[sIdx] > 0) return vps->m_dimensionIdLen[sIdx];
+}
+
+
+static unsigned int inferOuputLayerFlag(HEVCVPS *vps, int i, int j){
+	unsigned int outputLayerFlag;
+	switch(vps->m_defaultTargetOutputLayerIdc){
+	case 0:
+		outputLayerFlag = 1;
+		break;
+	case 1:
+		outputLayerFlag = (j == sizeof(vps->m_layerSetLayerIdList[i<=vps->vps_num_layer_sets-1])-1);
+		break;
+	case 2 :
+		if(i==0 && j ==0) outputLayerFlag = 1;
+		break;
+	default:
+		break;
+	}
+	return outputLayerFlag;
+}
+
 #endif
 
 static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
@@ -756,8 +895,19 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
             vps->layer_id_in_nuh[i] = i;
         vps->m_layerIdInVps[vps->layer_id_in_nuh[i]] = i;
         for(j = 0; j < numScalabilityTypes; j++)    {
+
+#if H_MV
+        	if(!vps->splitting_flag)
+        	{
+#endif
             vps->dimension_id[i][j]= get_bits(gb, vps->dimension_id_len[j]);
             print_cabac("dimension_id", vps->dimension_id[i][j]);
+#if H_MV
+        	} else
+        	{
+        		vps->m_dimensionId[i][j] =  ((vps->m_layerIdInNuh[i] & ((1<<xGetDimBitOffset(j+1,vps))-1)) >> xGetDimBitOffset(j,vps));
+        	}
+#endif
         }
     }
 
@@ -765,14 +915,32 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     // if ( pcVPS->getNumViews() > 1 )
     //   However, this is a bug in the text since, view_id_len_minus1 is needed to parse view_id_val.
     {
-        vps->m_viewIdLenMinus1 = get_bits(gb, 4);
-        print_cabac("view_id_len_minus1", vps->m_viewIdLenMinus1);
+        vps->m_viewIdLenMinus1 = get_bits(gb, 4) -1;
+        print_cabac("view_id_len_minus1", vps->m_viewIdLenMinus1 +1);
     }
+#if H_MV
+    if(vps->m_viewIdLenMinus1 + 1 >0)
+    {
 
-    for(  i = 0; i < getNumViews(vps); i++ ){
-        vps->m_viewIdVal[i] = get_bits(gb, vps->m_viewIdLenMinus1 + 1);
-        print_cabac("view_id_val", vps->m_viewIdVal[i]);
+    	for(  i = 0; i <= getNumViews(vps); i++ ){
+    		vps->m_viewIdVal[i] = get_bits(gb, vps->m_viewIdLenMinus1 + 1);
+    		print_cabac("view_id_val", vps->m_viewIdVal[i]);
+    	}
+
+    } else
+    {
+    	for(  i = 0; i <= getNumViews(vps); i++ ){
+    		vps->m_viewIdVal[i] = 0;
+    		print_cabac("view_id_val", vps->m_viewIdVal[i]);
+    	}
     }
+#else
+    for(  i = 0; i < getNumViews(vps); i++ ){
+    	vps->m_viewIdVal[i] = get_bits(gb, vps->m_viewIdLenMinus1 + 1);
+    	print_cabac("view_id_val", vps->m_viewIdVal[i]);
+    }
+#endif
+
 #endif
 #endif
 
@@ -820,12 +988,15 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
             for (j = i+1; j <= vps->vps_max_layers - 1; j++) {
                 if (vps->m_directDependencyFlag[j][i]) {
                     vps->m_maxTidIlRefPicsPlus1[i][j] =  get_bits(gb, 3);
-                    print_cabac("max_tid_il_ref_pics_plus1 %d", vps->m_maxTidIlRefPicsPlus1[i][j]);
+                    print_cabac("max_tid_il_ref_pics_plus1", vps->m_maxTidIlRefPicsPlus1[i][j]);
                 }
             }
 #else
+#if !H_MV
             vps->m_maxTidIlRefPicsPlus1[i] = get_bits(gb, 3);
             print_cabac("max_tid_il_ref_pics_plus1", vps->m_maxTidIlRefPicsPlus1[i]);
+#endif
+
 #if N0120_MAX_TID_REF_CFG
 #else
 #endif
@@ -864,12 +1035,16 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     print_cabac("all_ref_layers_active_flag", vps->m_ilpSshSignalingEnabledFlag);
 #endif
 
-#if VPS_EXTN_PROFILE_INFO
-    if(get_bits(gb, 10) != (vps->vps_num_layer_sets-1)) { //vps_number_layer_sets_minus1
-        av_log(s->avctx, AV_LOG_ERROR, "Erro vps_number_layer_sets_minus1 != vps->vps_num_layer_sets-1 \n");
-    }
+#if VPS_EXTN_PROFILE_INFO //MODIFIED
+    //int vps_number_layer_sets_minus1 = get_bits(gb,10);
+  //  if(vps_number_layer_sets_minus1 != (vps->vps_num_layer_sets-1)) { //vps_number_layer_sets_minus1
+   //     av_log(s->avctx, AV_LOG_ERROR, "Erro vps_number_layer_sets_minus1  %d != vps->vps_num_layer_sets-1 %d \n", vps_number_layer_sets_minus1, vps->vps_num_layer_sets-1);
+  //  }
 
-    vps->vps_num_profile_tier_level = get_bits(gb, 6)+1;
+
+
+    vps->vps_num_profile_tier_level = get_ue_golomb_long(gb)+1;
+
     print_cabac("vps_number_layer_sets_minus1", vps->vps_num_layer_sets-1);
     print_cabac("vps_num_profile_tier_level_minus1", vps->vps_num_profile_tier_level-1);
 
@@ -879,19 +1054,24 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         vps->vps_profile_present_flag[i] = get_bits1(gb);
         print_cabac("vps_profile_present_flag", vps->vps_profile_present_flag[i]);
         if( !vps->vps_profile_present_flag[i] ) {
-
+#if !H_MV
             vps->profile_ref[i] = get_bits(gb, 6)+1;
             print_cabac("profile_ref_minus1", vps->profile_ref[i]-1);
+#endif
             //vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
+
             memcpy(&vps->PTLExt[i], &vps->PTLExt[vps->profile_ref[i]], sizeof(PTL));
+
         }
         //vps->PTLExt[i] = av_malloc(sizeof(PTL));  // TO DO add free
-        parse_ptl(s, &vps->PTLExt[i], vps->vps_max_sub_layers);
+        parse_ptl(s, &vps->PTLExt[i], vps->vps_max_sub_layers, vps->vps_profile_present_flag[i]);
+
     }
 #endif
-    vps->more_output_layer_sets_than_default_flag = get_bits1(gb);
-    print_cabac("more_output_layer_sets_than_default_flag", vps->more_output_layer_sets_than_default_flag);   
     int numOutputLayerSets = 0;
+#if !H_MV
+    vps->more_output_layer_sets_than_default_flag = get_bits1(gb);
+    print_cabac("more_output_layer_sets_than_default_flag", vps->more_output_layer_sets_than_default_flag);
     if(! vps->more_output_layer_sets_than_default_flag )    {
         numOutputLayerSets = vps->vps_num_layer_sets;
     }   else    {
@@ -899,12 +1079,25 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         print_cabac("num_add_output_layer_sets", vps->num_add_output_layer_sets);   
         numOutputLayerSets = vps->vps_num_layer_sets + vps->num_add_output_layer_sets;
     }
+#else
+    vps->num_add_output_layer_sets = get_ue_golomb_long(gb);
+	print_cabac("num_add_output_layer_sets", vps->num_add_output_layer_sets);
+	numOutputLayerSets = vps->vps_num_layer_sets + vps->num_add_output_layer_sets;
+#endif
+
     if( numOutputLayerSets > 1 )    {
+#if !H_MV
         vps->default_one_target_output_layer_flag = get_bits1(gb);
         print_cabac("default_one_target_output_layer_flag", vps->default_one_target_output_layer_flag);
+#else
+        int default_target_output_layer_idc = get_bits(gb,2);
+        vps->m_defaultTargetOutputLayerIdc = default_target_output_layer_idc<2 ? default_target_output_layer_idc : 2;
+        print_cabac("default_target_output_layer_idc",vps->m_defaultTargetOutputLayerIdc);
+#endif
     }
     vps->m_numOutputLayerSets = numOutputLayerSets;
     for(i = 1; i < numOutputLayerSets; i++) {
+#if !H_MV
         if( i > (vps->vps_num_layer_sets - 1) ) {
             int numBits = 1, lsIdx;
             while ((1 << numBits) < (vps->vps_num_layer_sets - 1))  {
@@ -918,6 +1111,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
                 print_cabac("output_layer_flag", vps->m_outputLayerFlag[i][j]);
             }
         }   else    {
+
 #if VPS_DPB_SIZE_TABLE
             vps->m_outputLayerSetIdx[i] = i;
 #endif
@@ -932,12 +1126,44 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
                 }
             }
         }
-        int numBits = 1;
-        while ((1 << numBits) < (vps->vps_num_profile_tier_level))  {
-            numBits++;
+#else
+        if( i > (vps->vps_num_layer_sets - 1) )
+        {
+        	vps->m_outputLayerSetIdx[i] = get_ue_golomb_long(gb);
+        	print_cabac("output_layer_set_idx_minus1", vps->m_outputLayerSetIdx[i]);
         }
+
+        if((i>(vps->vps_num_layer_sets)-1) || (vps->m_defaultTargetOutputLayerIdc == 2))	{
+        	for(j = 0; j <= vps->m_numLayerInIdList[vps->m_outputLayerSetIdx[i]]; j++)	{
+        		vps->m_outputLayerFlag[i][j] = get_bits1(gb);
+        		print_cabac("output_layer_flag", vps->m_outputLayerFlag[i][j]);
+        	}
+        }	else	{
+        	for(j = 0; j <= vps->m_numLayerInIdList[vps->m_outputLayerSetIdx[i]]; j++){
+        		vps->m_outputLayerFlag[i][j] = inferOuputLayerFlag(vps,i,j);
+        		print_cabac("output_layer_flag", vps->m_outputLayerFlag[i][j]);
+        	}
+        }
+#endif
+#if !H_MV
+        int numBits = 1;
+#else
+        int numBits = 0;
+#endif
+        while ((1 << numBits) < (vps->vps_num_profile_tier_level))  {
+        	numBits++;
+        }
+#if !H_MV
         vps->profile_level_tier_idx[i] = get_bits(gb, numBits);
         print_cabac("profile_level_tier_idx", vps->profile_level_tier_idx[i]);
+
+#else
+    if ( numBits > 0 )
+    {
+    	vps->profile_level_tier_idx[i] = get_bits(gb, numBits);
+    	print_cabac("profile_level_tier_idx", vps->profile_level_tier_idx[i]);
+    }
+#endif
     }
 #endif
 
@@ -952,15 +1178,20 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     vps->m_repFormatIdxPresentFlag = get_bits1(gb);
     print_cabac("rep_format_idx_present_flag", vps->m_repFormatIdxPresentFlag);
     if( vps->m_repFormatIdxPresentFlag )    {
+#if !H_MV
 #if O0096_REP_FORMAT_INDEX
         vps->m_vpsNumRepFormats = get_bits(gb, 8) +1 ;
 #else
         vps->m_vpsNumRepFormats = get_bits(gb, 4) +1 ;
 #endif
+#else
+        vps->m_vpsNumRepFormats = get_ue_golomb_long(gb) +1;
+#endif
         print_cabac("vps_num_rep_formats_minus1", vps->m_vpsNumRepFormats-1);
     }   else    {
         vps->m_vpsNumRepFormats = vps->vps_max_layers;
     }
+
     for(i = 0; i < vps->m_vpsNumRepFormats; i++)    {
         parseRepFormat( &vps->m_vpsRepFormat[i], gb);
     }
@@ -968,10 +1199,15 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     if( vps->m_repFormatIdxPresentFlag) {
         for(i = 1; i < vps->vps_max_layers; i++)    {
             if( vps->m_vpsNumRepFormats > 1 )   {
+
+#if H_MV
+		vps->m_vpsNumRepFormats =get_ue_golomb_long(gb) +1;
+#else
 #if O0096_REP_FORMAT_INDEX
                 vps->m_vpsRepFormatIdx[i] = get_bits(gb, 8);
 #else
                 vps->m_vpsRepFormatIdx[i] = get_bits(gb, 4);
+#endif
 #endif
                 print_cabac("vps_rep_format_idx", vps->m_vpsRepFormatIdx[i]); 
             }   else    {
@@ -997,9 +1233,14 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
         }
     }
 #endif
+
+#if !H_MV
 #if O0215_PHASE_ALIGNMENT
     vps->m_phaseAlignFlag = get_bits1(gb);
     print_cabac("cross_layer_phase_alignment_flag", vps->m_phaseAlignFlag); 
+#endif
+#else
+    print_cabac("vps_reserved_zero_flag",get_bits1(gb));
 #endif
 
     /*      DPB size    */
@@ -1020,10 +1261,17 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
                 }
             }
             if( vps->m_subLayerDpbInfoPresentFlag[i][j] ) { // If sub-layer DPB information is present
-                for(k = 0; k < vps->m_numSubDpbs[i]; k++)   {
-                    vps->m_maxVpsDecPicBufferingMinus1[i][k][j] = get_ue_golomb_long(gb);
-                    print_cabac("max_vps_dec_pic_buffering_minus1", vps->m_maxVpsDecPicBufferingMinus1[i][k][j]);
-                }
+#if !H_MV
+            	for(k = 0; k < vps->m_numSubDpbs[i]; k++)   {
+            		vps->m_maxVpsDecPicBufferingMinus1[i][k][j] = get_ue_golomb_long(gb);
+            		print_cabac("max_vps_dec_pic_buffering_minus1", vps->m_maxVpsDecPicBufferingMinus1[i][k][j]);
+            	}
+#else
+            	for(k = 0 ; k <= vps->m_numSubDpbs[i];k++){
+            		vps->m_maxVpsDecPicBufferingMinus1[i][k][j] = get_ue_golomb_long(gb);
+            		print_cabac("max_vps_dec_pic_buffering_minus1", vps->m_maxVpsDecPicBufferingMinus1[i][k][j]);
+            	}
+#endif
                 vps->m_maxVpsNumReorderPics[i][j] = get_ue_golomb_long(gb);
                 vps->m_maxVpsLatencyIncreasePlus1[i][j]= get_ue_golomb_long(gb);
                 print_cabac("max_vps_num_reorder_pics", vps->m_maxVpsNumReorderPics[i][j]);
@@ -1073,7 +1321,7 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
             assert( vps->getNumRefLayers(vps->getLayerIdInNuh(i)) <= MAX_REF_LAYERS);*/
 
 #endif
-
+#if !H_MV
 #if M0040_ADAPTIVE_RESOLUTION_CHANGE
     vps->m_singleLayerForNonIrapFlag = (get_bits1(gb)==1);
     print_cabac("single_layer_for_non_irap_flag", vps->m_singleLayerForNonIrapFlag);
@@ -1081,6 +1329,13 @@ static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
 #if HIGHER_LAYER_IRAP_SKIP_FLAG
     vps->m_higherLayerIrapSkipFlag = (get_bits1(gb)==1);
     print_cabac("higher_layer_irap_skip_flag", vps->m_higherLayerIrapSkipFlag);
+#endif
+#else
+    vps->m_vpsNonVuiExtensionLength = get_ue_golomb_long(gb);
+	print_cabac("vps_non_vui_extension_length",vps->m_vpsNonVuiExtensionLength);
+	for(i=1;i<=vps->m_vpsNonVuiExtensionLength;i++){
+		print_cabac("vps_non_vui_extension_data_byte",get_bits(gb,8));
+	}
 #endif
 
 #if VPS_VUI
@@ -1099,7 +1354,7 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
     int vps_id = 0;
     HEVCVPS *vps;
     AVBufferRef *vps_buf = av_buffer_allocz(sizeof(*vps));
-    print_cabac(" \n --- parse vps --- \n ", s->nuh_layer_id);
+    print_cabac(" \n --- parse vps --- \n ", s->nuh_layer_id); //SOUCI
     if (!vps_buf)
         return AVERROR(ENOMEM);
     vps = (HEVCVPS*)vps_buf->data;
@@ -1131,7 +1386,7 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
                vps->vps_max_sub_layers);
         goto err;
     }
-#if VPS_EXTN_OFFSET
+#if VPS_EXTN_OFFSET //ne doit pas être utilisé pour une vidéo mv
     vps->m_extensionOffset = get_bits(gb, 16);
     print_cabac("vps_extension_offset", vps->m_extensionOffset);
 #else
@@ -1141,7 +1396,7 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
     }
 #endif
 
-    parse_ptl(s, &vps->ptl, vps->vps_max_sub_layers);
+    parse_ptl(s, &vps->ptl, vps->vps_max_sub_layers,1);
 
     vps->vps_sub_layer_ordering_info_present_flag = get_bits1(gb);
     print_cabac("vps_sub_layer_ordering_info_present_flag", vps->vps_sub_layer_ordering_info_present_flag);
@@ -1194,6 +1449,7 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
         }
         vps->vps_num_hrd_parameters = get_ue_golomb_long(gb);
         print_cabac("vps_num_hrd_parameters", vps->vps_num_hrd_parameters);
+
         for (i = 0; i < vps->vps_num_hrd_parameters; i++) {
             int common_inf_present = 1;
             vps->m_hrdOpSetIdx[i] = get_ue_golomb_long(gb);// hrd_layer_set_idx
@@ -1212,6 +1468,12 @@ int ff_hevc_decode_nal_vps(HEVCContext *s)
     if(vps->vps_extension_flag){ // vps_extension_flag
         align_get_bits(gb);
         parse_vps_extension(s, vps);
+#if H_MV
+        vps->vps_extension2_flag = get_bits1(gb); //Has been added to the syntax of HEVCVPS
+        print_cabac("vps_extension2_flag",vps->vps_extension2_flag);
+
+
+#endif
     }
 #endif
 
@@ -1474,8 +1736,10 @@ static void parseSPSExtension( HEVCContext *s, HEVCSPS *sps )
     int i;
     int inter_view = get_bits1(gb);
     print_cabac("inter_view_mv_vert_constraint_flag",  inter_view);
+#if !H_MV
     if( s->nuh_layer_id > 0 )
     {
+#endif
         sps->m_numScaledRefLayerOffsets = get_ue_golomb_long(gb);
         print_cabac("num_scaled_ref_layer_offsets",  sps->m_numScaledRefLayerOffsets);
         for( i = 0; i < sps->m_numScaledRefLayerOffsets; i++) {
@@ -1491,8 +1755,13 @@ static void parseSPSExtension( HEVCContext *s, HEVCSPS *sps )
             print_cabac("scaled_ref_layer_top_offset",  sps->scaled_ref_layer_window[i].top_offset);
             print_cabac("scaled_ref_layer_right_offset",  sps->scaled_ref_layer_window[i].right_offset);
             print_cabac("scaled_ref_layer_bottom_offset",  sps->scaled_ref_layer_window[i].bottom_offset);
+#if H_MV
+            print_cabac("sps_multilayer_ext_reserved_zero_flag", get_bits1(gb));
+#endif
         }
+#if !H_MV
     }
+#endif
 }
 #endif
 
@@ -1550,7 +1819,8 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     }
 
     if (s->nuh_layer_id == 0)
-        parse_ptl(s, &sps->ptl, sps->max_sub_layers);
+        parse_ptl(s, &sps->ptl, sps->max_sub_layers,1);
+
     sps_id = get_ue_golomb_long(gb);
     print_cabac("sps_seq_parameter_set_id", sps_id);
     if (sps_id >= MAX_SPS_COUNT) {
@@ -1561,6 +1831,13 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     if (s->nuh_layer_id > 0) {
         sps->m_updateRepFormatFlag = get_bits1(gb);
         print_cabac("update_rep_format_flag", sps->m_updateRepFormatFlag);
+
+#if H_MV
+        if(sps->m_updateRepFormatFlag){
+        	sps->m_updateRepFormatIndex = get_bits(gb, 8);
+        	print_cabac("update_rep_format_index", sps->m_updateRepFormatIndex);
+        }
+#endif
     } else {
         sps->m_updateRepFormatFlag = 1;
     }
@@ -1573,8 +1850,10 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
             goto err;
         }
 
-        if (sps->chroma_format_idc == 3)
+        if (sps->chroma_format_idc == 3){
             sps->separate_colour_plane_flag = get_bits1(gb);
+            print_cabac("separate_colour_plane_flag", sps->separate_colour_plane_flag);
+        }
 
        if (sps->separate_colour_plane_flag)
             sps->chroma_array_type = 0;
@@ -1588,11 +1867,16 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
         if ((ret = av_image_check_size(sps->width,
                 sps->height, 0, s->avctx)) < 0)
             goto err;
-    } else if (sps->m_updateRepFormatFlag) {
+    }
+
+#if !H_MV
+    else if (sps->m_updateRepFormatFlag) {
         sps->chroma_array_type = sps->chroma_format_idc = 0;
         sps->m_updateRepFormatIndex = get_bits(gb, 8);
         print_cabac("update_rep_format_index", sps->m_updateRepFormatIndex);
     }
+#endif
+
     int conformance_window_flag = get_bits1(gb);
     print_cabac("conformance_window_flag", conformance_window_flag);
     if (conformance_window_flag) { // pic_conformance_flag
@@ -1709,43 +1993,49 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
         ret = AVERROR_INVALIDDATA;
         goto err;
     }
+#if H_MV
+    if(s->nuh_layer_id==0)
+    {
+#endif
+    	sublayer_ordering_info = get_bits1(gb);
+    	print_cabac("sps_sub_layer_ordering_info_present_flag", sublayer_ordering_info);
+    	start = sublayer_ordering_info ? 0 : sps->max_sub_layers - 1;
+    	for (i = start; i < sps->max_sub_layers; i++) {
+    		sps->temporal_layer[i].max_dec_pic_buffering = get_ue_golomb_long(gb) + 1;
+    		sps->temporal_layer[i].num_reorder_pics      = get_ue_golomb_long(gb);
+    		sps->temporal_layer[i].max_latency_increase  = get_ue_golomb_long(gb) - 1;
 
-    sublayer_ordering_info = get_bits1(gb);
-    print_cabac("log2_max_pic_order_cnt_lsb_minus4", sublayer_ordering_info);
-    start = sublayer_ordering_info ? 0 : sps->max_sub_layers - 1;
-    for (i = start; i < sps->max_sub_layers; i++) {
-        sps->temporal_layer[i].max_dec_pic_buffering = get_ue_golomb_long(gb) + 1;
-        sps->temporal_layer[i].num_reorder_pics      = get_ue_golomb_long(gb);
-        sps->temporal_layer[i].max_latency_increase  = get_ue_golomb_long(gb) - 1;
+    		print_cabac("sps_max_dec_pic_buffering_minus1", sps->temporal_layer[i].max_dec_pic_buffering -1);
+    		print_cabac("sps_num_reorder_pics", sps->temporal_layer[i].num_reorder_pics);
+    		print_cabac("sps_max_latency_increase_plus1", sps->temporal_layer[i].max_latency_increase +1);
 
-        print_cabac("sps_max_dec_pic_buffering_minus1", sps->temporal_layer[i].max_dec_pic_buffering -1);
-        print_cabac("sps_num_reorder_pics", sps->temporal_layer[i].num_reorder_pics);
-        print_cabac("sps_max_latency_increase_plus1", sps->temporal_layer[i].max_latency_increase +1);
+    		if (sps->temporal_layer[i].max_dec_pic_buffering > MAX_DPB_SIZE) {
+    			av_log(s->avctx, AV_LOG_ERROR, "sps_max_dec_pic_buffering_minus1 out of range: %d\n",
+    					sps->temporal_layer[i].max_dec_pic_buffering - 1);
+    			ret = AVERROR_INVALIDDATA;
+    			goto err;
+    		}
+    		if (sps->temporal_layer[i].num_reorder_pics > sps->temporal_layer[i].max_dec_pic_buffering - 1) {
+    			av_log(s->avctx, AV_LOG_ERROR, "sps_max_num_reorder_pics out of range: %d\n",
+    					sps->temporal_layer[i].num_reorder_pics);
+    			if (sps->temporal_layer[i].num_reorder_pics > MAX_DPB_SIZE - 1) {
+    				ret = AVERROR_INVALIDDATA;
+    				goto err;
+    			}
+    			sps->temporal_layer[i].max_dec_pic_buffering = sps->temporal_layer[i].num_reorder_pics + 1;
+    		}
+    	}
 
-        if (sps->temporal_layer[i].max_dec_pic_buffering > MAX_DPB_SIZE) {
-            av_log(s->avctx, AV_LOG_ERROR, "sps_max_dec_pic_buffering_minus1 out of range: %d\n",
-                   sps->temporal_layer[i].max_dec_pic_buffering - 1);
-            ret = AVERROR_INVALIDDATA;
-            goto err;
-        }
-        if (sps->temporal_layer[i].num_reorder_pics > sps->temporal_layer[i].max_dec_pic_buffering - 1) {
-            av_log(s->avctx, AV_LOG_ERROR, "sps_max_num_reorder_pics out of range: %d\n",
-                   sps->temporal_layer[i].num_reorder_pics);
-            if (sps->temporal_layer[i].num_reorder_pics > MAX_DPB_SIZE - 1) {
-                ret = AVERROR_INVALIDDATA;
-                goto err;
-            }
-            sps->temporal_layer[i].max_dec_pic_buffering = sps->temporal_layer[i].num_reorder_pics + 1;
-        }
+    	if (!sublayer_ordering_info) {
+    		for (i = 0; i < start; i++) {
+    			sps->temporal_layer[i].max_dec_pic_buffering = sps->temporal_layer[start].max_dec_pic_buffering;
+    			sps->temporal_layer[i].num_reorder_pics      = sps->temporal_layer[start].num_reorder_pics;
+    			sps->temporal_layer[i].max_latency_increase  = sps->temporal_layer[start].max_latency_increase;
+    		}
+    	}
+#if H_MV
     }
-
-    if (!sublayer_ordering_info) {
-        for (i = 0; i < start; i++) {
-            sps->temporal_layer[i].max_dec_pic_buffering = sps->temporal_layer[start].max_dec_pic_buffering;
-            sps->temporal_layer[i].num_reorder_pics      = sps->temporal_layer[start].num_reorder_pics;
-            sps->temporal_layer[i].max_latency_increase  = sps->temporal_layer[start].max_latency_increase;
-        }
-    }
+#endif
 
     sps->log2_min_cb_size                    = get_ue_golomb_long(gb) + 3;
     sps->log2_diff_max_min_coding_block_size = get_ue_golomb_long(gb);
@@ -1777,11 +2067,11 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
 #if SCALINGLIST_INFERRING
         if (s->nuh_layer_id > 0) {
             sps->m_inferScalingListFlag =  get_bits1(gb);
-            print_cabac("sps_infer_scaling_list_flag\n", sps->m_inferScalingListFlag);
+            print_cabac("sps_infer_scaling_list_flag", sps->m_inferScalingListFlag);
         }
         if (sps->m_inferScalingListFlag) {
             sps->m_scalingListRefLayerId = get_ue_golomb_long(gb);
-            print_cabac("sps_scaling_list_ref_layer_id\n", sps->m_scalingListRefLayerId);
+            print_cabac("sps_scaling_list_ref_layer_id", sps->m_scalingListRefLayerId);
             sps->scaling_list_enable_flag = 0;
         } else {
 #endif            
@@ -1801,7 +2091,7 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     sps->sao_enabled      = get_bits1(gb);
 
     print_cabac("amp_enabled_flag", sps->amp_enabled_flag);
-    print_cabac("sample_adaptive_offset_enabled_flag\n", sps->sao_enabled);
+    print_cabac("sample_adaptive_offset_enabled_flag", sps->sao_enabled);
 
     if (sps->sao_enabled)
         av_log(s->avctx, AV_LOG_DEBUG, "SAO enabled\n");
@@ -1849,7 +2139,7 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
     print_cabac("long_term_ref_pics_present_flag", sps->long_term_ref_pics_present_flag);
     if (sps->long_term_ref_pics_present_flag) {
         sps->num_long_term_ref_pics_sps = get_ue_golomb_long(gb);
-        print_cabac("long_term_ref_pics_present_flag", sps->num_long_term_ref_pics_sps);
+        print_cabac("num_long_term_ref_pics_sps", sps->num_long_term_ref_pics_sps);
         for (i = 0; i < sps->num_long_term_ref_pics_sps; i++) {
             sps->lt_ref_pic_poc_lsb_sps[i]       = get_bits(gb, sps->log2_max_poc_lsb);
             sps->used_by_curr_pic_lt_sps_flag[i] = get_bits1(gb);
@@ -1875,6 +2165,8 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
         decode_vui(s, sps);
 
     if (get_bits1(gb)) { // sps_extension_flag
+
+#if !H_MV
         int sps_extension_flag[1];
         int sps_extension_7bits;
         for (i = 0; i < 1; i++)
@@ -1891,6 +2183,16 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
             int fast_rice_adaptation_enabled_flag    = get_bits1(gb);
             int cabac_bypass_alignment_enabled_flag  = get_bits1(gb);
         }
+#else
+        unsigned int spsExtensionTypeFlag[8];
+        	for ( i = 0; i < 8; i++) {
+        		spsExtensionTypeFlag[i] = get_bits1(gb);
+        	}
+        	if(spsExtensionTypeFlag[1] == 1){
+        		parseSPSExtension(s, sps);
+
+        	}
+#endif
     }
     if (s->apply_defdispwin) {
         sps->output_window.left_offset   += sps->vui.def_disp_win.left_offset;
@@ -2291,6 +2593,16 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
     print_cabac("slice_segment_header_extension_present_flag", pps->slice_header_extension_present_flag);
     print_cabac("pps_extension_flag", pps->pps_extension_flag );
 
+#if H_MV
+	for(i = 0; i<8;i++){
+		pps->m_ppsExtensionTypeFlag[i] = get_bits1(gb);
+		//Metter le test de assert
+	}
+	if(pps->m_ppsExtensionTypeFlag[0]==1){
+		pps->m_pocResetInfoPresentFlag = get_bits1(gb);
+		print_cabac("poc_reset_info_present_flag",pps->m_pocResetInfoPresentFlag);
+	}
+#endif
     // Inferred parameters
     pps->col_bd   = av_malloc_array(pps->num_tile_columns + 1, sizeof(*pps->col_bd));
     pps->row_bd   = av_malloc_array(pps->num_tile_rows + 1,    sizeof(*pps->row_bd));
@@ -2435,7 +2747,6 @@ int ff_hevc_decode_nal_pps(HEVCContext *s)
 
     av_buffer_unref(&s->pps_list[pps_id]);
     s->pps_list[pps_id] = pps_buf;
-
     return 0;
 
 err:

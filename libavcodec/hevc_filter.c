@@ -1114,7 +1114,7 @@ static unsigned long int GetTimeMs64()
     return ret;
 #endif
 }
-void ff_upsample_block(HEVCContext *s, HEVCFrame *ref0, int x0, int y0, int nPbW, int nPbH) {
+void ff_upsample_block(HEVCContext *s, HEVCFrame *ref0, int x0, int y0, int nPbW, int nPbH) { //ICI, fonction de prédictions inter-view
 
     int ctb_size =  1<<s->sps->log2_ctb_size;
     int log2_ctb =  s->sps->log2_ctb_size;

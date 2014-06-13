@@ -126,12 +126,11 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc)
     /* check that this POC doesn't already exist */
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         HEVCFrame *frame = &s->DPB[i];
-
         if (frame->frame->buf[0] && frame->sequence == s->seq_decode &&
-            frame->poc == poc && !s->nuh_layer_id) {
-            av_log(s->avctx, AV_LOG_ERROR, "Duplicate POC in a sequence: %d.\n",
-                   poc);
-            return AVERROR_INVALIDDATA;
+        		frame->poc == poc && !s->nuh_layer_id) {//JE SORT ICI
+        	av_log(s->avctx, AV_LOG_ERROR, "Duplicate POC in a sequence: %d.\n",
+        			poc);
+        	return AVERROR_INVALIDDATA;
         }
     }
 
@@ -409,6 +408,7 @@ int ff_hevc_slice_rpl(HEVCContext *s)
     uint8_t nb_list = sh->slice_type == B_SLICE ? 2 : 1;
     uint8_t list_idx;
     int i, j, ret;
+    int test;
 
     ret = init_slice_rpl(s);
     if (ret < 0)
@@ -442,7 +442,6 @@ int ff_hevc_slice_rpl(HEVCContext *s)
                 }
             }
         }
-
         /* reorder the references if necessary */
         if (sh->rpl_modification_flag[list_idx]) {
             for (i = 0; i < sh->nb_refs[list_idx]; i++) {
@@ -738,11 +737,20 @@ int ff_hevc_frame_rps(HEVCContext *s)
 
 int ff_hevc_compute_poc(HEVCContext *s, int poc_lsb)
 {
-    int max_poc_lsb  = 1 << s->sps->log2_max_poc_lsb;
-    int prev_poc_lsb = s->pocTid0 % max_poc_lsb;
-    int prev_poc_msb = s->pocTid0 - prev_poc_lsb;
-    int poc_msb;
+	int poc_msb = 0;
 
+#if H_MV
+	if(!(s->nal_unit_type == NAL_BLA_W_LP   ||
+			s->nal_unit_type == NAL_BLA_W_RADL ||
+			s->nal_unit_type == NAL_BLA_N_LP  ||
+			s->nal_unit_type == NAL_IDR_N_LP ||
+			s->nal_unit_type == NAL_IDR_W_RADL))
+	{
+#endif
+
+	int max_poc_lsb  = 1 << s->sps->log2_max_poc_lsb;
+	int prev_poc_lsb = s->pocTid0 % max_poc_lsb;
+	int prev_poc_msb = s->pocTid0 - prev_poc_lsb;
     if (poc_lsb < prev_poc_lsb && prev_poc_lsb - poc_lsb >= max_poc_lsb / 2)
         poc_msb = prev_poc_msb + max_poc_lsb;
     else if (poc_lsb > prev_poc_lsb && poc_lsb - prev_poc_lsb > max_poc_lsb / 2)
@@ -750,16 +758,20 @@ int ff_hevc_compute_poc(HEVCContext *s, int poc_lsb)
     else
         poc_msb = prev_poc_msb;
 
+#if !H_MV
     // For BLA picture types, POCmsb is set to 0.
     if (s->nal_unit_type == NAL_BLA_W_LP   ||
         s->nal_unit_type == NAL_BLA_W_RADL ||
         s->nal_unit_type == NAL_BLA_N_LP)
         poc_msb = 0;
+#else
+	}
+#endif
 
     return poc_msb + poc_lsb;
 }
 
-int ff_hevc_frame_nb_refs(HEVCContext *s)
+int ff_hevc_frame_nb_refs(HEVCContext *s)//JENSUISLA
 {
     int ret = 0;
     int i;
@@ -767,14 +779,17 @@ int ff_hevc_frame_nb_refs(HEVCContext *s)
     LongTermRPS *long_rps   = &s->sh.long_term_rps;
 
 #ifdef REF_IDX_FRAMEWORK
+
     if( s->sh.slice_type == I_SLICE || (s->nuh_layer_id &&
                                         (s->nal_unit_type >= NAL_BLA_W_LP) &&
                                         (s->nal_unit_type<= NAL_CRA_NUT ) ))
+
 #else
         if (s->sh.slice_type == I_SLICE)
 #endif
         {
 #ifdef REF_IDX_FRAMEWORK
+
 #ifdef JCTVC_M0458_INTERLAYER_RPS_SIG
             return s->sh.active_num_ILR_ref_idx;
 #else

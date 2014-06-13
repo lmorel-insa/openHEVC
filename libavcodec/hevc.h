@@ -43,6 +43,7 @@
 #define MAX_NB_THREADS 16
 #define SHIFT_CTB_WPP 2
 
+
 /**
  * 7.4.2.1
  */
@@ -102,8 +103,13 @@ unsigned long int layers_time[3];
 
 enum ScalabilityType
 {
+#if !H_MV
     VIEW_ORDER_INDEX  = 1,
     SCALABILITY_ID = 2,
+#else
+    VIEW_ORDER_INDEX  = 1,
+#endif
+
 };
 
 /**
@@ -136,7 +142,7 @@ enum NALUnitType {
     NAL_SEI_PREFIX = 39,
     NAL_SEI_SUFFIX = 40,
 };
-#if 0
+#if 1
 #define print_cabac(string, val) \
     printf(" %s : %d \n", string, val);
 #else
@@ -632,16 +638,24 @@ typedef struct HEVCVPS {
     unsigned int         m_minHorizontalCtuOffsetPlus1 [MAX_VPS_LAYER_ID_PLUS1][MAX_VPS_LAYER_ID_PLUS1];
 #endif
 #if VPS_VUI_VIDEO_SIGNAL
-    unsigned int        m_vidSigPresentVpsFlag;
+    unsigned int         m_vidSigPresentVpsFlag;
     unsigned int         m_vpsVidSigInfo;
     unsigned int         m_vpsVidSigIdx[MAX_VPS_LAYER_ID_PLUS1];
     unsigned int         m_vpsVidFormat[16];
-    unsigned int        m_vpsFullRangeFlag[16];
+    unsigned int         m_vpsFullRangeFlag[16];
     unsigned int         m_vpsColorPrimaries[16];
     unsigned int         m_vpsTransChar[16];
     unsigned int         m_vpsMatCoeff[16];
 #endif
 
+#if H_MV //added
+    unsigned int		 m_vpsVuiBspHrdPresentFlag;
+    unsigned int 		 m_baseLayerParameterSetCompatibilityFlag[MAX_VPS_LAYER_ID_PLUS1];
+    int					 m_defaultTargetOutputLayerIdc;
+    int					 m_vpsNonVuiExtensionLength;
+    unsigned int		 m_vps_VuiPresentFlag;
+    unsigned int 		 vps_extension2_flag;
+#endif
 } HEVCVPS;
 
 typedef struct ScalingList {
@@ -823,7 +837,10 @@ typedef struct HEVCPPS {
     int *tile_pos_rs;       ///< TilePosRS
     int *min_cb_addr_zs;    ///< MinCbAddrZS
     int *min_tb_addr_zs;    ///< MinTbAddrZS
-
+#if H_MV
+    unsigned int m_ppsExtensionTypeFlag[8];
+    unsigned int m_pocResetInfoPresentFlag;
+#endif
 } HEVCPPS;
 
 typedef struct SliceHeader {
@@ -912,6 +929,20 @@ typedef struct SliceHeader {
 #endif
 
     int slice_ctb_addr_rs;
+
+#if H_MV
+    int m_numInterLayerRefPicsMinus1;
+    uint8_t m_discardableFlag;
+    int m_sliceSegmentHeaderExtensionLength;
+    int m_poc_ResetIdc;
+    int m_pocResetPeriodId;
+    uint8_t m_fullPocResetFlag;
+    int m_pocLsbVal;
+    uint8_t m_pocMsbValPresentFlag;
+    int m_pocMsbVal;
+    uint8_t m_pocMsbValRequiredFlag;
+#endif
+
 } SliceHeader;
 
 typedef struct CodingTree {
