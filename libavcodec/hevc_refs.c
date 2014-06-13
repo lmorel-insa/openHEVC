@@ -127,7 +127,7 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc)
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         HEVCFrame *frame = &s->DPB[i];
         if (frame->frame->buf[0] && frame->sequence == s->seq_decode &&
-        		frame->poc == poc && !s->nuh_layer_id) {//JE SORT ICI
+        		frame->poc == poc && !s->nuh_layer_id) {
         	av_log(s->avctx, AV_LOG_ERROR, "Duplicate POC in a sequence: %d.\n",
         			poc);
         	return AVERROR_INVALIDDATA;
@@ -594,7 +594,6 @@ static int add_candidate_ref(HEVCContext *s, RefPicList *list,
     list->list[list->nb_refs] = ref->poc;
     list->ref[list->nb_refs]  = ref;
     list->nb_refs++;
-
     mark_ref(ref, ref_flag);
     return 0;
 }
@@ -712,7 +711,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
 #endif
 
 #ifdef REF_IDX_FRAMEWORK
-    if(s->nuh_layer_id) {
+    if(s->nuh_layer_id) {//ICI
 #ifdef JCTVC_M0458_INTERLAYER_RPS_SIG
         for( i = 0; i < s->vps->max_one_active_ref_layer_flag; i ++) {
 #else
@@ -721,9 +720,11 @@ int ff_hevc_frame_rps(HEVCContext *s)
                 if((vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[0]) && (vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[vps->m_refLayerId[s->nuh_layer_id][s->sh.inter_layer_pred_layer_idc[i]]])){
                 //IL_REF0 , IL_REF1
                     ret = add_candidate_ref(s, &rps[IL_REF0], s->poc, HEVC_FRAME_FLAG_LONG_REF);
+                    printf("----------------------Liste 0 : %d\n",s->poc);
                 }
                 else{
                     ret = add_candidate_ref(s, &rps[IL_REF1], s->poc, HEVC_FRAME_FLAG_LONG_REF);
+                    printf("----------------------Liste 1 : %d\n",s->poc);
                 }
             }
         }

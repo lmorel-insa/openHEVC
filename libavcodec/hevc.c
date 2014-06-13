@@ -3221,7 +3221,8 @@ if (s->nal_unit_type != s->first_nal_type) {
 }
 
 if (!s->sh.dependent_slice_segment_flag &&
-		s->sh.slice_type != I_SLICE) {
+		s->sh.slice_type != I_SLICE) {//ICI
+	//ICI
 	ret = ff_hevc_slice_rpl(s);
 	if (ret < 0) {
 		av_log(s->avctx, AV_LOG_WARNING,
@@ -3609,7 +3610,6 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *got_output,
 		const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
 		int cIdx;
 		uint8_t md5[3][16];
-		//SOUCI : calc_md5 ne calcule pas bien le md5!
 		calc_md5(md5[0], frame->data[0], frame->linesize[0], s->sps->width  , s->sps->height  , s->sps->pixel_shift);
 		calc_md5(md5[1], frame->data[1], frame->linesize[1], s->sps->width >> desc->log2_chroma_w, s->sps->height >> desc->log2_chroma_h, s->sps->pixel_shift);
 		calc_md5(md5[2], frame->data[2], frame->linesize[2], s->sps->width >> desc->log2_chroma_w, s->sps->height >> desc->log2_chroma_h, s->sps->pixel_shift);

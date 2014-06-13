@@ -1007,9 +1007,12 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
     HEVCFrame *refBL = s->BL_frame;
     HEVCFrame *refEL = s->inter_layer_ref;
 
-    if (s->up_filter_inf.idx == SNR) { /* SNR scalability x1*/
-        /*  memcpy(refEL->tab_mvf_buf->data, refBL->tab_mvf_buf->data , refBL->tab_mvf_buf->size );*/
 
+
+    if (s->up_filter_inf.idx == SNR) { /* SNR scalability x1*/
+#if 0
+          memcpy(refEL->tab_mvf_buf->data, refBL->tab_mvf_buf->data , refBL->tab_mvf_buf->size );
+#else
         for(yEL=ctb_y; yEL < ctb_y+ctb_size && yEL<s->sps->height; yEL+=16) {
             for(xEL=ctb_x; xEL < ctb_x+ctb_size && xEL<s->sps->width; xEL+=16) {
                 xBL = (((av_clip_c(xEL+8, 0, s->sps->width -1)  - s->sps->pic_conf_win.left_offset)*s->up_filter_inf.scaleXLum + (1<<15)) >> 16) + 4;
@@ -1040,7 +1043,9 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                 }
             }
         }
+#endif
     }   else {/*    Spatial scalability       */
+
         for(yEL=ctb_y; yEL < ctb_y+ctb_size && yEL<s->sps->height; yEL+=16) {
             for(xEL=ctb_x; xEL < ctb_x+ctb_size && xEL<s->sps->width; xEL+=16) {
                 xBL = (((av_clip_c(xEL+8, 0, s->sps->width -1)  - s->sps->pic_conf_win.left_offset)*s->up_filter_inf.scaleXLum + (1<<15)) >> 16) + 4;
