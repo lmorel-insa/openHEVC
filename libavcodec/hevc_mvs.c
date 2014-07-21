@@ -261,13 +261,14 @@ static int temporal_luma_motion_vector(HEVCContext *s, int x0, int y0,
     //bottom right collocated motion vector
     x = x0 + nPbW;
     y = y0 + nPbH;
+
 #if ACTIVE_PU_UPSAMPLING
     if(ref == s->inter_layer_ref ) {
         if (s->threads_type & FF_THREAD_FRAME ){
             int bl_y = y0 + (1<<s->sps->log2_ctb_size)*2 + 9;
             bl_y = (( (bl_y  - s->sps->pic_conf_win.top_offset) * s->up_filter_inf.scaleYLum + s->up_filter_inf.addYLum) >> 12) >> 4;
             ff_thread_await_progress(&s->BL_frame->tf, bl_y, 0);
-        }
+        }//Ne rentre jamais ici
         ff_upsample_block(s, ref, x0 , y0, nPbW, nPbH);
     }
 #endif
@@ -296,6 +297,8 @@ static int temporal_luma_motion_vector(HEVCContext *s, int x0, int y0,
         temp_col           = TAB_MVF(x_pu, y_pu);
         availableFlagLXCol = DERIVE_TEMPORAL_COLOCATED_MVS;
     }
+   // printf("------------------------MV : x0= %d  y0= %d\n", x0,y0);
+   // printf("------------------------MV : x= %d  y= %d\n", mvLXCol->x,mvLXCol->y);
     return availableFlagLXCol;
 }
 
@@ -317,7 +320,8 @@ static void derive_spatial_merge_candidates(HEVCContext *s, int x0, int y0,
                                             int nPbW, int nPbH,
                                             int log2_cb_size,
                                             int singleMCLFlag, int part_idx,
-                                            struct MvField mergecandlist[])
+                                            struct MvField mergecandlist[],
+                                            int merge_idx)
 {
     HEVCLocalContext *lc   = s->HEVClc;
     RefPicList *refPicList = s->ref->refPicList;
@@ -387,6 +391,7 @@ static void derive_spatial_merge_candidates(HEVCContext *s, int x0, int y0,
 
     if (is_available_a1)
         mergecandlist[nb_merge_cand++] = TAB_MVF_PU(A1);
+
 
     // above spatial merge candidate
     is_available_b1 = AVAILABLE(cand_up, B1);
@@ -508,6 +513,7 @@ static void derive_spatial_merge_candidates(HEVCContext *s, int x0, int y0,
     }
 
     // append Zero motion vector candidates
+
     while (nb_merge_cand < s->sh.max_num_merge_cand) {
         mergecandlist[nb_merge_cand].pred_flag    = PF_L0 + ((s->sh.slice_type == B_SLICE) << 1);
         mergecandlist[nb_merge_cand].mv[0].x      = 0;
@@ -517,14 +523,17 @@ static void derive_spatial_merge_candidates(HEVCContext *s, int x0, int y0,
         mergecandlist[nb_merge_cand].ref_idx[0]   = zero_idx < nb_refs ? zero_idx : 0;
         mergecandlist[nb_merge_cand].ref_idx[1]   = zero_idx < nb_refs ? zero_idx : 0;
 
+
         nb_merge_cand++;
         zero_idx++;
     }
+
 }
 
 /*
  * 8.5.3.1.1 Derivation process of luma Mvs for merge mode
  */
+
 void ff_hevc_luma_mv_merge_mode(HEVCContext *s, int x0, int y0, int nPbW,
                                 int nPbH, int log2_cb_size, int part_idx,
                                 int merge_idx, MvField *mv)
@@ -543,11 +552,14 @@ void ff_hevc_luma_mv_merge_mode(HEVCContext *s, int x0, int y0, int nPbW,
         nPbW          = nCS;
         nPbH          = nCS;
         part_idx      = 0;
+
+
     }
 
     ff_hevc_set_neighbour_available(s, x0, y0, nPbW, nPbH);
+
     derive_spatial_merge_candidates(s, x0, y0, nPbW, nPbH, log2_cb_size,
-                                    singleMCLFlag, part_idx, mergecand_list);
+                                    singleMCLFlag, part_idx, mergecand_list,merge_idx);
 
     if (mergecand_list[merge_idx].pred_flag == PF_BI &&
         (nPbW2 + nPbH2) == 12) {

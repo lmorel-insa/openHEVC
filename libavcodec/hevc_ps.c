@@ -851,7 +851,7 @@ static unsigned int inferOuputLayerFlag(HEVCVPS *vps, int i, int j){
 static void parse_vps_extension (HEVCContext *s, HEVCVPS *vps)  {
     int i, j, k;
     GetBitContext *gb = &s->HEVClc->gb;
-    print_cabac(" \n --- parse vps extention  --- \n ", s->nuh_layer_id);
+    print_cabac(" \n --- parse vps extension  --- \n ", s->nuh_layer_id);
 
 #if VPS_EXTN_MASK_AND_DIM_INFO
     int numScalabilityTypes = 0;

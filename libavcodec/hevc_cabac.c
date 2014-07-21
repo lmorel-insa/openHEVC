@@ -1369,6 +1369,7 @@ void ff_hevc_hls_residual_coding(HEVCContext *s, int x0, int y0,
                         int last_coeff_abs_level_remaining = coeff_abs_level_remaining_decode(s, c_rice_param);
 
                         trans_coeff_level += last_coeff_abs_level_remaining;
+
                         if (trans_coeff_level > (3 << c_rice_param))
                             c_rice_param = FFMIN(c_rice_param + 1, 4);
 
@@ -1385,8 +1386,9 @@ void ff_hevc_hls_residual_coding(HEVCContext *s, int x0, int y0,
                     if (n == first_nz_pos_in_cg && (sum_abs&1))
                         trans_coeff_level = -trans_coeff_level;
                 }
-                if (coeff_sign_flag >> 15)
+                if (coeff_sign_flag >> 15){
                     trans_coeff_level = -trans_coeff_level;
+                }
                 coeff_sign_flag <<= 1;
                 if(!lc->cu.cu_transquant_bypass_flag) {
                     if(s->sps->scaling_list_enable_flag) {
@@ -1424,12 +1426,15 @@ void ff_hevc_hls_residual_coding(HEVCContext *s, int x0, int y0,
                       log2_trafo_size == 2 &&
                       lc->cu.pred_mode == MODE_INTRA;
             s->hevcdsp.transform_skip[!!rot](dst, coeffs, stride);
-        } else if (lc->cu.pred_mode == MODE_INTRA && c_idx == 0 && log2_trafo_size == 2)
+        } else if (lc->cu.pred_mode == MODE_INTRA && c_idx == 0 && log2_trafo_size == 2){
             s->hevcdsp.transform_4x4_luma_add(dst, coeffs, stride);
+        }
         else {
             int max_xy = FFMAX(last_significant_coeff_x, last_significant_coeff_y);
-            if (max_xy == 0)
-                s->hevcdsp.transform_dc_add[log2_trafo_size-2](dst, coeffs, stride);
+            if (max_xy == 0){
+            	s->hevcdsp.transform_dc_add[log2_trafo_size-2](dst, coeffs, stride);
+
+            }
             else {
                 int col_limit = last_significant_coeff_x + last_significant_coeff_y + 4;
                 if (max_xy < 4)
@@ -1438,9 +1443,12 @@ void ff_hevc_hls_residual_coding(HEVCContext *s, int x0, int y0,
                     col_limit = FFMIN(8, col_limit);
                 else if (max_xy < 12)
                     col_limit = FFMIN(24, col_limit);
+
+
                 s->hevcdsp.transform_add[log2_trafo_size-2](dst, coeffs, stride, col_limit);
             }
         }
+
     }
 }
 

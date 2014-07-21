@@ -23,9 +23,9 @@
 #ifndef AVCODEC_HEVC_DEF_H
 #define AVCODEC_HEVC_DEF_H
 
-#define H_MV 			0
-#define SVC_EXTENSION   1
-#define VPS_EXTN_OFFSET                  1      ///< implementation of vps_extension_offset syntax element
+#define H_MV 								0
+#define SVC_EXTENSION						1
+#define VPS_EXTN_OFFSET                  	1      ///< implementation of vps_extension_offset syntax element
 
 #ifdef SVC_EXTENSION
     #define VPS_EXTENSION   1

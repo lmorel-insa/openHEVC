@@ -82,7 +82,12 @@
 #define QPEL_EXTRA_AFTER  4
 #define QPEL_EXTRA        7
 #define ACTIVE_PU_UPSAMPLING     1
+
+#if !H_MV
 #define ACTIVE_BOTH_FRAME_AND_PU 0
+#else
+#define ACTIVE_BOTH_FRAME_AND_PU 1
+#endif
 
 #define EDGE_EMU_BUFFER_STRIDE 80
 

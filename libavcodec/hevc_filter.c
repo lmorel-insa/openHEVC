@@ -710,6 +710,7 @@ void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
     }
 
     if (log2_trafo_size > log2_min_pu_size && !is_intra) {
+
         RefPicList *refPicList = ff_hevc_get_ref_list(s, s->ref,
                                                            x0,
                                                            y0);
@@ -1008,7 +1009,6 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
     HEVCFrame *refEL = s->inter_layer_ref;
 
 
-
     if (s->up_filter_inf.idx == SNR) { /* SNR scalability x1*/
 #if 0
           memcpy(refEL->tab_mvf_buf->data, refBL->tab_mvf_buf->data , refBL->tab_mvf_buf->size );
@@ -1029,6 +1029,8 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                 } else
                     memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
 
+
+
                 if( ((xEL+1)>>s->sps->log2_min_pu_size) < pic_width_in_min_pu && ((yEL+1)>>s->sps->log2_min_pu_size) < pic_height_in_min_pu) {
                     pre_unit_col = (((yEL+1)>>s->sps->log2_min_pu_size)*pic_width_in_min_pu) + ((xEL+1)>>s->sps->log2_min_pu_size);
                     memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvField));
@@ -1041,8 +1043,10 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                     pre_unit_col = (((yEL+1)>>s->sps->log2_min_pu_size)*pic_width_in_min_pu) + ((xEL)>>s->sps->log2_min_pu_size);
                     memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvField));
                 }
+
             }
         }
+
 #endif
     }   else {/*    Spatial scalability       */
 
@@ -1119,7 +1123,7 @@ static unsigned long int GetTimeMs64()
     return ret;
 #endif
 }
-void ff_upsample_block(HEVCContext *s, HEVCFrame *ref0, int x0, int y0, int nPbW, int nPbH) { //ICI, fonction de prédictions inter-view
+void ff_upsample_block(HEVCContext *s, HEVCFrame *ref0, int x0, int y0, int nPbW, int nPbH) {
 
     int ctb_size =  1<<s->sps->log2_ctb_size;
     int log2_ctb =  s->sps->log2_ctb_size;
@@ -1136,13 +1140,13 @@ void ff_upsample_block(HEVCContext *s, HEVCFrame *ref0, int x0, int y0, int nPbW
 
     if(  (y0 - ctb_y0) < MAX_EDGE  && ctb_y0>ctb_size &&
        !s->is_upsampled[((ctb_y0-ctb_size)/ctb_size*s->sps->ctb_width)+(ctb_x0/ctb_size)]){
-        ff_upscale_mv_block(s, ctb_x0      , ctb_y0-ctb_size);
+    	ff_upscale_mv_block(s, ctb_x0      , ctb_y0-ctb_size);
         upsample_block_mc   ( s, ref0, ctb_x0>>1, (ctb_y0-ctb_size)>>1 );
         upsample_block_luma ( s, ref0, ctb_x0   ,  ctb_y0-ctb_size     );
     }
 
     if(!s->is_upsampled[(ctb_y0/ctb_size*s->sps->ctb_width)+(ctb_x0/ctb_size)]){
-        ff_upscale_mv_block(s, ctb_x0      , ctb_y0);
+    	ff_upscale_mv_block(s, ctb_x0      , ctb_y0);
         upsample_block_mc   ( s, ref0, ctb_x0>>1, ctb_y0>>1 );
         upsample_block_luma ( s, ref0, ctb_x0   , ctb_y0    );
 
@@ -1150,7 +1154,7 @@ void ff_upsample_block(HEVCContext *s, HEVCFrame *ref0, int x0, int y0, int nPbW
 
     if((((x0 + nPbW + MAX_EDGE) >> log2_ctb)<<log2_ctb) > ctb_x0 && ((ctb_x0+ctb_size) < s->sps->width) &&
        !s->is_upsampled[(ctb_y0/ctb_size*s->sps->ctb_width)+((ctb_x0+ctb_size)/ctb_size)]){
-        ff_upscale_mv_block(s, ctb_x0 + ctb_size, ctb_y0);
+    	ff_upscale_mv_block(s, ctb_x0 + ctb_size, ctb_y0);
         upsample_block_mc   ( s,  ref0, (ctb_x0 + ctb_size)>>1,  ctb_y0>>1 );
         upsample_block_luma (  s, ref0,  ctb_x0 + ctb_size     , ctb_y0    );
     }

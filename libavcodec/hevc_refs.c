@@ -663,6 +663,7 @@ int ff_hevc_frame_rps(HEVCContext *s)
 
     for (i = 0; i < NB_RPS_TYPE; i++)
         rps[i].nb_refs = 0;
+
 #ifdef SVC_EXTENSION
     if(!s->nuh_layer_id || !(s->nal_unit_type >= NAL_BLA_W_LP && s->nal_unit_type <= NAL_CRA_NUT && s->sps->set_mfm_enabled_flag))  {
 #endif
@@ -674,10 +675,12 @@ int ff_hevc_frame_rps(HEVCContext *s)
 
             if (!short_rps->used[i])
                 list = ST_FOLL;
-            else if (i < short_rps->num_negative_pics)
+            else if (i < short_rps->num_negative_pics){
                 list = ST_CURR_BEF;
-            else
+            }
+            else{
                 list = ST_CURR_AFT;
+            }
 
             ret = add_candidate_ref(s, &rps[list], poc, HEVC_FRAME_FLAG_SHORT_REF);
             if (ret < 0)
@@ -710,21 +713,26 @@ int ff_hevc_frame_rps(HEVCContext *s)
     }
 #endif
 
+
 #ifdef REF_IDX_FRAMEWORK
-    if(s->nuh_layer_id) {//ICI
+    if(s->nuh_layer_id) {
 #ifdef JCTVC_M0458_INTERLAYER_RPS_SIG
         for( i = 0; i < s->vps->max_one_active_ref_layer_flag; i ++) {
 #else
             for( i = 0; i < m_numILRRefIdx; i ++) {
 #endif
-                if((vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[0]) && (vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[vps->m_refLayerId[s->nuh_layer_id][s->sh.inter_layer_pred_layer_idc[i]]])){
-                //IL_REF0 , IL_REF1
+
+#if !H_MV
+            	if((vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[0]) && (vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[vps->m_refLayerId[s->nuh_layer_id][s->sh.inter_layer_pred_layer_idc[i]]])){
+#else
+            		if(((vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[0]) && (vps->m_viewIdVal[s->nuh_layer_id] <= vps->m_viewIdVal[vps->m_refLayerId[s->nuh_layer_id][s->sh.inter_layer_pred_layer_idc[i]]])) ||
+            				((vps->m_viewIdVal[s->nuh_layer_id] >= vps->m_viewIdVal[0]) && (vps->m_viewIdVal[s->nuh_layer_id] >= vps->m_viewIdVal[vps->m_refLayerId[s->nuh_layer_id][s->sh.inter_layer_pred_layer_idc[i]]]))){
+#endif
+            			//IL_REF0 , IL_REF1
                     ret = add_candidate_ref(s, &rps[IL_REF0], s->poc, HEVC_FRAME_FLAG_LONG_REF);
-                    printf("----------------------Liste 0 : %d\n",s->poc);
                 }
                 else{
                     ret = add_candidate_ref(s, &rps[IL_REF1], s->poc, HEVC_FRAME_FLAG_LONG_REF);
-                    printf("----------------------Liste 1 : %d\n",s->poc);
                 }
             }
         }
