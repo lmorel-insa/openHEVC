@@ -83,6 +83,8 @@ static void pic_arrays_free(HEVCContext *s)
     av_freep(&s->sh.size);
     av_freep(&s->sh.offset);
 
+    av_freep(&s->tab_mv);
+
     av_buffer_pool_uninit(&s->tab_mvf_pool);
     av_buffer_pool_uninit(&s->rpl_tab_pool);
 
@@ -164,11 +166,15 @@ static int pic_arrays_init(HEVCContext *s, const HEVCSPS *sps)
     if (!s->horizontal_bs || !s->vertical_bs)
         goto fail;
 
-    s->tab_mvf_pool = av_buffer_pool_init(min_pu_size * sizeof(MvField),
+    s->tab_mv       = av_mallocz(min_pu_size * sizeof(MvField));
+    if (!s->tab_mv)
+        goto fail;
+
+    s->tab_mvf_pool = av_buffer_pool_init(min_pu_size * sizeof(MvFieldT),
                                           av_buffer_allocz);
     s->rpl_tab_pool = av_buffer_pool_init(ctb_count * sizeof(RefPicListTab),
                                           av_buffer_allocz);
-    s->dynamic_alloc += (min_pu_size * sizeof(MvField));
+    s->dynamic_alloc += (min_pu_size * sizeof(MvFieldT));
     s->dynamic_alloc += (ctb_count * sizeof(RefPicListTab));
 
     if (!s->tab_mvf_pool || !s->rpl_tab_pool)
@@ -1576,10 +1582,10 @@ static void luma_mc_uni(HEVCContext *s, uint8_t *dst, ptrdiff_t dststride,
  */
  static void luma_mc_bi(HEVCContext *s, uint8_t *dst, ptrdiff_t dststride,
                        AVFrame *ref0, const Mv *mv0, int x_off, int y_off,
-                       int block_w, int block_h, AVFrame *ref1, const Mv *mv1, struct MvField *current_mv)
+                       int block_w, int block_h, AVFrame *ref1, const Mv *mv1, struct MvFieldT *current_mv)
 {
     HEVCLocalContext *lc = s->HEVClc;
-    DECLARE_ALIGNED(16, int16_t,  tmp[MAX_PB_SIZE * MAX_PB_SIZE]);
+    LOCAL_ALIGNED(32, int16_t,  tmp, [MAX_PB_SIZE * MAX_PB_SIZE]);
     ptrdiff_t src0stride  = ref0->linesize[0];
     ptrdiff_t src1stride  = ref1->linesize[0];
     int pic_width        = s->sps->width;
@@ -1668,7 +1674,7 @@ static void luma_mc_uni(HEVCContext *s, uint8_t *dst, ptrdiff_t dststride,
 
 static void chroma_mc_uni(HEVCContext *s, uint8_t *dst0,
                           ptrdiff_t dststride, uint8_t *src0, ptrdiff_t srcstride, int reflist,
-                          int x_off, int y_off, int block_w, int block_h, struct MvField *current_mv, int chroma_weight, int chroma_offset)
+                          int x_off, int y_off, int block_w, int block_h, struct MvFieldT *current_mv, int chroma_weight, int chroma_offset)
 {
     HEVCLocalContext *lc = s->HEVClc;
     int pic_width        = s->sps->width >> s->sps->hshift[1];
@@ -1732,9 +1738,9 @@ static void chroma_mc_uni(HEVCContext *s, uint8_t *dst0,
  * @param cidx chroma component(cb, cr)
  */
 static void chroma_mc_bi(HEVCContext *s, uint8_t *dst0, ptrdiff_t dststride, AVFrame *ref0, AVFrame *ref1,
-                         int x_off, int y_off, int block_w, int block_h, struct MvField *current_mv, int cidx)
+                         int x_off, int y_off, int block_w, int block_h, struct MvFieldT *current_mv, int cidx)
 {
-    DECLARE_ALIGNED(16, int16_t, tmp [MAX_PB_SIZE * MAX_PB_SIZE]);
+    DECLARE_ALIGNED(32, int16_t, tmp [MAX_PB_SIZE * MAX_PB_SIZE]);
     int tmpstride = MAX_PB_SIZE;
     HEVCLocalContext *lc = s->HEVClc;
     uint8_t *src1        = ref0->data[cidx+1];
@@ -1848,12 +1854,12 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
     &s->frame->data[c_idx][((y) >> s->sps->vshift[c_idx]) * s->frame->linesize[c_idx] + \
                            (((x) >> s->sps->hshift[c_idx]) << s->sps->pixel_shift)]
     HEVCLocalContext *lc = s->HEVClc;
-    int merge_idx = 0;
-    struct MvField current_mv;
+    int merge_idx;
+    struct MvFieldT current_mv;
 
     int min_pu_width = s->sps->min_pu_width;
 
-    MvField *tab_mvf = s->ref->tab_mvf;
+    MvFieldT *tab_mvf = s->ref->tab_mvf;
     RefPicList  *refPicList = s->ref->refPicList;
     HEVCFrame *ref0 = NULL, *ref1 = NULL;
     uint8_t *dst0 = POS(0, x0, y0);
@@ -1907,7 +1913,7 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
                 mvp_flag = ff_hevc_mvp_lx_flag_decode(s);
                 ff_hevc_luma_mv_mvp_mode(s, x0, y0, nPbW, nPbH, log2_cb_size,
                                          partIdx, merge_idx, &current_mv,
-                                         mvp_flag, 0);
+                                         mvp_flag, 0, current_mv.ref_idx[0]);
                 current_mv.mv[0].x += lc->pu.mvd.x;
                 current_mv.mv[0].y += lc->pu.mvd.y;
             }
@@ -1931,7 +1937,7 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
                 mvp_flag = ff_hevc_mvp_lx_flag_decode(s);
                 ff_hevc_luma_mv_mvp_mode(s, x0, y0, nPbW, nPbH, log2_cb_size,
                                          partIdx, merge_idx, &current_mv,
-                                         mvp_flag, 1);
+                                         mvp_flag, 1, current_mv.ref_idx[1]);
                 current_mv.mv[1].x += lc->pu.mvd.x;
                 current_mv.mv[1].y += lc->pu.mvd.y;
             }
@@ -1941,8 +1947,20 @@ static void hls_prediction_unit(HEVCContext *s, int x0, int y0,
     x_pu = x0 >> s->sps->log2_min_pu_size;
     y_pu = y0 >> s->sps->log2_min_pu_size;
     for (j = 0; j < nPbH >> s->sps->log2_min_pu_size; j++)
-        for (i = 0; i < nPbW >> s->sps->log2_min_pu_size; i++)
-            tab_mvf[(y_pu + j) * min_pu_width + x_pu + i] = current_mv;
+        for (i = 0; i < nPbW >> s->sps->log2_min_pu_size; i++) {
+            tab_mvf[(y_pu + j) * min_pu_width + x_pu + i].mv[0] = current_mv.mv[0];
+            tab_mvf[(y_pu + j) * min_pu_width + x_pu + i].mv[1] = current_mv.mv[1];
+            tab_mvf[(y_pu + j) * min_pu_width + x_pu + i].poc[0] = current_mv.poc[0];
+            tab_mvf[(y_pu + j) * min_pu_width + x_pu + i].poc[1] = current_mv.poc[1];
+                tab_mvf[(y_pu + j) * min_pu_width + x_pu + i].ref_idx[0] = current_mv.ref_idx[0];
+                tab_mvf[(y_pu + j) * min_pu_width + x_pu + i].ref_idx[1] = current_mv.ref_idx[1];
+            tab_mvf[(y_pu + j) * min_pu_width + x_pu + i].pred_flag = current_mv.pred_flag;
+            s->tab_mv[(y_pu + j) * min_pu_width + x_pu + i].mv[0]=current_mv.mv[0];
+            s->tab_mv[(y_pu + j) * min_pu_width + x_pu + i].mv[1]=current_mv.mv[1];
+            s->tab_mv[(y_pu + j) * min_pu_width + x_pu + i].poc[0]  = current_mv.poc[0];
+            s->tab_mv[(y_pu + j) * min_pu_width + x_pu + i].poc[1]  = current_mv.poc[1];
+            s->tab_mv[(y_pu + j) * min_pu_width + x_pu + i].pred_flag  = current_mv.pred_flag;
+        }
 
     if (current_mv.pred_flag & PF_L0) {
         ref0 = refPicList[0].ref[current_mv.ref_idx[0]];
@@ -2055,7 +2073,7 @@ static int luma_intra_pred_mode(HEVCContext *s, int x0, int y0, int pu_size,
 
     int y_ctb = (y0 >> (s->sps->log2_ctb_size)) << (s->sps->log2_ctb_size);
 
-    MvField *tab_mvf = s->ref->tab_mvf;
+    MvFieldT *tab_mvf = s->ref->tab_mvf;
     int intra_pred_mode;
     int candidate[3];
     int i, j;
@@ -2210,7 +2228,8 @@ static void intra_prediction_unit_default_value(HEVCContext *s,
     int pb_size          = 1 << log2_cb_size;
     int size_in_pus      = pb_size >> s->sps->log2_min_pu_size;
     int min_pu_width     = s->sps->min_pu_width;
-    MvField *tab_mvf     = s->ref->tab_mvf;
+    MvFieldT *tab_mvf    = s->ref->tab_mvf;
+    MvField  *tab_mv     = s->tab_mv;
     int x_pu             = x0 >> s->sps->log2_min_pu_size;
     int y_pu             = y0 >> s->sps->log2_min_pu_size;
     int j, k;
@@ -2222,7 +2241,7 @@ static void intra_prediction_unit_default_value(HEVCContext *s,
     if (lc->cu.pred_mode == MODE_INTRA)
         for (j = 0; j < size_in_pus; j++)
             for (k = 0; k < size_in_pus; k++)
-                tab_mvf[(y_pu + j) * min_pu_width + x_pu + k].pred_flag = PF_INTRA;
+                tab_mv[(y_pu + j) * min_pu_width + x_pu + k].pred_flag = tab_mvf[(y_pu + j) * min_pu_width + x_pu + k].pred_flag = PF_INTRA;
 }
 
 static int hls_coding_unit(HEVCContext *s, int x0, int y0, int log2_cb_size)
@@ -3340,8 +3359,10 @@ static int decode_nal_units(HEVCContext *s, const uint8_t *buf, int length)
             int i;
             for (i = 0; i < s->nal_length_size; i++)
                 extract_length = (extract_length << 8) | buf[i];
+
             buf    += s->nal_length_size;
             length -= s->nal_length_size;
+
 
             if (extract_length > length) {
                 av_log(s->avctx, AV_LOG_ERROR, "Invalid NAL unit size.\n");
@@ -3883,6 +3904,7 @@ static int hevc_decode_extradata(HEVCContext *s)
         /* Now store right nal length size, that will be used to parse
          * all other nals */
         s->nal_length_size = nal_len_size;
+            printf("nal_len_size %d\n", nal_len_size);
     } else {
         s->is_nalff = 0;
         ret = decode_nal_units(s, avctx->extradata, avctx->extradata_size);

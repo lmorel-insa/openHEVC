@@ -178,7 +178,7 @@ HPELDSP_AVG_PIXELS16(_mmxext)
     if (HAVE_MMX_EXTERNAL)                                                  \
     c->PFX ## _pixels_tab IDX [0] = PFX ## _pixels ## SIZE ## _     ## CPU;
 
-#if HAVE_MMX_INLINE
+#if HAVE_MMX_INLINE_
 #define SET_HPEL_FUNCS(PFX, IDX, SIZE, CPU)                                     \
     do {                                                                        \
         SET_HPEL_FUNCS_EXT(PFX, IDX, SIZE, CPU)                                 \
@@ -205,7 +205,7 @@ static void hpeldsp_init_mmx(HpelDSPContext *c, int flags, int cpu_flags)
         c->avg_pixels_tab[1][0] = ff_avg_pixels8_mmx;
         c->avg_pixels_tab[1][1] = ff_avg_pixels8_x2_mmx;
     }
-#if HAVE_MMX_INLINE
+#if HAVE_MMX_INLINE_
     c->avg_pixels_tab[1][2] = avg_pixels8_y2_mmx;
     c->avg_pixels_tab[1][3] = ff_avg_pixels8_xy2_mmx;
 #endif

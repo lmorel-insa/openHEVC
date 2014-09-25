@@ -498,9 +498,18 @@ static void deblocking_filter_CTB(HEVCContext *s, int x0, int y0)
                     no_p[1] = get_pcm(s, x + 4, y - 1);
                     no_q[0] = get_pcm(s, x, y);
                     no_q[1] = get_pcm(s, x + 4, y);
-                    s->hevcdsp.hevc_h_loop_filter_luma_c(src,
-                                                         s->frame->linesize[LUMA],
-                                                         beta, tc, no_p, no_q);
+                    if (!no_p[0] &&
+                        !no_p[1] &&
+                        !no_q[0] &&
+                        !no_q[1]) {
+                        s->hevcdsp.hevc_h_loop_filter_luma(src,
+                                                             s->frame->linesize[LUMA],
+                                                             beta, tc, no_p, no_q);
+                    } else {
+                        s->hevcdsp.hevc_h_loop_filter_luma_c(src,
+                                                           s->frame->linesize[LUMA],
+                                                           beta, tc, no_p, no_q);
+                    }
                 } else
                     s->hevcdsp.hevc_h_loop_filter_luma(src,
                                                        s->frame->linesize[LUMA],
@@ -538,12 +547,24 @@ static void deblocking_filter_CTB(HEVCContext *s, int x0, int y0)
                         no_p[1] = get_pcm(s, x + (4 * h), y - 1);
                         no_q[0] = get_pcm(s, x,           y);
                         no_q[1] = get_pcm(s, x + (4 * h), y);
-                        s->hevcdsp.hevc_h_loop_filter_chroma_c(src,
-                                                               s->frame->linesize[1],
-                                                               c_tc, no_p, no_q);
-                        s->hevcdsp.hevc_h_loop_filter_chroma_c(src2,
-                                                               s->frame->linesize[2],
-                                                               c_tc2, no_p, no_q);
+                        if (!no_p[0] &&
+                            !no_p[1] &&
+                            !no_q[0] &&
+                            !no_q[1]) {
+                            s->hevcdsp.hevc_h_loop_filter_chroma(src,
+                                                                 s->frame->linesize[1],
+                                                                 c_tc, no_p, no_q);
+                            s->hevcdsp.hevc_h_loop_filter_chroma(src2,
+                                                                 s->frame->linesize[2],
+                                                                 c_tc2, no_p, no_q);
+                        } else {
+                            s->hevcdsp.hevc_h_loop_filter_chroma_c(src,
+                                                                   s->frame->linesize[1],
+                                                                   c_tc, no_p, no_q);
+                            s->hevcdsp.hevc_h_loop_filter_chroma_c (src2,
+                                                                   s->frame->linesize[2],
+                                                                   c_tc2, no_p, no_q);
+                        }
                     } else {
                         s->hevcdsp.hevc_h_loop_filter_chroma(src,
                                                              s->frame->linesize[1],
@@ -560,7 +581,7 @@ static void deblocking_filter_CTB(HEVCContext *s, int x0, int y0)
 }
 
 #ifdef TEST_MV_POC
-static int boundary_strength(HEVCContext *s, MvField *curr, MvField *neigh)
+static int boundary_strength(HEVCContext *s, MvFieldT *curr, MvFieldT *neigh)
 {
 #if HAVE_SSE42
     {
@@ -572,7 +593,7 @@ static int boundary_strength(HEVCContext *s, MvField *curr, MvField *neigh)
             return 0;
     }
 #else
-    if ( bcmp(curr, neigh, sizeof(MvField)) == 0)
+    if ( bcmp(curr, neigh, sizeof(MvFieldT)) == 0)
         return 0;
 #endif
     if (curr->pred_flag == PF_BI &&  neigh->pred_flag == PF_BI) {
@@ -674,7 +695,7 @@ static int boundary_strength(HEVCContext *s, MvField *curr, MvField *neigh)
     return 1;
 }
 #else
-static int boundary_strength(HEVCContext *s, MvField *curr, MvField *neigh,
+static int boundary_strength(HEVCContext *s, MvFieldT *curr, MvFieldT *neigh,
                              RefPicList *neigh_refPicList)
 {
     if (curr->pred_flag == PF_BI &&  neigh->pred_flag == PF_BI) {
@@ -781,7 +802,7 @@ void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
                                            int log2_trafo_size)
 {
     HEVCLocalContext *lc = s->HEVClc;
-    MvField *tab_mvf     = s->ref->tab_mvf;
+    MvFieldT *tab_mvf     = s->ref->tab_mvf;
     int log2_min_pu_size = s->sps->log2_min_pu_size;
     int log2_min_tu_size = s->sps->log2_min_tb_size;
     int min_pu_width     = s->sps->min_pu_width;
@@ -808,8 +829,8 @@ void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
             for (i = 0; i < (1 << log2_trafo_size); i += 4) {
                 int x_pu = (x0 + i) >> log2_min_pu_size;
                 int x_tu = (x0 + i) >> log2_min_tu_size;
-                MvField *top  = &tab_mvf[yp_pu * min_pu_width + x_pu];
-                MvField *curr = &tab_mvf[yq_pu * min_pu_width + x_pu];
+                MvFieldT *top  = &tab_mvf[yp_pu * min_pu_width + x_pu];
+                MvFieldT *curr = &tab_mvf[yq_pu * min_pu_width + x_pu];
                 uint8_t top_cbf_luma  = s->cbf_luma[yp_tu * min_tu_width + x_tu];
                 uint8_t curr_cbf_luma = s->cbf_luma[yq_tu * min_tu_width + x_tu];
 
@@ -847,8 +868,8 @@ void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
             for (i = 0; i < (1 << log2_trafo_size); i += 4) {
                 int y_pu      = (y0 + i) >> log2_min_pu_size;
                 int y_tu      = (y0 + i) >> log2_min_tu_size;
-                MvField *left = &tab_mvf[y_pu * min_pu_width + xp_pu];
-                MvField *curr = &tab_mvf[y_pu * min_pu_width + xq_pu];
+                MvFieldT *left = &tab_mvf[y_pu * min_pu_width + xp_pu];
+                MvFieldT *curr = &tab_mvf[y_pu * min_pu_width + xq_pu];
                 uint8_t left_cbf_luma = s->cbf_luma[y_tu * min_tu_width + xp_tu];
                 uint8_t curr_cbf_luma = s->cbf_luma[y_tu * min_tu_width + xq_tu];
 
@@ -877,11 +898,11 @@ void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
         for (i = 0; i < (1 << log2_trafo_size); i += 4) {
             int x_pu  = (x0 + i) >> log2_min_pu_size;
             int yp_pu = (y0 + 8 - 1) >> log2_min_pu_size;
-            MvField *top  = &tab_mvf[yp_pu * min_pu_width + x_pu];
+            MvFieldT *top  = &tab_mvf[yp_pu * min_pu_width + x_pu];
 
             for (j = 8; j < (1 << log2_trafo_size); j += 8) {
                 int yq_pu = (y0 + j)     >> log2_min_pu_size;
-                MvField *curr = &tab_mvf[yq_pu * min_pu_width + x_pu];
+                MvFieldT *curr = &tab_mvf[yq_pu * min_pu_width + x_pu];
 
 #ifdef TEST_MV_POC
                 bs = boundary_strength(s, curr, top);
@@ -897,11 +918,11 @@ void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
         for (j = 0; j < (1 << log2_trafo_size); j += 4) {
             int y_pu  = (y0 + j) >> log2_min_pu_size;
             int xp_pu = (x0 + 8 - 1) >> log2_min_pu_size;
-            MvField *left = &tab_mvf[y_pu * min_pu_width + xp_pu];
+            MvFieldT *left = &tab_mvf[y_pu * min_pu_width + xp_pu];
 
             for (i = 8; i < (1 << log2_trafo_size); i += 8) {
                 int xq_pu = (x0 + i)     >> log2_min_pu_size;
-                MvField *curr = &tab_mvf[y_pu * min_pu_width + xq_pu];
+                MvFieldT *curr = &tab_mvf[y_pu * min_pu_width + xq_pu];
 
 #ifdef TEST_MV_POC
                 bs = boundary_strength(s, curr, left);
@@ -917,7 +938,7 @@ void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
 
 void ff_hevc_deblocking_boundary_strengths_h(HEVCContext *s, int x0, int y0, int slice_up_boundary)
 {
-    MvField *tab_mvf        = s->ref->tab_mvf;
+    MvFieldT *tab_mvf        = s->ref->tab_mvf;
     int log2_min_pu_size    = s->sps->log2_min_pu_size;
     int log2_min_tu_size    = s->sps->log2_min_tb_size;
     int pic_width_in_min_pu = s->sps->width >> log2_min_pu_size;
@@ -930,8 +951,8 @@ void ff_hevc_deblocking_boundary_strengths_h(HEVCContext *s, int x0, int y0, int
         int yq_tu =  y0      >> log2_min_tu_size;
         int x_pu  =  x0      >> log2_min_pu_size;
         int x_tu  =  x0      >> log2_min_tu_size;
-        MvField *top  = &tab_mvf[yp_pu * pic_width_in_min_pu + x_pu];
-        MvField *curr = &tab_mvf[yq_pu * pic_width_in_min_pu + x_pu];
+        MvFieldT *top  = &tab_mvf[yp_pu * pic_width_in_min_pu + x_pu];
+        MvFieldT *curr = &tab_mvf[yq_pu * pic_width_in_min_pu + x_pu];
         uint8_t top_cbf_luma  = s->cbf_luma[yp_tu * pic_width_in_min_tu + x_tu];
         uint8_t curr_cbf_luma = s->cbf_luma[yq_tu * pic_width_in_min_tu + x_tu];
 #ifndef TEST_MV_POC
@@ -957,7 +978,7 @@ void ff_hevc_deblocking_boundary_strengths_h(HEVCContext *s, int x0, int y0, int
 
 void ff_hevc_deblocking_boundary_strengths_v(HEVCContext *s, int x0, int y0, int slice_left_boundary)
 {
-    MvField *tab_mvf        = s->ref->tab_mvf;
+    MvFieldT *tab_mvf        = s->ref->tab_mvf;
     int log2_min_pu_size    = s->sps->log2_min_pu_size;
     int log2_min_tu_size    = s->sps->log2_min_tb_size;
     int pic_width_in_min_pu = s->sps->width >> log2_min_pu_size;
@@ -971,8 +992,8 @@ void ff_hevc_deblocking_boundary_strengths_v(HEVCContext *s, int x0, int y0, int
         int xq_tu =  x0      >> log2_min_tu_size;
         int y_pu  =  y0      >> log2_min_pu_size;
         int y_tu  =  y0      >> log2_min_tu_size;
-        MvField *left = &tab_mvf[y_pu * pic_width_in_min_pu + xp_pu];
-        MvField *curr = &tab_mvf[y_pu * pic_width_in_min_pu + xq_pu];
+        MvFieldT *left = &tab_mvf[y_pu * pic_width_in_min_pu + xp_pu];
+        MvFieldT *curr = &tab_mvf[y_pu * pic_width_in_min_pu + xq_pu];
         uint8_t left_cbf_luma = s->cbf_luma[y_tu * pic_width_in_min_tu + xp_tu];
         uint8_t curr_cbf_luma = s->cbf_luma[y_tu * pic_width_in_min_tu + xq_tu];
 #ifndef TEST_MV_POC
@@ -1204,7 +1225,7 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                 Ref_pre_unit = (yBL*pic_width_in_min_puBL)+xBL;
                 if(refBL->tab_mvf[Ref_pre_unit].pred_flag) {
                     if (s->up_filter_inf.idx == SNR) {
-                        memcpy(&refEL->tab_mvf[pre_unit], &refBL->tab_mvf[Ref_pre_unit], sizeof(MvField));
+                        memcpy(&refEL->tab_mvf[pre_unit], &refBL->tab_mvf[Ref_pre_unit], sizeof(MvFieldT));
                     } else {
 
                         for( list=0; list < nb_list; list++) {
@@ -1218,23 +1239,23 @@ void ff_upscale_mv_block(HEVCContext *s, int ctb_x, int ctb_y) {
                         }
                     }
                 } else
-                    memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
+                    memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvFieldT));
 
 
             } else
-                memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvField));
+                memset(&refEL->tab_mvf[pre_unit], 0, sizeof(MvFieldT));
 
             if( ((xEL+1)>>s->sps->log2_min_pu_size) < pic_width_in_min_pu && ((yEL+1)>>s->sps->log2_min_pu_size) < pic_height_in_min_pu) {
                 pre_unit_col = (((yEL+1)>>s->sps->log2_min_pu_size)*pic_width_in_min_pu) + ((xEL+1)>>s->sps->log2_min_pu_size);
-                memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvField));
+                memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvFieldT));
             }
             if( ((xEL+1)>>s->sps->log2_min_pu_size) < pic_width_in_min_pu) {
                 pre_unit_col = ((yEL>>s->sps->log2_min_pu_size)*pic_width_in_min_pu) + ((xEL+1)>>s->sps->log2_min_pu_size);
-                memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvField));
+                memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvFieldT));
             }
             if( ((yEL+1)>>s->sps->log2_min_pu_size) < pic_height_in_min_pu) {
                 pre_unit_col = (((yEL+1)>>s->sps->log2_min_pu_size)*pic_width_in_min_pu) + ((xEL)>>s->sps->log2_min_pu_size);
-                memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvField));
+                memcpy(&refEL->tab_mvf[pre_unit_col], &refEL->tab_mvf[pre_unit], sizeof(MvFieldT));
             }
         }
     }

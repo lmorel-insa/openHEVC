@@ -137,6 +137,9 @@ if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
     endif()
 elseif(APPLE)
     set(CMAKE_C_FLAGS   "-D_ISOC99_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DHAVE_AV_CONFIG_H -DPIC -fPIC -mssse3 -msse4 -msse4.1")
+    if(USE_AVX2)
+        add_definitions(-mavx2)
+    endif(USE_AVX2)
 elseif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i686")
     set(CMAKE_C_FLAGS "-DX86_32 -DPIC -fPIC -Wl,-Bsymbolic -march=native -fno-tree-vectorize")
 endif()
@@ -314,6 +317,7 @@ list(APPEND libfilenames
     libavcodec/x86/hevc_idct_sse.c
     libavcodec/x86/hevc_il_pred_sse.c
     libavcodec/x86/hevc_mc_sse.c
+    libavcodec/x86/hevc_mc_avx2.c
     libavcodec/x86/hevc_sao_sse.c
     libavcodec/x86/hevc_intra_pred_sse.c
     libavcodec/x86/hpeldsp_init.c

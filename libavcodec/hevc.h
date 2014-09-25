@@ -855,7 +855,7 @@ typedef struct Mv {
     int16_t y;  ///< vertical component of motion vector
 } Mv;
 
-typedef struct MvField {
+typedef struct MvFieldT {
     Mv mv[2];
 #ifdef TEST_MV_POC
     int16_t poc[2];
@@ -863,6 +863,13 @@ typedef struct MvField {
 #else
     uint8_t pred_flag;
 #endif
+    uint8_t ref_idx[2];
+} MvFieldT;
+
+typedef struct MvField {
+    Mv mv[2];
+    int16_t poc[2];
+    uint32_t pred_flag;
     uint8_t ref_idx[2];
 } MvField;
 
@@ -916,7 +923,7 @@ typedef struct DBParams {
 typedef struct HEVCFrame {
     AVFrame *frame;
     ThreadFrame tf;
-    MvField *tab_mvf;
+    MvFieldT *tab_mvf;
     RefPicList *refPicList;
     RefPicListTab **rpl_tab;
     int ctb_count;
@@ -1014,6 +1021,7 @@ typedef struct HEVCContext {
 
     AVBufferPool *tab_mvf_pool;
     AVBufferPool *rpl_tab_pool;
+    MvField *tab_mv;
 
     SliceHeader sh;
     SAOParams *sao;
@@ -1234,11 +1242,11 @@ void ff_hevc_set_neighbour_available(HEVCContext *s, int x0, int y0,
                                      int nPbW, int nPbH);
 void ff_hevc_luma_mv_merge_mode(HEVCContext *s, int x0, int y0,
                                 int nPbW, int nPbH, int log2_cb_size,
-                                int part_idx, int merge_idx, MvField *mv);
+                                int part_idx, int merge_idx, MvFieldT *mv);
 void ff_hevc_luma_mv_mvp_mode(HEVCContext *s, int x0, int y0,
                               int nPbW, int nPbH, int log2_cb_size,
                               int part_idx, int merge_idx,
-                              MvField *mv, int mvp_lx_flag, int LX);
+                              MvFieldT *mv, int mvp_lx_flag, int LX, int ref_idx);
 void ff_hevc_set_qPy(HEVCContext *s, int xBase, int yBase,
                      int log2_cb_size);
 void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,
