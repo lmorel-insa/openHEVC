@@ -315,6 +315,7 @@ static void video_decode_example(const char *filename)
 int main(int argc, char *argv[]) {
     init_main(argc, argv);
 
+#ifdef MEMORY_SAMPLING_ENABLE
 	// LM - initialize numap
 	if (opt->enable_memory_sampling == TRUE || opt->memory_bdw_sampling_freq > 0) {
 	  rc = numap_init();
@@ -326,7 +327,6 @@ int main(int argc, char *argv[]) {
 	}
 	
 	// Still mysterious why this is for. 
-#ifdef MEMORY_SAMPLING_ENABLE
 	if (opt->enable_memory_sampling == TRUE) {
 		// Register exit functions
 		if (atexit(dump_mem_samples) != 0) {
@@ -334,7 +334,6 @@ int main(int argc, char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 	}
-#endif
 
 
 	// MANU Save mem_bdw_sampling in a file
@@ -368,6 +367,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "Couldn't create memory bandwidth sampling thread\n");
 		}
 	}
+#endif
 
 
 
