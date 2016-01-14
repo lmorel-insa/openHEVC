@@ -359,9 +359,10 @@ if(WIN32 OR ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l"))
 else()
     option (BUILD_SHARED_LIBS "enabled static library instead of shared" OFF)
 endif()
+
 add_library (LibOpenHevcWrapper ${libfilenames} ${YASM_OBJECTS})
 
-target_link_libraries(LibOpenHevcWrapper m)
+target_link_libraries(LibOpenHevcWrapper m numa numap)
 
 include_directories(. gpac/modules/openhevc_dec/ platform/x86/)
 
