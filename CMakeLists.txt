@@ -54,6 +54,15 @@ if (USE_YASM)
   find_package (Yasm)
 endif ()
 
+# LM: added for allowing the use of memory sampling (through numap)
+if (MEMORY_SAMPLING_ENABLE)
+	set (CMAKE_C_FLAGS "-D MEMORY_SAMPLING_ENABLE=True")
+	message(STATUS "Enable memory sampling")
+else()
+	message(STATUS "Disable memory sampling")
+endif()
+
+
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
   configure_file(platform/arm/config.h ${PROJECT_SOURCE_DIR}/config.h)
 else()
@@ -359,8 +368,8 @@ include_directories(. gpac/modules/openhevc_dec/ platform/x86/)
 option(ENABLE_EXECUTABLE "Generate the test application" ON)
 
 if(ENABLE_EXECUTABLE)
-
-    set(LINK_LIBRARIES_LIST LibOpenHevcWrapper)
+# LM: modified for including numa and numap library
+    set(LINK_LIBRARIES_LIST LibOpenHevcWrapper numa numap)
     set(HEVC_SOURCES_FILES
         main_hm/getopt.c
         main_hm/main.c
