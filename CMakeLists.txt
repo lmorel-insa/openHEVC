@@ -362,15 +362,23 @@ endif()
 
 add_library (LibOpenHevcWrapper ${libfilenames} ${YASM_OBJECTS})
 
-target_link_libraries(LibOpenHevcWrapper m numa numap)
+if(MEMORY_SAMPLING_ENABLE)
+  target_link_libraries(LibOpenHevcWrapper m numa numap)
+else()
+  target_link_libraries(LibOpenHevcWrapper m)
+endif()
 
 include_directories(. gpac/modules/openhevc_dec/ platform/x86/)
 
 option(ENABLE_EXECUTABLE "Generate the test application" ON)
 
 if(ENABLE_EXECUTABLE)
-# LM: modified for including numa and numap library
-    set(LINK_LIBRARIES_LIST LibOpenHevcWrapper numa numap)
+  # LM: modified for including numa and numap library 
+  if(MEMORY_SAMPLING_ENABLE)
+	set(LINK_LIBRARIES_LIST LibOpenHevcWrapper numa numap)
+  else()
+	set(LINK_LIBRARIES_LIST LibOpenHevcWrapper)
+  endif()
     set(HEVC_SOURCES_FILES
         main_hm/getopt.c
         main_hm/main.c
