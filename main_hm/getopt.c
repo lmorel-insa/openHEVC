@@ -61,7 +61,7 @@ void print_usage() {
     printf("     -l <Quality layer id> \n");
     printf("     -s <num> Stop after num frames \n");
     printf("     -r <num> Frame rate (FPS) \n");
-	printf("     -m activate memory sampling");
+	printf("     -m activate memory sampling\n");
 	// Still need to add options for allowing user to specify sampling frequency
 }
 
