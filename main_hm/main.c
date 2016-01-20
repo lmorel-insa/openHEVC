@@ -8,9 +8,11 @@
 #include "openHevcWrapper.h"
 #include "getopt.h"
 #include <libavformat/avformat.h>
-#include <numa.h>
 
+#ifdef MEMORY_SAMPLING_ENABLE
+#include <numa.h>
 #include "numap.h"
+#endif
 
 //#define TIME2
 
