@@ -483,7 +483,11 @@ struct mem_bdw_sample_s {
 
 typedef struct mem_bdw_sample_s mem_bdw_sample_t;
 
-
+mem_bdw_sample_t **mem_bdw_samples;
+struct numap_bdw_measure mem_bdw_measure;
+int i;
+int nb_mem_bdw_samples;
+int numap_rc; // numap return codes
 
 void *mem_bdw_sampling_routine(void *arg) {
 
@@ -514,10 +518,10 @@ void *mem_bdw_sampling_routine(void *arg) {
 		for(i = 0; i < mem_bdw_measure.nb_nodes; i++) {
 			uint64_t r = (mem_bdw_measure.reads_count[i] * 64);
 			uint64_t w = (mem_bdw_measure.writes_count[i] * 64);
-		    net->mem_bdw_samples[i][net->nb_mem_bdw_samples].read_bdw = r;
-		    net->mem_bdw_samples[i][net->nb_mem_bdw_samples].write_bdw = w;
+		    mem_bdw_samples[i][net->nb_mem_bdw_samples].read_bdw = r;
+		    mem_bdw_samples[i][net->nb_mem_bdw_samples].write_bdw = w;
 		}
-		net->nb_mem_bdw_samples++;
+		nb_mem_bdw_samples++;
 	}
 	
 }
@@ -526,13 +530,7 @@ void *mem_bdw_sampling_routine(void *arg) {
 
 
 int main(int argc, char *argv[]) {
-  int numap_rc; // numap return codes
-  mem_bdw_sample_t **mem_bdw_samples;
-  struct numap_bdw_measure mem_bdw_measure;
   int i;
-  int nb_mem_bdw_samples;
-  
-
   init_main(argc, argv);
 
 
