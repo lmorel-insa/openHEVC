@@ -502,6 +502,12 @@ void *mem_bdw_sampling_routine(void *arg) {
 
 
 
+void dump_mem_samples(void) {
+  printf("bla");
+}
+
+
+
 
 int main(int argc, char *argv[]) {
   int i;
