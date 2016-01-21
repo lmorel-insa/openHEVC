@@ -400,6 +400,9 @@ static void video_decode_example(const char *filename)
 #endif
 }
 
+
+
+// LM - RANGEMENT A FAIRE !! 
 struct mem_bdw_sample_s {
 	uint64_t read_bdw;
 	uint64_t write_bdw;
@@ -412,6 +415,8 @@ struct numap_bdw_measure mem_bdw_measure;
 int i;
 int nb_mem_bdw_samples;
 int numap_rc; // numap return codes
+struct numap_sampling_measure measures[MAX_THREAD_NB];
+///////
 
 void *mem_bdw_sampling_routine(void *arg) {
 
