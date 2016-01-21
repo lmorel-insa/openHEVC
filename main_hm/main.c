@@ -481,8 +481,8 @@ void dump_mem_samples(void) {
   }
 
   // Stop instruction counting
-  ioctl(inst_fd, PERF_EVENT_IOC_DISABLE, 0);
-  read(inst_fd, &insts_count, sizeof(insts_count));
+  //ioctl(inst_fd, PERF_EVENT_IOC_DISABLE, 0);
+  //read(inst_fd, &insts_count, sizeof(insts_count));
 
   // Get threads stack informations
   for (i = 0; i < nb_pthreads; i++) {
