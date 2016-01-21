@@ -353,6 +353,8 @@ int numap_rc; // numap return codes
 struct numap_sampling_measure measures[MAX_THREAD_NB];
 ///////
 
+
+
 void *mem_bdw_sampling_routine(void *arg) {
 
 	unsigned int *freq ;
@@ -360,9 +362,9 @@ void *mem_bdw_sampling_routine(void *arg) {
 	int res;
 	int i;
 
-	if (pthread_setname_np(pthread_self(), "mem_bdw_samp") != 0) {
-		fprintf(stderr, "Failed to set name of mem_bdw_samp thread");
-	}
+	/* if (pthread_setname_np(pthread_self(), "mem_bdw_samp") != 0) { */
+	/* 	fprintf(stderr, "Failed to set name of mem_bdw_samp thread"); */
+	/* } */
 
 	freq = (unsigned int *)arg;
 	periodInMicroS = (unsigned int)(1.0E6 / *freq);
