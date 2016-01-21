@@ -558,7 +558,7 @@ int main(int argc, char *argv[]) {
 	
 	nb_mem_bdw_samples = 0; 
 	pthread_t memory_bdw_sampling_thread; 
-	numap_rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &memory_bdw_sampling_freq); */
+	numap_rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &memory_bdw_sampling_freq);
 	  if (numap_rc != 0) { 
 		fprintf(stderr, "Couldn't create memory bandwidth sampling thread\n");
 	  }
