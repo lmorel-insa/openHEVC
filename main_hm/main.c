@@ -549,7 +549,7 @@ int main(int argc, char *argv[]) {
   /* } */
 
 
-  numap_bdw_start(&mem_bdw_measure);
+  //  numap_bdw_start(&mem_bdw_measure);
 
   // MANU starts memory bandwidth sampling if requested
   if (memory_bdw_sampling_freq > 0) {
@@ -580,7 +580,7 @@ int main(int argc, char *argv[]) {
   video_decode_example(input_file);
 	
   // stop numap mem sampling
-  numap_bdw_stop(&mem_bdw_measure);
+  //numap_bdw_stop(&mem_bdw_measure);
   dump_mem_samples();
 	
   return 0;
