@@ -484,6 +484,47 @@ struct mem_bdw_sample_s {
 typedef struct mem_bdw_sample_s mem_bdw_sample_t;
 
 
+
+void *mem_bdw_sampling_routine(void *arg) {
+
+	unsigned int *freq ;
+	unsigned int periodInMicroS;
+	int res;
+	int i;
+
+	if (pthread_setname_np(pthread_self(), "mem_bdw_samp") != 0) {
+		fprintf(stderr, "Failed to set name of mem_bdw_samp thread");
+	}
+
+	freq = (unsigned int *)arg;
+	periodInMicroS = (unsigned int)(1.0E6 / *freq);
+
+	while (1) {
+		res = numap_bdw_start(&mem_bdw_measure);
+		if(res < 0) {
+			fprintf(stderr, "numap_start error : %s\n", numap_error_message(res));
+			exit(-1);
+		}
+		usleep(periodInMicroS);
+		res = numap_bdw_stop(&mem_bdw_measure);
+		if(res < 0) {
+			fprintf(stderr, "numap_stop error : %s\n", numap_error_message(res));
+			exit(-1);
+		}
+		for(i = 0; i < mem_bdw_measure.nb_nodes; i++) {
+			uint64_t r = (mem_bdw_measure.reads_count[i] * 64);
+			uint64_t w = (mem_bdw_measure.writes_count[i] * 64);
+		    net->mem_bdw_samples[i][net->nb_mem_bdw_samples].read_bdw = r;
+		    net->mem_bdw_samples[i][net->nb_mem_bdw_samples].write_bdw = w;
+		}
+		net->nb_mem_bdw_samples++;
+	}
+	
+}
+
+
+
+
 int main(int argc, char *argv[]) {
   int numap_rc; // numap return codes
   mem_bdw_sample_t **mem_bdw_samples;
