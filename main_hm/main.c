@@ -42,9 +42,9 @@ void dump_mem_bdw_samples(void) {
 	FILE *f;
 	int i, j;
 	f = fopen("mem_bdw_samples", "w");
-	for (i = 0; i < net->nb_mem_bdw_samples; i++) {
+	for (i = 0; i < nb_mem_bdw_samples; i++) {
 		for(j = 0; j < mem_bdw_measure.nb_nodes; j++) {
-			fprintf(f, "%d %" PRIu64 " %" PRIu64 "\n", j, net->mem_bdw_samples[j][i].read_bdw, net->mem_bdw_samples[j][i].write_bdw);
+			fprintf(f, "%d %" PRIu64 " %" PRIu64 "\n", j, mem_bdw_samples[j][i].read_bdw, mem_bdw_samples[j][i].write_bdw);
 		}
 	}
 	fclose(f);
@@ -97,32 +97,6 @@ int print_samples ( struct numap_sampling_measure *measure, local_scheduler_t *s
 			action_found = 0;
 			fifo_found_src_name = "NOT_FOUND";
 			fifo_found_dst_name = "NOT_FOUND";
-
-			// search for corresponding action
-			/* i = 0; */
-			/* while (i < sched->num_actors && !action_found) { */
-			/* 	for (j = 0; j < sched->actors[i]->nb_actions; j++) { */
-			/* 		if (sample->ip > sched->actors[i]->actions[j]->begin && */
-			/* 				sample->ip < sched->actors[i]->actions[j]->end) { */
-			/* 			actor_found_name = sched->actors[i]->name; */
-			/* 			action_found_name = sched->actors[i]->actions[j]->name; */
-			/* 			action_found_start = sched->actors[i]->actions[j]->begin; */
-			/* 			action_found_end = sched->actors[i]->actions[j]->end; */
-			/* 			action_found = 1; */
-			/* 			break; */
-			/* 		} */
-			/* 	} */
-			/* 	i++; */
-			/* } */
-
-			// search for corresponding fifo
-			/* for (i = 0; i < net->nb_connections; i++) { */
-			/* 	if (sample->addr >= net->connections[i]->start && sample->addr <= net->connections[i]->end) { */
-			/* 		fifo_found_src_name = net->connections[i]->src->name; */
-			/* 		fifo_found_dst_name = net->connections[i]->dst->name; */
-			/* 		break; */
-			/* 	} */
-			/* } */
 
 			// dump result
 			fprintf(f,  "ip = %" PRIx64
@@ -518,8 +492,8 @@ void *mem_bdw_sampling_routine(void *arg) {
 		for(i = 0; i < mem_bdw_measure.nb_nodes; i++) {
 			uint64_t r = (mem_bdw_measure.reads_count[i] * 64);
 			uint64_t w = (mem_bdw_measure.writes_count[i] * 64);
-		    mem_bdw_samples[i][net->nb_mem_bdw_samples].read_bdw = r;
-		    mem_bdw_samples[i][net->nb_mem_bdw_samples].write_bdw = w;
+		    mem_bdw_samples[i][nb_mem_bdw_samples].read_bdw = r;
+		    mem_bdw_samples[i][nb_mem_bdw_samples].write_bdw = w;
 		}
 		nb_mem_bdw_samples++;
 	}
