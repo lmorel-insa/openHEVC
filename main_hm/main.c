@@ -484,24 +484,24 @@ void dump_mem_samples(void) {
   //ioctl(inst_fd, PERF_EVENT_IOC_DISABLE, 0);
   //read(inst_fd, &insts_count, sizeof(insts_count));
 
-  // Get threads stack informations
-  for (i = 0; i < nb_pthreads; i++) {
-	res = pthread_getattr_np(threads[i], &attr);
-	if (res != 0) {
-	  fprintf(stderr, "pthread_getattr_np error\n");
-	  exit(-1);
-	}
-	res = pthread_attr_getguardsize(&attr, &stack_guard_size);
-	if (res != 0) {
-	  fprintf(stderr, "pthread_attr_getguardsize error\n");
-	  exit(-1);
-	}
-	res = pthread_attr_getstack(&attr, &stack_addr, &stack_size);
-	if (res != 0) {
-	  fprintf(stderr, "pthread_attr_getstack error\n");
-	  exit(-1);
-	}
-  }
+  /* // Get threads stack informations */
+  /* for (i = 0; i < nb_pthreads; i++) { */
+  /* 	res = pthread_getattr_np(threads[i], &attr); */
+  /* 	if (res != 0) { */
+  /* 	  fprintf(stderr, "pthread_getattr_np error\n"); */
+  /* 	  exit(-1); */
+  /* 	} */
+  /* 	res = pthread_attr_getguardsize(&attr, &stack_guard_size); */
+  /* 	if (res != 0) { */
+  /* 	  fprintf(stderr, "pthread_attr_getguardsize error\n"); */
+  /* 	  exit(-1); */
+  /* 	} */
+  /* 	res = pthread_attr_getstack(&attr, &stack_addr, &stack_size); */
+  /* 	if (res != 0) { */
+  /* 	  fprintf(stderr, "pthread_attr_getstack error\n"); */
+  /* 	  exit(-1); */
+  /* 	} */
+  /* } */
 }
 
 
