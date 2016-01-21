@@ -52,7 +52,7 @@ void dump_mem_bdw_samples(void) {
 
 
 
-int print_samples ( struct numap_sampling_measure *measure, local_scheduler_t *sched, char* file_name) {
+int print_samples (struct numap_sampling_measure *measure, char* file_name) {
 
 	FILE *f;
 	int i, j;
@@ -471,7 +471,7 @@ void dump_mem_samples(void) {
 	}
   }
   for (i = 0; i < nb_pthreads; i++) {
-	print_samples(&measures[i], scheduler->schedulers[i], opt->memory_sampling_file);
+	print_samples(&measures[i], opt->memory_sampling_file);
   }
 
   // Stop instruction counting
@@ -495,8 +495,6 @@ void dump_mem_samples(void) {
 	  fprintf(stderr, "pthread_attr_getstack error\n");
 	  exit(-1);
 	}
-	threads_stack_start[i] =  (uint64_t) stack_addr;
-	threads_stack_end[i] =  (uint64_t) ((char *) stack_addr + stack_size);
   }
 }
 
