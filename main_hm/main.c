@@ -319,7 +319,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef MEMORY_SAMPLING_ENABLE
 	// LM - initialize numap
-	if (opt->enable_memory_sampling == TRUE || opt->memory_bdw_sampling_freq > 0) {
+	if (mem_profiling == ENABLE || memory_bdw_sampling_freq > 0) {
 	  rc = numap_init();
 	  if(rc < 0) {
 		fprintf(stderr, "numap_init : %s\n", numap_error_message(rc));
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	// Still mysterious why this is for. 
-	if (opt->enable_memory_sampling == TRUE) {
+	if (mem_profiling == ENABLE) {
 		// Register exit functions
 		if (atexit(dump_mem_samples) != 0) {
 			fprintf(stderr, "cannot set exit function\n");
@@ -339,7 +339,7 @@ int main(int argc, char *argv[]) {
 
 
 	// MANU Save mem_bdw_sampling in a file
-	if (opt->memory_bdw_sampling_freq > 0) {
+	if (memory_bdw_sampling_freq > 0) {
 
 		// Register exit function
 		if (atexit(dump_mem_bdw_samples) != 0) {
@@ -350,7 +350,7 @@ int main(int argc, char *argv[]) {
 
 
 	// MANU starts memory bandwidth sampling if requested
-	if (opt->memory_bdw_sampling_freq > 0) {
+	if (memory_bdw_sampling_freq > 0) {
 
 		rc = numap_bdw_init_measure(&mem_bdw_measure);
 		if(rc < 0) {
@@ -359,12 +359,12 @@ int main(int argc, char *argv[]) {
 		}
 		net->mem_bdw_samples = malloc(sizeof(mem_bdw_sample_t *) * mem_bdw_measure.nb_nodes);
 		for(i = 0; i < mem_bdw_measure.nb_nodes; i++) {
-			net->mem_bdw_samples[i] = malloc(sizeof(mem_bdw_sample_t) * opt->memory_bdw_sampling_freq * 100); // 100 seconds max
+			net->mem_bdw_samples[i] = malloc(sizeof(mem_bdw_sample_t) * memory_bdw_sampling_freq * 100); // 100 seconds max
 			assert(net->mem_bdw_samples);
 		}
 		net->nb_mem_bdw_samples = 0;
 		pthread_t memory_bdw_sampling_thread;
-		rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &opt->memory_bdw_sampling_freq);
+		rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &memory_bdw_sampling_freq);
 		if (rc != 0) {
 			fprintf(stderr, "Couldn't create memory bandwidth sampling thread\n");
 		}
