@@ -503,7 +503,51 @@ void *mem_bdw_sampling_routine(void *arg) {
 
 
 void dump_mem_samples(void) {
-  printf("bla");
+  int i;
+  int res;
+  size_t stack_size;
+  size_t stack_guard_size;
+  void *stack_addr;
+  pthread_attr_t attr;
+
+  // Stop memory sampling and save results to a file
+  for (i = 0; i < nb_threads; i++) {
+	res = numap_sampling_read_stop(&measures[i]);
+	if(res < 0) {
+	  fprintf(stderr, "numap_sampling_stop error : %s\n", numap_error_message(res));
+	  exit(-1);
+	} else {
+	  fprintf(stdout, "numap_sampling_stop OK\n");
+	}
+  }
+  for (i = 0; i < nb_threads; i++) {
+	print_samples(&measures[i], scheduler->schedulers[i], opt->memory_sampling_file);
+  }
+
+  // Stop instruction counting
+  ioctl(inst_fd, PERF_EVENT_IOC_DISABLE, 0);
+  read(inst_fd, &insts_count, sizeof(insts_count));
+
+  // Get threads stack informations
+  for (i = 0; i < nb_threads; i++) {
+	res = pthread_getattr_np(threads[i], &attr);
+	if (res != 0) {
+	  fprintf(stderr, "pthread_getattr_np error\n");
+	  exit(-1);
+	}
+	res = pthread_attr_getguardsize(&attr, &stack_guard_size);
+	if (res != 0) {
+	  fprintf(stderr, "pthread_attr_getguardsize error\n");
+	  exit(-1);
+	}
+	res = pthread_attr_getstack(&attr, &stack_addr, &stack_size);
+	if (res != 0) {
+	  fprintf(stderr, "pthread_attr_getstack error\n");
+	  exit(-1);
+	}
+	threads_stack_start[i] =  (uint64_t) stack_addr;
+	threads_stack_end[i] =  (uint64_t) ((char *) stack_addr + stack_size);
+  }
 }
 
 
