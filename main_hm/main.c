@@ -481,6 +481,8 @@ struct mem_bdw_sample_s {
 	uint64_t write_bdw;
 };
 
+typedef struct mem_bdw_sample_s mem_bdw_sample_t;
+
 
 int main(int argc, char *argv[]) {
   int numap_rc; // numap return codes
