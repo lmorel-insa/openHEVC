@@ -134,7 +134,7 @@ int getopt(int nargc, char * const *nargv, const char *ostr) {
 void init_main(int argc, char *argv[]) {
   // every command line option must be followed by ':' if it takes an
   // argument, and '::' if this argument is optional
-  const char *ostr = "achi:no:p:f:s:t:wl:r:";
+  const char *ostr = "achi:no:p:f:s:t:wl:r:m:u:";
 
   int c;
   check_md5_flags   = ENABLE;
