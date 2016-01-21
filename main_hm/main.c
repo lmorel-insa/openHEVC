@@ -53,72 +53,6 @@ void dump_mem_bdw_samples(void) {
 
 
 
-int print_samples (struct numap_sampling_measure *measure, char* file_name) {
-
-	FILE *f;
-	int i, j;
-	struct perf_event_mmap_page *metadata_page;
-	struct perf_event_header *header;
-	uint64_t head;
-	uint64_t consumed;
-
-	char *actor_found_name;
-	char *action_found_name;
-	uint64_t action_found_start;
-	uint64_t action_found_end;
-	char *fifo_found_src_name;
-	char *fifo_found_dst_name;
-	int action_found;
-
-	f = fopen(file_name, "a");
-
-	//	fprintf(f, "// New Thread %d has %d actors\n", sched->id, sched->num_actors);
-	metadata_page = measure->metadata_pages_per_tid[0];
-	head = metadata_page -> data_head;
-	rmb();
-	header = (struct perf_event_header *)((char *)metadata_page + measure->page_size);
-	consumed = 0;
-
-	// Parse all samples
-	while (consumed < head) {
-		if (header->size == 0) {
-			fprintf(stderr, "Error: invalid header size = 0\n");
-			return -1;
-		}
-		else {
-			fprintf(stderr, "Header size = %d\n", header->size);
-		}
-		if (header -> type == PERF_RECORD_SAMPLE) {
-		  struct read_sample *sample = (struct read_sample *)((char *)(header) + 8);
-
-			actor_found_name = "NOT_FOUND";
-			action_found_name = "NOT_FOUND";
-			action_found_start = 0;
-			action_found_end = 0;
-			action_found = 0;
-			fifo_found_src_name = "NOT_FOUND";
-			fifo_found_dst_name = "NOT_FOUND";
-
-			// dump result
-			fprintf(f,  "ip = %" PRIx64
-						", @ = %" PRIx64
-						", weight = %" PRIu64
-						", src_level = %s"
-						", conn_src = %s"
-						", conn_dst = %s\n",
-						sample->ip, sample->addr, sample->weight,
-						get_data_src_level(sample->data_src),
-						fifo_found_src_name,
-						fifo_found_dst_name);
-		}
-		consumed += header->size;
-		header = (struct perf_event_header *)((char *)header + header -> size);
-	}
-	fprintf(f, "// End Thread\n");
-	fclose(f);
-}
-
-
 
 static unsigned long int GetTimeMs64()
 {
@@ -455,6 +389,74 @@ void *mem_bdw_sampling_routine(void *arg) {
 	}
 	
 }
+
+
+int print_samples (struct numap_sampling_measure *measure, char* file_name) {
+
+	FILE *f;
+	int i, j;
+	struct perf_event_mmap_page *metadata_page;
+	struct perf_event_header *header;
+	uint64_t head;
+	uint64_t consumed;
+
+	char *actor_found_name;
+	char *action_found_name;
+	uint64_t action_found_start;
+	uint64_t action_found_end;
+	char *fifo_found_src_name;
+	char *fifo_found_dst_name;
+	int action_found;
+
+	f = fopen(file_name, "a");
+
+	//	fprintf(f, "// New Thread %d has %d actors\n", sched->id, sched->num_actors);
+	metadata_page = measure->metadata_pages_per_tid[0];
+	head = metadata_page -> data_head;
+	rmb();
+	header = (struct perf_event_header *)((char *)metadata_page + measure->page_size);
+	consumed = 0;
+
+	// Parse all samples
+	while (consumed < head) {
+		if (header->size == 0) {
+			fprintf(stderr, "Error: invalid header size = 0\n");
+			return -1;
+		}
+		else {
+			fprintf(stderr, "Header size = %d\n", header->size);
+		}
+		if (header -> type == PERF_RECORD_SAMPLE) {
+		  struct read_sample *sample = (struct read_sample *)((char *)(header) + 8);
+
+			actor_found_name = "NOT_FOUND";
+			action_found_name = "NOT_FOUND";
+			action_found_start = 0;
+			action_found_end = 0;
+			action_found = 0;
+			fifo_found_src_name = "NOT_FOUND";
+			fifo_found_dst_name = "NOT_FOUND";
+
+			// dump result
+			fprintf(f,  "ip = %" PRIx64
+						", @ = %" PRIx64
+						", weight = %" PRIu64
+						", src_level = %s"
+						", conn_src = %s"
+						", conn_dst = %s\n",
+						sample->ip, sample->addr, sample->weight,
+						get_data_src_level(sample->data_src),
+						fifo_found_src_name,
+						fifo_found_dst_name);
+		}
+		consumed += header->size;
+		header = (struct perf_event_header *)((char *)header + header -> size);
+	}
+	fprintf(f, "// End Thread\n");
+	fclose(f);
+}
+
+
 
 
 
