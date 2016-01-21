@@ -479,6 +479,7 @@ static void video_decode_example(const char *filename)
 int main(int argc, char *argv[]) {
   int numap_rc; // numap return codes
   mem_bdw_sample_t **mem_bdw_samples;
+  struct numap_bdw_measure mem_bdw_measure;
 
   init_main(argc, argv);
 
