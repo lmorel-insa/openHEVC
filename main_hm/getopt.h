@@ -55,6 +55,8 @@ int num_frames;
 int frame_rate;
 int mem_profiling;
 int memory_bdw_sampling_freq;
+char *profiling_output_file;
+
 
 // initialize APR and parse command-line options
 void init_main(int argc, char *argv[]);

@@ -62,6 +62,7 @@ void print_usage() {
   printf("     -s <num> Stop after num frames \n");
   printf("     -r <num> Frame rate (FPS) \n");
   printf("     -m <freq> activate memory sampling at frequency <freq> (Hz)\n");
+  printf("     -u <memory profiling file> write sampling info to specified file\n");
 }
 
 /*
@@ -149,6 +150,7 @@ void init_main(int argc, char *argv[]) {
   frame_rate        = 0;
 
   mem_profiling = DISABLE;
+  profiling_output_file       = NULL;
 
   program           = argv[0];
     
@@ -198,6 +200,12 @@ void init_main(int argc, char *argv[]) {
 	case 'm': 
 	  mem_profiling = ENABLE;
 	  memory_bdw_sampling_freq = atoi(optarg);
+	  break;
+	case 'u':
+	  profiling_output_file = strdup(optarg);
+	  if(output_file[strlen(output_file)-4] == '.')
+		output_file[strlen(output_file)-4] = '\0';
+	  break;
 	default:
 	  print_usage();
 	  exit(1);

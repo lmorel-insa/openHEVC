@@ -12,6 +12,7 @@
 #ifdef MEMORY_SAMPLING_ENABLE
 #include <numa.h>
 #include "numap.h"
+#define MAX_THREAD_NB 12
 #endif
 
 //#define TIME2
@@ -476,7 +477,7 @@ void dump_mem_samples(void) {
 	}
   }
   for (i = 0; i < nb_pthreads; i++) {
-	print_samples(&measures[i], opt->memory_sampling_file);
+	print_samples(&measures[i], profiling_output_file);
   }
 
   // Stop instruction counting
