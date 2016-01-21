@@ -478,7 +478,11 @@ static void video_decode_example(const char *filename)
 
 int main(int argc, char *argv[]) {
   int numap_rc; // numap return codes
+  mem_bdw_sample_t **mem_bdw_samples;
+
   init_main(argc, argv);
+
+
   
   // #ifdef MEMORY_SAMPLING_ENABLE
   // LM - initialize numap
@@ -513,18 +517,18 @@ int main(int argc, char *argv[]) {
 
 
   // MANU starts memory bandwidth sampling if requested
-/*   if (memory_bdw_sampling_freq > 0) { */
+  if (memory_bdw_sampling_freq > 0) {
 
-/* 	numap_rc = numap_bdw_init_measure(&mem_bdw_measure); */
-/* 	if(numap_rc < 0) { */
-/* 	  fprintf(stderr, "numap_init_measure error : %s\n", numap_error_message(numap_rc)); */
-/* 	  exit(-1); */
-/* 	} */
-/* 	net->mem_bdw_samples = malloc(sizeof(mem_bdw_sample_t *) * mem_bdw_measure.nb_nodes); */
-/* 	for(i = 0; i < mem_bdw_measure.nb_nodes; i++) { */
-/* 	  net->mem_bdw_samples[i] = malloc(sizeof(mem_bdw_sample_t) * memory_bdw_sampling_freq * 100); // 100 seconds max */
-/* 	  assert(net->mem_bdw_samples); */
-/* 	} */
+	numap_rc = numap_bdw_init_measure(&mem_bdw_measure);
+	if(numap_rc < 0) {
+	  fprintf(stderr, "numap_init_measure error : %s\n", numap_error_message(numap_rc));
+	  exit(-1);
+	}
+	mem_bdw_samples = malloc(sizeof(mem_bdw_sample_t *) * mem_bdw_measure.nb_nodes);
+ 	for(i = 0; i < mem_bdw_measure.nb_nodes; i++) { 
+ 	  mem_bdw_samples[i] = malloc(sizeof(mem_bdw_sample_t) * memory_bdw_sampling_freq * 100); // 100 seconds max 
+ 	  assert(mem_bdw_samples); 
+ 	} 
 /* 	net->nb_mem_bdw_samples = 0; */
 /* 	pthread_t memory_bdw_sampling_thread; */
 /* 	numap_rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &memory_bdw_sampling_freq); */
