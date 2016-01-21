@@ -203,8 +203,6 @@ void init_main(int argc, char *argv[]) {
 	  break;
 	case 'u':
 	  profiling_output_file = strdup(optarg);
-	  if(output_file[strlen(output_file)-4] == '.')
-		output_file[strlen(output_file)-4] = '\0';
 	  break;
 	default:
 	  print_usage();
