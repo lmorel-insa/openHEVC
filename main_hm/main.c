@@ -33,6 +33,169 @@ int mmap_pages_count = 8192; // must be power of two
 /* Returns the amount of milliseconds elapsed since the UNIX epoch. Works on both
  * windows and linux. */
 
+
+
+
+#ifdef MEMORY_SAMPLING_ENABLE
+
+void dump_mem_bdw_samples(void) {
+
+	FILE *f;
+	int i, j;
+	f = fopen("mem_bdw_samples", "w");
+	for (i = 0; i < net->nb_mem_bdw_samples; i++) {
+		for(j = 0; j < mem_bdw_measure.nb_nodes; j++) {
+			fprintf(f, "%d %" PRIu64 " %" PRIu64 "\n", j, net->mem_bdw_samples[j][i].read_bdw, net->mem_bdw_samples[j][i].write_bdw);
+		}
+	}
+	fclose(f);
+}
+
+
+
+int print_samples ( struct numap_sampling_measure *measure, local_scheduler_t *sched, char* file_name) {
+
+	FILE *f;
+	int i, j;
+	struct perf_event_mmap_page *metadata_page;
+	struct perf_event_header *header;
+	uint64_t head;
+	uint64_t consumed;
+
+	char *actor_found_name;
+	char *action_found_name;
+	uint64_t action_found_start;
+	uint64_t action_found_end;
+	char *fifo_found_src_name;
+	char *fifo_found_dst_name;
+	int action_found;
+
+	f = fopen(file_name, "a");
+
+	//	fprintf(f, "// New Thread %d has %d actors\n", sched->id, sched->num_actors);
+	metadata_page = measure->metadata_pages_per_tid[0];
+	head = metadata_page -> data_head;
+	rmb();
+	header = (struct perf_event_header *)((char *)metadata_page + measure->page_size);
+	consumed = 0;
+
+	// Parse all samples
+	while (consumed < head) {
+		if (header->size == 0) {
+			fprintf(stderr, "Error: invalid header size = 0\n");
+			return -1;
+		}
+		else {
+			fprintf(stderr, "Header size = %d\n", header->size);
+		}
+		if (header -> type == PERF_RECORD_SAMPLE) {
+		  struct read_sample *sample = (struct read_sample *)((char *)(header) + 8);
+
+			actor_found_name = "NOT_FOUND";
+			action_found_name = "NOT_FOUND";
+			action_found_start = 0;
+			action_found_end = 0;
+			action_found = 0;
+			fifo_found_src_name = "NOT_FOUND";
+			fifo_found_dst_name = "NOT_FOUND";
+
+			// search for corresponding action
+			/* i = 0; */
+			/* while (i < sched->num_actors && !action_found) { */
+			/* 	for (j = 0; j < sched->actors[i]->nb_actions; j++) { */
+			/* 		if (sample->ip > sched->actors[i]->actions[j]->begin && */
+			/* 				sample->ip < sched->actors[i]->actions[j]->end) { */
+			/* 			actor_found_name = sched->actors[i]->name; */
+			/* 			action_found_name = sched->actors[i]->actions[j]->name; */
+			/* 			action_found_start = sched->actors[i]->actions[j]->begin; */
+			/* 			action_found_end = sched->actors[i]->actions[j]->end; */
+			/* 			action_found = 1; */
+			/* 			break; */
+			/* 		} */
+			/* 	} */
+			/* 	i++; */
+			/* } */
+
+			// search for corresponding fifo
+			/* for (i = 0; i < net->nb_connections; i++) { */
+			/* 	if (sample->addr >= net->connections[i]->start && sample->addr <= net->connections[i]->end) { */
+			/* 		fifo_found_src_name = net->connections[i]->src->name; */
+			/* 		fifo_found_dst_name = net->connections[i]->dst->name; */
+			/* 		break; */
+			/* 	} */
+			/* } */
+
+			// dump result
+			fprintf(f,  "ip = %" PRIx64
+						", @ = %" PRIx64
+						", weight = %" PRIu64
+						", src_level = %s"
+						", conn_src = %s"
+						", conn_dst = %s\n",
+						sample->ip, sample->addr, sample->weight,
+						get_data_src_level(sample->data_src),
+						fifo_found_src_name,
+						fifo_found_dst_name);
+		}
+		consumed += header->size;
+		header = (struct perf_event_header *)((char *)header + header -> size);
+	}
+	fprintf(f, "// End Thread\n");
+	fclose(f);
+}
+
+
+void dump_mem_samples(void) {
+	int i;
+	int res;
+	size_t stack_size;
+	size_t stack_guard_size;
+	void *stack_addr;
+	pthread_attr_t attr;
+
+	// Stop memory sampling and save results to a file
+	for (i = 0; i < nb_threads; i++) {
+		res = numap_sampling_read_stop(&measures[i]);
+		if(res < 0) {
+			fprintf(stderr, "numap_sampling_stop error : %s\n", numap_error_message(res));
+			exit(-1);
+		} else {
+			fprintf(stdout, "numap_sampling_stop OK\n");
+		}
+	}
+	for (i = 0; i < nb_threads; i++) {
+		print_samples(&measures[i], scheduler->schedulers[i], opt->memory_sampling_file);
+	}
+
+	// Stop instruction counting
+	ioctl(inst_fd, PERF_EVENT_IOC_DISABLE, 0);
+	read(inst_fd, &insts_count, sizeof(insts_count));
+
+	// Get threads stack informations
+	for (i = 0; i < nb_threads; i++) {
+		res = pthread_getattr_np(threads[i], &attr);
+		if (res != 0) {
+			fprintf(stderr, "pthread_getattr_np error\n");
+			exit(-1);
+		}
+		res = pthread_attr_getguardsize(&attr, &stack_guard_size);
+		if (res != 0) {
+			fprintf(stderr, "pthread_attr_getguardsize error\n");
+			exit(-1);
+		}
+		res = pthread_attr_getstack(&attr, &stack_addr, &stack_size);
+		if (res != 0) {
+			fprintf(stderr, "pthread_attr_getstack error\n");
+		 	exit(-1);
+		}
+		threads_stack_start[i] =  (uint64_t) stack_addr;
+		threads_stack_end[i] =  (uint64_t) ((char *) stack_addr + stack_size);
+	}
+}
+#endif
+
+
+
 static unsigned long int GetTimeMs64()
 {
 #ifdef WIN32
@@ -315,14 +478,15 @@ static void video_decode_example(const char *filename)
 }
 
 int main(int argc, char *argv[]) {
+  int numap_rc; // numap return codes
     init_main(argc, argv);
 
 #ifdef MEMORY_SAMPLING_ENABLE
 	// LM - initialize numap
 	if (mem_profiling == ENABLE || memory_bdw_sampling_freq > 0) {
-	  rc = numap_init();
-	  if(rc < 0) {
-		fprintf(stderr, "numap_init : %s\n", numap_error_message(rc));
+	  numap_rc = numap_init();
+	  if(numap_rc < 0) {
+		fprintf(stderr, "numap_init : %s\n", numap_error_message(numap_rc));
 	  } else {
 		fprintf(stdout, "numap_init OK\n");
 	  }
@@ -352,9 +516,9 @@ int main(int argc, char *argv[]) {
 	// MANU starts memory bandwidth sampling if requested
 	if (memory_bdw_sampling_freq > 0) {
 
-		rc = numap_bdw_init_measure(&mem_bdw_measure);
-		if(rc < 0) {
-			fprintf(stderr, "numap_init_measure error : %s\n", numap_error_message(rc));
+		numap_rc = numap_bdw_init_measure(&mem_bdw_measure);
+		if(numap_rc < 0) {
+			fprintf(stderr, "numap_init_measure error : %s\n", numap_error_message(numap_rc));
 			exit(-1);
 		}
 		net->mem_bdw_samples = malloc(sizeof(mem_bdw_sample_t *) * mem_bdw_measure.nb_nodes);
@@ -364,16 +528,21 @@ int main(int argc, char *argv[]) {
 		}
 		net->nb_mem_bdw_samples = 0;
 		pthread_t memory_bdw_sampling_thread;
-		rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &memory_bdw_sampling_freq);
-		if (rc != 0) {
+		numap_rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &memory_bdw_sampling_freq);
+		if (numap_rc != 0) {
 			fprintf(stderr, "Couldn't create memory bandwidth sampling thread\n");
 		}
 	}
 #endif
 
 
-
+	// perform the actual decoding
     video_decode_example(input_file);
+	
+	// stop numap mem sampling
+	numap_bdw_stop(&mem_bdw_measure);
+	dump_mem_samples();
+	
     return 0;
 }
 
