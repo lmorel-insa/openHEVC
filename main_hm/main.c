@@ -520,14 +520,14 @@ int main(int argc, char *argv[]) {
 	}
   }
   
-  /* // Still mysterious why this is for.  */
-  /* if (mem_profiling == ENABLE) { */
-  /* 	// Register exit functions */
-  /* 	if (atexit(dump_mem_samples) != 0) { */
-  /* 	  fprintf(stderr, "cannot set exit function\n"); */
-  /* 	  exit(EXIT_FAILURE); */
-  /* 	} */
-  /* } */
+  // Still mysterious why this is for.
+  if (mem_profiling == ENABLE) {
+  	// Register exit functions
+  	if (atexit(dump_mem_samples) != 0) {
+  	  fprintf(stderr, "cannot set exit function\n");
+  	  exit(EXIT_FAILURE);
+  	}
+  }
 
 
   /* // MANU Save mem_bdw_sampling in a file */
