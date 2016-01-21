@@ -539,7 +539,7 @@ int main(int argc, char *argv[]) {
   video_decode_example(input_file);
 	
   // stop numap mem sampling
-  numap_bdw_stop(&mem_bdw_measure);
+  // numap_bdw_stop(&mem_bdw_measure);
 	
   return 0;
 }
