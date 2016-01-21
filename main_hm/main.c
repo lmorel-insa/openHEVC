@@ -494,7 +494,7 @@ int main(int argc, char *argv[]) {
   // Still mysterious why this is for. 
   if (mem_profiling == ENABLE) {
 	// Register exit functions
-	if (atexit(dump_mem_samples) != 0) {
+	if (atexit(dump_mem_samples(NULL)) != 0) {
 	  fprintf(stderr, "cannot set exit function\n");
 	  exit(EXIT_FAILURE);
 	}
