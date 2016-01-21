@@ -488,6 +488,7 @@ int main(int argc, char *argv[]) {
   int numap_rc; // numap return codes
   mem_bdw_sample_t **mem_bdw_samples;
   struct numap_bdw_measure mem_bdw_measure;
+  int i;
 
   init_main(argc, argv);
 
@@ -538,6 +539,7 @@ int main(int argc, char *argv[]) {
  	  mem_bdw_samples[i] = malloc(sizeof(mem_bdw_sample_t) * memory_bdw_sampling_freq * 100); // 100 seconds max 
  	  assert(mem_bdw_samples); 
  	} 
+  }
 /* 	net->nb_mem_bdw_samples = 0; */
 /* 	pthread_t memory_bdw_sampling_thread; */
 /* 	numap_rc = pthread_create(&memory_bdw_sampling_thread, NULL, &mem_bdw_sampling_routine, &memory_bdw_sampling_freq); */
