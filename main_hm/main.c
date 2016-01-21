@@ -549,6 +549,8 @@ int main(int argc, char *argv[]) {
   /* } */
 
 
+  numap_bdw_star(&mem_bdw_measure);
+
   // MANU starts memory bandwidth sampling if requested
   if (memory_bdw_sampling_freq > 0) {
 
