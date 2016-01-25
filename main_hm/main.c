@@ -529,15 +529,16 @@ int main(int argc, char *argv[]) {
 
 
   
-  //Start memory access sampling
-  res = numap_sampling_read_start(&measures[sched->id]);
-  if(res < 0) {
-	fprintf(stderr, "numap_sampling_start error : %s\n", numap_error_message(res));
-	pthread_exit(NULL);
-  } else {
-	fprintf(stdout, "numap_sampling_start every %" PRIu64 " events OK\n", opt->memory_sampling_rate);
+  for (i = 0; i < nb_pthreads; i++) {
+	//Start memory access sampling
+	res = numap_sampling_read_start(&measures[i]);
+	if(res < 0) {
+	  fprintf(stderr, "numap_sampling_start error : %s\n", numap_error_message(res));
+	  pthread_exit(NULL);
+	} else {
+	  fprintf(stdout, "numap_sampling_start every %" PRIu64 " events OK\n", memory_bdw_sampling_freq);
+	}
   }
-  
   
   // MANU starts memory bandwidth sampling if requested
   if (memory_bdw_sampling_freq > 0) {
