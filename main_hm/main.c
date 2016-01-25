@@ -474,10 +474,10 @@ void dump_mem_samples(void) {
   for (i = 0; i < nb_pthreads; i++) {
 	res = numap_sampling_read_stop(&measures[i]);
 	if(res < 0) {
-	  fprintf(stderr, "numap_sampling_stop error : %s\n", numap_error_message(res));
+	  fprintf(stderr, "numap_sampling_read_stop error : %s\n", numap_error_message(res));
 	  exit(-1);
 	} else {
-	  fprintf(stdout, "numap_sampling_stop OK\n");
+	  fprintf(stdout, "numap_sampling_read_stop OK\n");
 	}
   }
   for (i = 0; i < nb_pthreads; i++) {
@@ -516,7 +516,6 @@ int main(int argc, char *argv[]) {
   init_main(argc, argv);
 
 
-  
   // #ifdef MEMORY_SAMPLING_ENABLE
   // LM - initialize numap
   if (mem_profiling == ENABLE || memory_bdw_sampling_freq > 0) {
@@ -527,6 +526,8 @@ int main(int argc, char *argv[]) {
 	  fprintf(stdout, "numap_init OK\n");
 	}
   }
+
+
   
   // MANU starts memory bandwidth sampling if requested
   if (memory_bdw_sampling_freq > 0) {
@@ -552,7 +553,7 @@ int main(int argc, char *argv[]) {
   }
   // #endif
 
-  numap_bdw_start(&mem_bdw_measure);
+  // numap_bdw_start(&mem_bdw_measure);
   // perform the actual decoding
   video_decode_example(input_file);
 	
