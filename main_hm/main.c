@@ -533,7 +533,7 @@ int main(int argc, char *argv[]) {
 	//Start memory access sampling
 	numap_rc = numap_sampling_read_start(&measures[i]);
 	if(numap_rc < 0) {
-	  fprintf(stderr, "numap_sampling_start error : %s\n", numap_error_message(res));
+	  fprintf(stderr, "numap_sampling_start error : %s\n", numap_error_message(numap_rc));
 	  pthread_exit(NULL);
 	} else {
 	  fprintf(stdout, "numap_sampling_start every %" PRIu64 " events OK\n", memory_bdw_sampling_freq);
