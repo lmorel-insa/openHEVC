@@ -528,29 +528,6 @@ int main(int argc, char *argv[]) {
 	}
   }
   
-  // Still mysterious why this is for.
-  /* if (mem_profiling == ENABLE) { */
-  /* 	Register exit functions */
-  /* 	if (atexit(dump_mem_samples) != 0) { */
-  /* 	  fprintf(stderr, "cannot set exit function\n"); */
-  /* 	  exit(EXIT_FAILURE); */
-  /* 	} */
-  /* } */
-
-
-  /* // MANU Save mem_bdw_sampling in a file */
-  /* if (memory_bdw_sampling_freq > 0) { */
-
-  /* 	// Register exit function */
-  /* 	if (atexit(dump_mem_bdw_samples) != 0) { */
-  /* 	  fprintf(stderr, "cannot set exit function\n"); */
-  /* 	  exit(EXIT_FAILURE); */
-  /* 	} */
-  /* } */
-
-
-  //  numap_bdw_start(&mem_bdw_measure);
-
   // MANU starts memory bandwidth sampling if requested
   if (memory_bdw_sampling_freq > 0) {
 
@@ -575,7 +552,7 @@ int main(int argc, char *argv[]) {
   }
   // #endif
 
-
+  numap_bdw_start(&mem_bdw_measure);
   // perform the actual decoding
   video_decode_example(input_file);
 	
