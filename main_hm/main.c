@@ -531,7 +531,7 @@ int main(int argc, char *argv[]) {
   
   for (i = 0; i < nb_pthreads; i++) {
 	//Start memory access sampling
-	res = numap_sampling_read_start(&measures[i]);
+	numap_rc = numap_sampling_read_start(&measures[i]);
 	if(res < 0) {
 	  fprintf(stderr, "numap_sampling_start error : %s\n", numap_error_message(res));
 	  pthread_exit(NULL);
