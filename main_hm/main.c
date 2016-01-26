@@ -530,6 +530,13 @@ int main(int argc, char *argv[]) {
 
   
   for (i = 0; i < nb_pthreads; i++) {
+	// init memory access sampling
+	numap_rc = numap_sampling_init_measure(&measures[i],1,memory_bdw_sampling_freq,mmap_pages_count);
+	if(numap_rc < 0) {
+	  fprintf(stderr, "numap_sampling_init error : %s\n", numap_error_message(numap_rc));
+	  pthread_exit(NULL);
+	}
+
 	//Start memory access sampling
 	numap_rc = numap_sampling_read_start(&measures[i]);
 	if(numap_rc < 0) {
@@ -571,7 +578,7 @@ int main(int argc, char *argv[]) {
   // stop numap mem sampling
   //numap_bdw_stop(&mem_bdw_measure);
   dump_mem_samples();
-	
+  
   return 0;
 }
 
