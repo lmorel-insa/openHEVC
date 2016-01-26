@@ -31,11 +31,6 @@
 // Sampling parameters
 int mmap_pages_count = 8192; // must be power of two
 
-/* Returns the amount of milliseconds elapsed since the UNIX epoch. Works on both
- * windows and linux. */
-
-
-
 
 // #ifdef MEMORY_SAMPLING_ENABLE
 void dump_mem_bdw_samples(void) {
@@ -53,6 +48,11 @@ void dump_mem_bdw_samples(void) {
 
 
 
+
+
+
+/* Returns the amount of milliseconds elapsed since the UNIX epoch. Works on both
+ * windows and linux. */
 
 static unsigned long int GetTimeMs64()
 {
