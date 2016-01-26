@@ -13,6 +13,8 @@
 #include <numa.h>
 #include "numap.h"
 #define MAX_THREAD_NB 12
+// Sampling parameters
+int mmap_pages_count = 8192; // must be power of two
 #endif
 
 //#define TIME2
@@ -27,9 +29,6 @@
 #define FRAME_CONCEALMENT   0
 
 
-
-// Sampling parameters
-int mmap_pages_count = 8192; // must be power of two
 
 
 // #ifdef MEMORY_SAMPLING_ENABLE
