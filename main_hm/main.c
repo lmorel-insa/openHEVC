@@ -441,15 +441,15 @@ int print_samples (struct numap_sampling_measure *measure, char* file_name) {
 
 			// dump result
 			fprintf(f,  "ip = %" PRIx64
-						", @ = %" PRIx64
-						", weight = %" PRIu64
-						", src_level = %s"
-						", conn_src = %s"
-						", conn_dst = %s\n",
-						sample->ip, sample->addr, sample->weight,
-						get_data_src_level(sample->data_src),
-						fifo_found_src_name,
-						fifo_found_dst_name);
+					", @ = %" PRIx64
+					", weight = %" PRIu64
+					", src_level = %s", 
+					//						", conn_src = %s"
+					//		", conn_dst = %s\n",
+					sample->ip, sample->addr, sample->weight,
+					get_data_src_level(sample->data_src)); //,
+			//						fifo_found_src_name,
+			//				fifo_found_dst_name);
 		}
 		consumed += header->size;
 		header = (struct perf_event_header *)((char *)header + header -> size);
