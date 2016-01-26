@@ -442,7 +442,7 @@ int print_samples (struct numap_sampling_measure *measure, char* file_name) {
 			fprintf(f,  "ip = %" PRIx64
 					", @ = %" PRIx64
 					", weight = %" PRIu64
-					", src_level = %s", 
+					", src_level = %s\n", 
 					//						", conn_src = %s"
 					//		", conn_dst = %s\n",
 					sample->ip, sample->addr, sample->weight,
